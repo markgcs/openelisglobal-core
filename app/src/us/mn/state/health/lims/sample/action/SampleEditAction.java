@@ -22,6 +22,7 @@ import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.DynaActionForm;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
@@ -46,6 +47,7 @@ import us.mn.state.health.lims.samplehuman.daoimpl.SampleHumanDAOImpl;
 import us.mn.state.health.lims.sampleitem.dao.SampleItemDAO;
 import us.mn.state.health.lims.sampleitem.daoimpl.SampleItemDAOImpl;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 import us.mn.state.health.lims.test.dao.TestDAO;
 import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
 import us.mn.state.health.lims.test.valueholder.Test;
@@ -59,7 +61,9 @@ import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.lang.reflect.InvocationTargetException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SampleEditAction extends BaseAction {
@@ -71,12 +75,14 @@ public class SampleEditAction extends BaseAction {
     private static final Set<Integer> excludedAnalysisStatusList;
     private static final Set<Integer> ENTERED_STATUS_SAMPLE_LIST = new HashSet<Integer>();
     private static final Collection<String> ABLE_TO_CANCEL_ROLE_NAMES = new ArrayList<String>(  );
+    private static Set<SystemUserSection> userSection;
 
 	private boolean isEditable = false;
 	private String maxAccessionNumber;
 
 	static {
 		excludedAnalysisStatusList = new HashSet<Integer>();
+		excludedAnalysisStatusList.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn)));
 		excludedAnalysisStatusList.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Canceled)));
 
 		ENTERED_STATUS_SAMPLE_LIST.add( Integer.parseInt( StatusService.getInstance().getStatusID( SampleStatus.Entered ) ) );
@@ -89,14 +95,14 @@ public class SampleEditAction extends BaseAction {
 			throws Exception {
 
 		String forward = "success";
+		userSection = getUserSectionForView();
 
 		request.getSession().setAttribute(SAVE_DISABLED, TRUE);
 
 		DynaActionForm dynaForm = (DynaActionForm) form;
 
 		String accessionNumber = request.getParameter("accessionNumber");
-        boolean allowedToCancelResults = userModuleDAO.isUserAdmin(request) ||
-                new UserRoleDAOImpl().userInRole( currentUserId, ABLE_TO_CANCEL_ROLE_NAMES );
+        boolean allowedToCancelResults = userModuleDAO.isUserAdmin(request);
 
 		if( GenericValidator.isBlankOrNull(accessionNumber)){
 			accessionNumber = getMostRecentAccessionNumberForPaitient( request.getParameter("patientID"));
@@ -107,20 +113,35 @@ public class SampleEditAction extends BaseAction {
 		isEditable = "readwrite".equals(request.getSession().getAttribute(IActionConstants.SAMPLE_EDIT_WRITABLE))
 				|| "readwrite".equals(request.getParameter("type"));
 		PropertyUtils.setProperty(dynaForm, "isEditable", isEditable);
+		// Trung Add for keep value after search
+		String criteria= request.getParameter("criteria");
+		if(!GenericValidator.isBlankOrNull(criteria)){
+            request.setAttribute(IActionConstants.CIRITERIA, criteria);
+        }else{
+            request.setAttribute(IActionConstants.CIRITERIA, "");
+        }
 		if (!GenericValidator.isBlankOrNull(accessionNumber)) {
 
 			PropertyUtils.setProperty(dynaForm, "accessionNumber", accessionNumber);
 			PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.TRUE);
 
 			Sample sample = getSample(accessionNumber);
-
+			//part sample onset of date Dung add
+			if(sample.getOnsetOfDate()!=null){
+				SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+				String onsetOfDate  = dateFormat.format(sample.getOnsetOfDate());
+				request.setAttribute("onsetOfDate", onsetOfDate);
+			}
 			if (sample != null && !GenericValidator.isBlankOrNull(sample.getId())) {
 
 				List<SampleItem> sampleItemList = getSampleItems(sample);
 				setPatientInfo(dynaForm, sample);
                 List<SampleEditItem> currentTestList = getCurrentTestInfo( sampleItemList, accessionNumber, allowedToCancelResults );
+                
                 PropertyUtils.setProperty(dynaForm, "existingTests", currentTestList);
-				setAddableTestInfo(dynaForm, sampleItemList, accessionNumber);
+                PropertyUtils.setProperty(dynaForm, "testNameList", currentTestList);
+
+                setAddableTestInfo(dynaForm, sampleItemList, accessionNumber);
 				setAddableSampleTypes(dynaForm);
                 setSampleOrderInfo(dynaForm, sample);
                 PropertyUtils.setProperty( dynaForm, "ableToCancelResults", hasResults(currentTestList, allowedToCancelResults) );
@@ -144,7 +165,18 @@ public class SampleEditAction extends BaseAction {
         patientSearch.setSelectedPatientActionButtonText( StringUtil.getMessageForKey( "label.patient.search.select" ) );
         PropertyUtils.setProperty( form, "patientSearch", patientSearch );
 		
-		return mapping.findForward(forward);
+        // The following are for compatibility with modal version of sample entry
+        if (FormFields.getInstance().useField(FormFields.Field.SAMPLE_ENTRY_MODAL_VERSION)) {
+        	PropertyUtils.setProperty(dynaForm, "sampleSources", DisplayListService.getList(ListType.SAMPLE_SOURCE));
+        	PropertyUtils.setProperty(dynaForm, "initConditionFormErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_FORM_ERRORS));
+        	PropertyUtils.setProperty(dynaForm, "initConditionLabelErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_LABEL_ERRORS));
+        	PropertyUtils.setProperty(dynaForm, "initConditionMiscList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_MISC));
+        	PropertyUtils.setProperty(dynaForm, "rejectionReasonFormErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_FORM_ERRORS));
+        	PropertyUtils.setProperty(dynaForm, "rejectionReasonLabelErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_LABEL_ERRORS));
+        	PropertyUtils.setProperty(dynaForm, "rejectionReasonMiscList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_MISC));
+        }
+
+        return mapping.findForward(forward);
 	}
 
     private Boolean hasResults( List<SampleEditItem> currentTestList, boolean allowedToCancelResults ){
@@ -200,7 +232,7 @@ public class SampleEditAction extends BaseAction {
 		IPatientService patientService = new PatientService(patient);
 
         PropertyUtils.setProperty( dynaForm, "patientName", patientService.getLastFirstName() );
-		PropertyUtils.setProperty(dynaForm, "dob", patientService.getEnteredDOB());
+		PropertyUtils.setProperty(dynaForm, "dob", patientService.getDOB());
 		PropertyUtils.setProperty(dynaForm, "gender", patientService.getGender());
 		PropertyUtils.setProperty(dynaForm, "nationalId", patientService.getNationalId());
 	}
@@ -228,34 +260,41 @@ public class SampleEditAction extends BaseAction {
 
         String collectionDate = DateUtil.convertTimestampToStringDate( sampleItem.getCollectionDate() );
         String collectionTime = DateUtil.convertTimestampToStringTime( sampleItem.getCollectionDate() );
+        String sampleItemExternalId = sampleItem.getExternalId();
 		boolean canRemove = true;
 		for (Analysis analysis : analysisList) {
-			SampleEditItem sampleEditItem = new SampleEditItem();
+		    for (SystemUserSection systemUserSection : userSection) {
+                if (systemUserSection.getTestSection().getId().equals(analysis.getTestSection().getId()) && "Y".equals(systemUserSection.getHasView())) {
+                    SampleEditItem sampleEditItem = new SampleEditItem();
 
-			sampleEditItem.setTestId(analysis.getTest().getId());
-			sampleEditItem.setTestName(TestService.getUserLocalizedTestName( analysis.getTest() ));
-			sampleEditItem.setSampleItemId(sampleItem.getId());
+                    sampleEditItem.setTestId(analysis.getTest().getId());
+                    sampleEditItem.setTestName(TestService.getUserLocalizedTestName( analysis.getTest() ));
+                    //sampleEditItem.setSampelItemExternalId(sampleItemExternalId);
+                    sampleEditItem.setSampleItemId(sampleItem.getId());
 
-			boolean canCancel = allowedToCancelAll ||
-                    (!StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.Canceled ) &&
-					StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.NotStarted ));
+                    boolean canCancel = allowedToCancelAll || "Y".equals(systemUserSection.getHasCancel());
+                            //(!StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.Canceled ) &&
+                            //StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.NotStarted ));
 
-			if( !canCancel){
-				canRemove = false;
-			}
-			sampleEditItem.setCanCancel(canCancel);
-			sampleEditItem.setAnalysisId(analysis.getId());
-			sampleEditItem.setStatus(StatusService.getInstance().getStatusNameFromId(analysis.getStatusId()));
-			sampleEditItem.setSortOrder(analysis.getTest().getSortOrder());
-            sampleEditItem.setHasResults( !StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.NotStarted ) );
+                    if( !canCancel){
+                        canRemove = false;
+                    }
+                    sampleEditItem.setCanCancel(canCancel);
+                    sampleEditItem.setAnalysisId(analysis.getId());
+                    sampleEditItem.setStatus(StatusService.getInstance().getStatusNameFromId(analysis.getStatusId()));
+                    sampleEditItem.setSortOrder(analysis.getTest().getSortOrder());
+                    sampleEditItem.setHasResults( !StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.NotStarted ) );
 
-			analysisSampleItemList.add(sampleEditItem);
+                    analysisSampleItemList.add(sampleEditItem);
+                }
+            }
 		}
 
 		if (!analysisSampleItemList.isEmpty()) {
 			Collections.sort(analysisSampleItemList, testComparator);
             SampleEditItem firstItem = analysisSampleItemList.get( 0 );
 
+            firstItem.setSampleItemExternalId(sampleItemExternalId);
             firstItem.setAccessionNumber(accessionNumber + "-" + sampleItem.getSortOrder());
             firstItem.setSampleType(typeOfSample.getLocalizedName());
             firstItem.setCanRemoveSample(canRemove);
@@ -281,7 +320,7 @@ public class SampleEditAction extends BaseAction {
 	private void setAddableSampleTypes(DynaActionForm dynaForm) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
 		PropertyUtils.setProperty(dynaForm, "sampleTypes", DisplayListService.getList(ListType.SAMPLE_TYPE_ACTIVE));
 	}
-	
+    @SuppressWarnings("rawtypes")
 	private void addPossibleTestsToList(SampleItem sampleItem, List<SampleEditItem> possibleTestList, String accessionNumber) {
 
 		TypeOfSample typeOfSample = new TypeOfSample();
@@ -292,21 +331,27 @@ public class SampleEditAction extends BaseAction {
 		Test test = new Test();
 
 		TypeOfSampleTestDAO sampleTypeTestDAO = new TypeOfSampleTestDAOImpl();
-		List<TypeOfSampleTest> typeOfSampleTestList = sampleTypeTestDAO.getTypeOfSampleTestsForSampleType(typeOfSample.getId());
+		//Dung 2016.07.05
+		//add new the method get all test ids of this sample item
+        List listTest=analysisDAO.getTestIdBySampleItemId(sampleItem.getId());
+		List<TypeOfSampleTest> typeOfSampleTestList = sampleTypeTestDAO.getTypeOfSampleTestsForSampleTypeAndTestId(typeOfSample.getId(),listTest);
+		//End Dung add
 		List<SampleEditItem> typeOfTestSampleItemList = new ArrayList<SampleEditItem>();
 
 		for (TypeOfSampleTest typeOfSampleTest : typeOfSampleTestList) {
 			SampleEditItem sampleEditItem = new SampleEditItem();
-
+			sampleEditItem.setSampleTypeId(typeOfSampleTest.getTypeOfSampleId());
 			sampleEditItem.setTestId(typeOfSampleTest.getTestId());
 			test.setId(typeOfSampleTest.getTestId());
 			testDAO.getData(test);
-			if ("Y".equals(test.getIsActive()) && test.getOrderable()) {
-				sampleEditItem.setTestName( TestService.getUserLocalizedTestName( test ) );
-				sampleEditItem.setSampleItemId(sampleItem.getId());
-				sampleEditItem.setSortOrder(test.getSortOrder());
-				typeOfTestSampleItemList.add(sampleEditItem);
-			}
+			for (SystemUserSection systemUserSection : userSection) {
+                if (systemUserSection.getTestSection().getId().equals(test.getTestSection().getId()) && "Y".equals(test.getIsActive()) && test.getOrderable()) {
+                    sampleEditItem.setTestName( TestService.getUserLocalizedTestName( test ) );
+                    sampleEditItem.setSampleItemId(sampleItem.getId());
+                    sampleEditItem.setSortOrder(test.getSortOrder());
+                    typeOfTestSampleItemList.add(sampleEditItem);
+                }
+            }
 		}
 
 		if (!typeOfTestSampleItemList.isEmpty()) {

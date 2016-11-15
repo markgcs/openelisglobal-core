@@ -21,13 +21,12 @@ import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.common.util.SystemConfiguration;
+import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.sample.dao.SampleDAO;
 import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
 
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public abstract class BaseSiteYearAccessionValidator {
 
@@ -49,20 +48,36 @@ public abstract class BaseSiteYearAccessionValidator {
 
 	// input parameter is not used in this case
 	public String createFirstAccessionNumber(String nullPrefix) {
-		return getPrefix() + DateUtil.getTwoDigitYear() + INCREMENT_STARTING_VALUE;
+		StringBuilder builder = new StringBuilder(getPrefix());
+
+		builder.append(DateUtil.getTwoDigitYear());
+		builder.append(INCREMENT_STARTING_VALUE);
+		return builder.toString();
 	}
 
 	public String getInvalidMessage(ValidationResults results) {
 		String suggestedAccessionNumber = getNextAvailableAccessionNumber(null);
 
-		return StringUtil.getMessageForKey("sample.entry.invalid.accession.number.suggestion") + " " + suggestedAccessionNumber;
+		StringBuilder builder = new StringBuilder();
+
+		String configLocale = SystemConfiguration.getInstance().getDefaultLocale().toString();
+		Locale locale = new Locale(configLocale);
+
+		String message = ResourceLocator.getInstance().getMessageResources().getMessage(locale,
+				"sample.entry.invalid.accession.number.suggestion");
+
+		builder.append(message);
+		builder.append(" ");
+		builder.append(suggestedAccessionNumber);
+
+		return builder.toString();
 
 	}
 
 	// input parameter is not used in this case
 	public String getNextAvailableAccessionNumber(String nullPrefix) {
 
-		String nextAccessionNumber;
+		String nextAccessionNumber = null;
 
 		SampleDAO sampleDAO = new SampleDAOImpl();
 
@@ -103,7 +118,7 @@ public abstract class BaseSiteYearAccessionValidator {
 		}
 
 		int increment = Integer.parseInt(currentHighAccessionNumber.substring(INCREMENT_START));
-		String incrementAsString;
+		String incrementAsString = INCREMENT_STARTING_VALUE;
 
 		if (increment < UPPER_INC_RANGE) {
 			increment++;
@@ -112,7 +127,10 @@ public abstract class BaseSiteYearAccessionValidator {
 			throw new IllegalArgumentException("AccessionNumber has no next value");
 		}
 
-		return currentHighAccessionNumber.substring(SITE_START, YEAR_END) + incrementAsString;
+		StringBuilder builder = new StringBuilder(currentHighAccessionNumber.substring(SITE_START, YEAR_END));
+		builder.append(incrementAsString);
+
+		return builder.toString();
 	}
 
 	// recordType parameter is not used in this case

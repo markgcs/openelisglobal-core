@@ -53,6 +53,13 @@ setDatePattern(pattern) {
 
 function /*void*/
 setValidIndicaterOnField(valid, messageFieldIdPrefix) {
+    if (useModalSampleEntry) {
+    	if (!$(messageFieldIdPrefix))
+    		selectFieldErrorDisplay(valid, $($jq('[name="' + messageFieldIdPrefix + '"]').attr('id')));
+    	else
+    		selectFieldErrorDisplay(valid, $(messageFieldIdPrefix));
+        return;
+    }
     var fieldMessage = messageFieldIdPrefix + "Message";
 
     var mdiv = $(fieldMessage);
@@ -91,7 +98,8 @@ function setFieldErrorDisplay(field) {
 }
 
 function clearFieldErrorDisplay(field) {
-    field.className = field.className.replace(/(?:^|\s)error(?!\S)/, '');
+	if (field)
+		field.className = field.className.replace(/(?:^|\s)error(?!\S)/, '');
 }
 
 function /*boolean*/
@@ -263,7 +271,7 @@ function checkValidDate(dateElement, successCallback, dateRestriction, blankAllo
  * AgeType should be one of "age", "month" or "week"
  */
 
-function /*void*/
+/*function void
 handlePatientAgeChange(ageField, dateOfBirthID, endDateID, ageType) {
     var validAge = checkValidAge(ageField);
     if (validAge) {
@@ -271,7 +279,7 @@ handlePatientAgeChange(ageField, dateOfBirthID, endDateID, ageType) {
     }
     updateFieldValidity(validAge, dateOfBirthID);
 }
-
+*/
 
 function /*bool*/
 checkValidAge(age) {
@@ -672,7 +680,9 @@ function enableFields(enable, fieldsStr) {
 function /*void*/
 setSaveButton() {
     var validToSave = fieldValidator.isAllValid();
-    $("saveButtonId").disabled = !validToSave;
+    if($("saveButtonId") != null) {
+    	$("saveButtonId").disabled = !validToSave;
+    }
 }
 
 
@@ -773,33 +783,67 @@ function filterTimeKeys(field, event) {
         field.value = removeLastChar(v);
         return;
     }
-    var currentChar = v.charAt(v.length - 1);
-    if (!IsTimeKey(currentChar)) {
+    if (!IsTimeKey(field)) {
         field.value = removeLastChar(v);
     }
-
-    addHourTwoPoint(field,event);
+    addHourTwoPoint(field, event);
 }
+
+function IsTimeKey(field) {
+    var currentChar = field.value.charAt(field.value.length - 1);
+    var isTimeKey = true;
+    var timeChars = "0123456789:";
+    //if (timeChars.indexOf(currentChar) == -1 || !isTimeFormat24Hours(field))
+    if (timeChars.indexOf(currentChar) == -1)
+		isTimeKey = false;
     
+    return isTimeKey;
+}
+
+function isTimeFormat24Hours(field) {
+    var isFormat24Hour = true;
+    var number = field.value;
+
+    if (number.length == 1) {
+    	if (number > 2) {
+    		isFormat24Hour = false;
+    	}
+    } else if (number.length == 2) {
+    	var hourBigDigit = number.substring(0,1);
+    	if(hourBigDigit == 2){
+        	var hourSmallDigit = number.substring(1,2);
+			if (hourSmallDigit > 3) {
+				isFormat24Hour = false;
+			}
+    	}
+    } else if (number.length == 3) {
+    	var colonChar = number.substring(2,3);
+    	if(colonChar != ':'){
+			isFormat24Hour = false;
+    	}
+    } else if (number.length == 4) {
+    	var minuteBigDigit = number.substring(3,4);
+		if (minuteBigDigit > 5) {
+			isFormat24Hour = false;
+		}
+    }
+    
+    return isFormat24Hour;
+}
+
 function removeLastChar(stringToCut) {
     return stringToCut.substring(0, stringToCut.length - 1);
 }
-
-function IsTimeKey(currentChar) {
-    var isTimeKey = true;
-    var timeChars = "0123456789:";
-    if (timeChars.indexOf(currentChar) == -1)
-        isTimeKey = false;
-    return isTimeKey;
-}   
-        
 
 /**
  * shows hides note field.  Naming convention needs to be followed
  * showHideButton
  **/
 
-function /*void*/ showHideNotes( index) {
+function /*void*/ showHideNotes(index, me) {
+	if (me && me.getAttribute('disabled')) {
+		return;
+	}
     var current = $("hideShow_" + index).value;
 
     if (current == "hidden") {
@@ -969,7 +1013,7 @@ function round(value, exp) {
     return (+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp))).toFixed(exp);
 }
 
-function  addHourTwoPoint(field, event) {
+function addHourTwoPoint(field, event) {
     var key = event.which ? event.which : event.keyCode;
     if (key == 8) { // delete key? do nothing
         return;

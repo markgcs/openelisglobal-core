@@ -86,6 +86,10 @@ public abstract class BaseSampleEntryAction extends BaseAction {
 		PropertyUtils.setProperty(dynaForm, "genders", genders);
 	}
 	
+	protected void addPatientAgeUnitList(BaseActionForm dynaForm) throws LIMSRuntimeException, IllegalAccessException,
+	InvocationTargetException, NoSuchMethodException {
+}
+	
 
 	/**
 	 * various maps full of a various lists used by the entry form (typically for drop downs) and other forms who want to do patient entry.

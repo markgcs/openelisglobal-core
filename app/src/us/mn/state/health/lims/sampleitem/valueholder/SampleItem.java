@@ -16,12 +16,15 @@
 package us.mn.state.health.lims.sampleitem.valueholder;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 import us.mn.state.health.lims.common.valueholder.BaseObject;
 import us.mn.state.health.lims.common.valueholder.ValueHolder;
 import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.sourceofsample.valueholder.SourceOfSample;
+import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSample;
 import us.mn.state.health.lims.unitofmeasure.valueholder.UnitOfMeasure;
 
@@ -33,7 +36,10 @@ public class SampleItem extends BaseObject {
 
 	private String quantity;
 
+	//bugzilla 1773 need to store sample not sampleId for use in sorting
 	private ValueHolderInterface sample;
+
+	private ValueHolderInterface sampleItem;
 	private String sampleItemId;
 	private String sortOrder;
 	private ValueHolderInterface sourceOfSample;
@@ -50,6 +56,7 @@ public class SampleItem extends BaseObject {
 	
 	public SampleItem() {
 		super();
+		this.sampleItem = new ValueHolder();
 		this.typeOfSample = new ValueHolder();
 		this.sourceOfSample = new ValueHolder();
 		this.unitOfMeasure = new ValueHolder();
@@ -136,11 +143,25 @@ public class SampleItem extends BaseObject {
 	}
 
 	public String getSampleItemId() {
+		if( sampleItemId == null ){
+			if( getSampleItem() != null){
+				sampleItemId = getSampleItem().getId();
+			}
+		}
+
 		return sampleItemId;
 	}
 
 	public void setSampleItemId(String sampleItemId) {
 		this.sampleItemId = sampleItemId;
+	}
+
+	public SampleItem getSampleItem() {
+		return (SampleItem) this.sampleItem.getValue();
+	}
+
+	public void setSampleItem(SampleItem sampleItem) {
+		this.sampleItem.setValue(sampleItem);
 	}
 
 	public TypeOfSample getTypeOfSample() {
@@ -190,5 +211,4 @@ public class SampleItem extends BaseObject {
 	public void setCollector(String collector) {
 		this.collector = collector;
 	}
-
 }

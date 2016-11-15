@@ -196,9 +196,18 @@ public class IndicatorHIV extends IndicatorReport implements IReportCreator, IRe
 				testName.equals("CD4 Compte en %") ||
 				testName.equals("Dénombrement des lymphocytes CD4 (mm3)") ||
 				testName.equals("Dénombrement des lymphocytes  CD4 (%)") ){
-				if( firstResult.getMinNormal() == firstResult.getMaxNormal() ){
-					continue;
-				}
+			    
+			    //nhuql.gv CLOSE follow request of FindBugs
+				//if( firstResult.getMinNormal() == firstResult.getMaxNormal() ){
+				//	continue;
+				//}
+				//END nhuql.gv CLOSE
+				
+			    //nhuql.gv ADD
+                if( firstResult.getMinNormal().compareTo(firstResult.getMaxNormal()) == 0){
+                    continue;
+                }
+                //END nhuql.gv ADD
 				
 				try {
 					Double value = Double.valueOf(firstResult.getValue());	
@@ -381,4 +390,15 @@ public class IndicatorHIV extends IndicatorReport implements IReportCreator, IRe
 	protected String getLabNameLine2() {
 		return "";
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		
+		setDateRange(hashmap);
+		findAnalysis();
+		setReportParameters();
+		setHIVByTest();
+	}
+	
 }

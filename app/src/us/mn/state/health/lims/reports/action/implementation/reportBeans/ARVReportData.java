@@ -54,7 +54,6 @@ public class ARVReportData {
 	private Boolean showVirologie = Boolean.FALSE;
 	private Boolean showSerologie = Boolean.FALSE;
 	private Boolean showPCR = Boolean.FALSE;
-	private Boolean duplicateReport = Boolean.FALSE;
 
 	public String getGlyc() {
 		return glyc;
@@ -272,11 +271,5 @@ public class ARVReportData {
 	}
 	public void setShowPCR(Boolean showPCR){
 		this.showPCR = showPCR;
-	}
-	public Boolean getDuplicateReport() {
-		return duplicateReport;
-	}
-	public void setDuplicateReport(Boolean duplicateReport) {
-		this.duplicateReport = duplicateReport;
 	}
 }

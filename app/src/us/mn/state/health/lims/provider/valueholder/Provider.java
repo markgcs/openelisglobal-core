@@ -33,11 +33,25 @@ public class Provider extends BaseObject {
 	private ValueHolderInterface person;
 
 	private String selectedPersonId;
+	private Person personProvider;
 
 	public Provider() {
 		super();
 		this.person = new ValueHolder();
+		this.personProvider=new Person();
 
+	}
+
+	public Person getPersonProvider() {
+		return personProvider;
+	}
+
+	public void setPersonProvider(Person personProvider) {
+		this.personProvider = personProvider;
+	}
+
+	public void setPerson(ValueHolderInterface person) {
+		this.person = person;
 	}
 
 	public void setId(String id) {

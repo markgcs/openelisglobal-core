@@ -19,6 +19,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -209,7 +210,8 @@ public class ProjectDAOImpl extends BaseDAOImpl implements ProjectDAO {
 
 			//bugzilla 1399
 			//bugzilla 2438 order by local abbreviation
-			String sql = "from Project p order by p.localAbbreviation desc";
+			
+			String sql = "from Project p order by p.projectName";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(
 					sql);
 			query.setFirstResult(startingRecNo - 1);
@@ -384,18 +386,18 @@ public class ProjectDAOImpl extends BaseDAOImpl implements ProjectDAO {
 			// duplicates
 
 			//bugzilla 2438 adding local abbreviation to duplicate check
-			String sql = "from Project t where ((trim(lower(t.projectName)) = :param and t.id != :param2) or (trim(lower(t.localAbbreviation)) = :param3 and t.id != :param2))";
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(
-					sql);
-			query.setParameter("param", project.getProjectName().toLowerCase().trim());
-			query.setParameter("param3", project.getLocalAbbreviation().toLowerCase().trim());
+			//String sql = "from Project t where (trim(lower(t.projectName)) = :projName and t.id != :projId) or (t.localAbbreviation = :localAbbrev and t.id != :projId)";
+			String sql = "from Project t where (trim(lower(t.projectName)) = :projName and t.id != :projId)";
+			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+			query.setParameter("projName", project.getProjectName().toLowerCase().trim());
 
 			//initialize with 0 (for new records where no id has been generated yet
 			String projId = "0";
 			if (!StringUtil.isNullorNill(project.getId())) {
 				projId = project.getId();
 			}
-			query.setParameter("param2", projId);
+			
+			query.setInteger("projId", Integer.parseInt(projId));
 
 			list = query.list();
 			HibernateUtil.getSession().flush();

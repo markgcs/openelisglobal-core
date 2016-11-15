@@ -33,10 +33,10 @@ import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.common.util.validator.ActionError;
-import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.login.dao.UserTestSectionDAO;
 import us.mn.state.health.lims.login.daoimpl.UserTestSectionDAOImpl;
@@ -78,7 +78,16 @@ public class SystemUserSectionUpdateAction extends BaseAction {
 		}
 
 		BaseActionForm dynaForm = (BaseActionForm) form;
-
+		//add: get value of checkbox isAdmin
+		boolean isAdmin = dynaForm.get("checkOrUncheck").equals("true") ? true : false;
+		if (isAdmin) {
+			PropertyUtils.setProperty(dynaForm, "hasAssign", "Y");
+			PropertyUtils.setProperty(dynaForm, "hasCancel", "Y");
+			PropertyUtils.setProperty(dynaForm, "hasComplete", "Y");
+			PropertyUtils.setProperty(dynaForm, "hasRelease", "Y");
+			PropertyUtils.setProperty(dynaForm, "hasView", "Y");
+		}
+		
 		// server-side validation (validation.xml)
 		ActionMessages errors = dynaForm.validate(mapping, request);		
 		if (errors != null && errors.size() > 0) {
@@ -138,10 +147,27 @@ public class SystemUserSectionUpdateAction extends BaseAction {
 	
 		systemUserSection.setSystemUser(systemUser);
 		systemUserSection.setTestSection(testSection);
-			
+		systemUserSection.setIsAdmin(isAdmin ? YES : NO);
+		/**
+		 *  If a user has right on Assign, Cancel, Complete, Release and View (all are YES), but isAdmin is NO, this user cannot be an Admin.
+		 *  If a user has isAdmin with YES, this user will be Admin and will have right on Assign, Cancel, Complete, Release and View 
+		 *  (all are YES)
+		 */
+		/*if (systemUserSection.getHasAssign().equalsIgnoreCase("Y") && systemUserSection.getHasCancel().equalsIgnoreCase("Y") && 
+		        systemUserSection.getHasComplete().equalsIgnoreCase("Y") && systemUserSection.getHasRelease().equalsIgnoreCase("Y") && 
+		        systemUserSection.getHasView().equalsIgnoreCase("Y")) {
+			systemUserSection.setIsAdmin(YES);
+		}*/
+		if (isAdmin) {
+			systemUserSection.setHasAssign(YES);
+			systemUserSection.setHasCancel(YES);
+			systemUserSection.setHasComplete(YES);
+			systemUserSection.setHasRelease(YES);
+			systemUserSection.setHasView(YES);			
+		}
+		
 		try {
 			SystemUserSectionDAO systemUserSectionDAO = new SystemUserSectionDAOImpl();
-
 			if (!isNew) {
 				// UPDATE
 				systemUserSectionDAO.updateData(systemUserSection);
@@ -198,7 +224,6 @@ public class SystemUserSectionUpdateAction extends BaseAction {
 
 		if (systemUserSection.getId() != null && !systemUserSection.getId().equals("0")) {
 			request.setAttribute("ID", systemUserSection.getId());
-
 		}
 
 		if (isNew) forward = FWD_SUCCESS_INSERT;

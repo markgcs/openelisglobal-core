@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import us.mn.state.health.lims.common.dao.BaseDAO;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.test.valueholder.TestSection;
 
 /**
  *  @author     Hung Nguyen (Hung.Nguyen@health.state.mn.us)
@@ -43,4 +44,5 @@ public interface UserTestSectionDAO extends BaseDAO {
 	//bugzilla 2433
 	public List<Object> getAnalyses(HttpServletRequest request,
 			List<Object> analyses, List<Object> testSections) throws LIMSRuntimeException; 
+	public List<Object> getAllUserTestSectionsForAdmin(HttpServletRequest request) throws LIMSRuntimeException;
 }

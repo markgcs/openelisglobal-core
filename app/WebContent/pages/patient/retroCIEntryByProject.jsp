@@ -57,7 +57,9 @@ function /*void*/ setSaveButton() {
 		projectChecker.setSubjectOrSiteSubjectEntered();
 	}
 	var validToSave = fieldValidator.isAllValid() && requestType != "readonly";
-	$("saveButtonId").disabled = !validToSave;
+    if($("saveButtonId") != null) {
+		$("saveButtonId").disabled = !validToSave;
+	}
 }
 
 /**

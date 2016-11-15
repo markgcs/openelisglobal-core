@@ -39,7 +39,7 @@
     </tr>   
      <tr>
         <td width="20%">&nbsp;</td>
-        <td width="10%" noWrap><bean:message key="login.msg.password.current"/>:</td>
+        <td width="10%" align="right" noWrap><bean:message key="login.msg.password.current"/>:</td>
         <td colspan="2" align="left">
             <html:password name="<%=formName%>" property="password"/>
         </td>

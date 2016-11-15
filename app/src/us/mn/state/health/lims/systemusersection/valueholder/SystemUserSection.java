@@ -37,6 +37,7 @@ public class SystemUserSection extends BaseObject {
 	private ValueHolderInterface systemUser;
 	private String testSectionId;
 	private TestSection testSection;
+	private String isAdmin;
 	
 	public SystemUserSection() {
 		super();
@@ -116,9 +117,21 @@ public class SystemUserSection extends BaseObject {
 	}
 	
 	public void setTestSectionId(String testSectionId) {
+	    if(testSection!=null){
+	        testSectionId=testSection.getId();
+	    }
 		this.testSectionId = testSectionId;
 	}
 	public String getTestSectionId() {
 		return testSectionId;
 	}
+
+    public String getIsAdmin() {
+        return isAdmin;
+    }
+
+    public void setIsAdmin(String isAdmin) {
+        this.isAdmin = isAdmin;
+    }
+	
 }

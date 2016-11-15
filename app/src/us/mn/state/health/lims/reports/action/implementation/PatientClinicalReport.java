@@ -16,14 +16,28 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.NoteService;
+import us.mn.state.health.lims.common.services.ResultService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
+import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.referral.valueholder.Referral;
@@ -33,8 +47,6 @@ import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.sample.util.AccessionNumberUtil;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
 import us.mn.state.health.lims.test.valueholder.Test;
-
-import java.util.*;
 
 public class PatientClinicalReport extends PatientReport implements IReportCreator, IReportParameterSetter{
 
@@ -49,6 +61,7 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Finalized)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.NonConforming_depricated)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted)));
+		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Canceled)));
         analysisStatusIds.add(Integer.parseInt( StatusService.getInstance().getStatusID( AnalysisStatus.TechnicalRejected ) ) );
@@ -66,7 +79,8 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 
 	@Override
 	protected String reportFileName(){
-		return "PatientClinicalReport";
+		//return "TB_Patient_Report";
+		return "JgM03_BM_Patient_Report";
 	}
 
 	@Override
@@ -79,8 +93,8 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 		for(Analysis analysis : analysisList){
             sampleSet.add( analysis.getSampleItem() );
             boolean hasParentResult = analysis.getParentResult() != null;
-
-			if(analysis.getTest() != null ){
+			// case if there was a confirmation sample with no test specified
+			if(analysis.getTest() != null && !analysis.getStatusId().equals(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn))){
                 currentAnalysisService = new AnalysisService( analysis );
 				ClinicalPatientData resultsData = buildClinicalPatientData( hasParentResult );
 
@@ -97,8 +111,35 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 		}
 
         reportItems.addAll( currentSampleReportItems );
-        setCollectionTime( sampleSet, currentSampleReportItems, false );
+        setCollectionTime( sampleSet, currentSampleReportItems );
 	}
+
+    private void setCollectionTime( Set<SampleItem> sampleSet, List<ClinicalPatientData> currentSampleReportItems  ){
+        StringBuilder buffer = new StringBuilder(  );
+        boolean firstItem = true;
+        for( SampleItem sampleItem : sampleSet){
+            if( firstItem){
+                firstItem = false;
+            }else{
+                buffer.append( ", " );
+            }
+
+            buffer.append( sampleItem.getTypeOfSample().getLocalizedName() );
+
+            if( sampleItem.getCollectionDate() == null){
+                buffer.append( ": " );
+                buffer.append( StringUtil.getMessageForKey( "label.not.available" ) );
+            }else{
+                buffer.append( " " );
+                buffer.append( DateUtil.convertTimestampToStringDateAndConfiguredHourTime( sampleItem.getCollectionDate() ) );
+            }
+        }
+
+        String collectionTimes = buffer.toString();
+        for( ClinicalPatientData clinicalPatientData: currentSampleReportItems){
+            clinicalPatientData.setCollectionDateTime( collectionTimes );
+        }
+    }
 
     private List<ClinicalPatientData> addReferredTests(Referral referral, ClinicalPatientData parentData){
 
@@ -221,11 +262,12 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 
 				int o1Panel = Integer.MAX_VALUE;
 				int o2Panel = Integer.MAX_VALUE;
+				
 				if(o1.getPanel() != null){
-					o1Panel = o1.getPanel().getSortOrderInt();
+					o1Panel = Integer.valueOf(o1.getPanel().getSortOrder());
 				}
 				if(o2.getPanel() != null){
-					o2Panel = o2.getPanel().getSortOrderInt();
+					o2Panel = Integer.valueOf(o2.getPanel().getSortOrder());
 				}
 
 				int panelSort = o1Panel - o2Panel;
@@ -300,7 +342,8 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
 			throw new IllegalStateException("initializeReport not called first");
 		}
 
-		return errorFound ? new JRBeanCollectionDataSource(errorMsgs) : new JRBeanCollectionDataSource(reportItems);
+		//return errorFound ? new JRBeanCollectionDataSource(errorMsgs) : new JRBeanCollectionDataSource(reportItems);
+		return errorFound ? new JRBeanCollectionDataSource(errorMsgs) : new JRBeanCollectionDataSource(reportResults);
 	}
 
 	@Override
@@ -334,5 +377,10 @@ public class PatientClinicalReport extends PatientReport implements IReportCreat
     protected String getHeaderName(){
         return "GeneralHeader.jasper";
     }
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
 
 }

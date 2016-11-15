@@ -112,7 +112,7 @@ public class QaEventsEntryViewAction extends BaseAction {
 		String fullScreenSection = (String)dynaForm.get("fullScreenSection");
 		//bugzilla 2501
 		DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
-		List categoryDictionaries = dictionaryDAO.getDictionaryEntrysByCategoryAbbreviation(SystemConfiguration.getInstance().getQaEventDictionaryCategoryCategory());
+		List categoryDictionaries = dictionaryDAO.getDictionaryEntrysByCategory(SystemConfiguration.getInstance().getQaEventDictionaryCategoryCategory());
 		List testQaEvents = new ArrayList();
 		//bugzila 2501
 		List sampleQaEvents = new ArrayList();
@@ -226,7 +226,7 @@ public class QaEventsEntryViewAction extends BaseAction {
 			if (!StringUtil.isNullorNill(sample.getId())) {
 				sampleHuman.setSampleId(sample.getId());
 				sampleHumanDAO.getDataBySample(sampleHuman);
-				sampleOrganization.setSample(sample);
+				sampleOrganization.setSampleId(sample.getId());
 				sampleOrganizationDAO.getDataBySample(sampleOrganization);
 				sampleItem.setSample(sample);
 				sampleItemDAO.getDataBySample(sampleItem);

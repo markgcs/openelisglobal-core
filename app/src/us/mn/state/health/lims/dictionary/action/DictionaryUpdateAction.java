@@ -205,7 +205,9 @@ public class DictionaryUpdateAction extends BaseAction {
 			} else {
 				//bugzilla 1386
 				if (lre.getException() instanceof LIMSDuplicateRecordException) {
-					String messageKey = "dictionary.dictEntryByCategory";
+//					String messageKey = "dictionary.dictEntryByCategory";
+				    // change to confirm error message when having exception
+				    String messageKey = "dictionary.browse.title";
 					String msg =  ResourceLocator.getInstance().getMessageResources().getMessage(
 							locale, messageKey);
 					error = new ActionError("errors.DuplicateRecord.activate", msg,

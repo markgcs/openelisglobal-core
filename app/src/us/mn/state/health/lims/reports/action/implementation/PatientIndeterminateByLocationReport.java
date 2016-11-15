@@ -18,7 +18,9 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 
 import net.sf.jasperreports.engine.JRDataSource;
+
 import org.apache.commons.beanutils.PropertyUtils;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.organization.util.OrganizationTypeList;
@@ -126,4 +128,26 @@ public class PatientIndeterminateByLocationReport extends PatientIndeterminateRe
 	    super.createReportParameters();
 		reportParameters.put("contact", "CHU de Treichville, 01 BP 1712 Tel : 21-21-42-50/21-25-4189 Fax : 21-24-29-69/ 21-25-10-63");
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	    errorFound = false;
+	
+	    lowDateStr = hashmap.get("lowerDateRange");
+	    highDateStr = hashmap.get("upperDateRange");
+	    locationStr = hashmap.get("locationCode");
+	    dateRange = new DateRange(lowDateStr, highDateStr);
+	    
+	    createReportParameters();
+	
+	    errorFound = !validateSubmitParameters();
+		if (errorFound) {
+			return;
+		}
+	
+	    initializeReportItems();
+	    createReportItems();
+	}
+	
 }

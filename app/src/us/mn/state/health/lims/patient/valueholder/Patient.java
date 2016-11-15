@@ -71,6 +71,26 @@ public class Patient extends BaseObject {
 	private String selectedPersonId;
 	
 	private String chartNumber;
+	private Person personPatient;
+	
+	private String patientAgeUnit;
+	
+
+    public String getPatientAgeUnit() {
+		return patientAgeUnit;
+	}
+
+	public void setPatientAgeUnit(String patientAgeUnit) {
+		this.patientAgeUnit = patientAgeUnit;
+	}
+
+	public Person getPersonPatient() {
+		return personPatient;
+	}
+
+	public void setPersonPatient(Person personPatient) {
+		this.personPatient = personPatient;
+	}
 
 	public String getChartNumber() {
 		return chartNumber;
@@ -83,6 +103,7 @@ public class Patient extends BaseObject {
 	public Patient() {
 		super();
 		person = new ValueHolder();
+		personPatient=new Person();
 
 	}
 
@@ -241,7 +262,7 @@ public class Patient extends BaseObject {
 	public void setBirthDateForDisplay(String birthDateForDisplay) {
 		this.birthDateForDisplay = birthDateForDisplay;
 
-		if( birthDateForDisplay != null){
+		if( birthDateForDisplay != null){		
 			birthDate = DateUtil.convertAmbiguousStringDateToTimestamp(birthDateForDisplay);
 		}
 	}

@@ -99,7 +99,29 @@ public class PersonDAOImpl extends BaseDAOImpl implements PersonDAO {
 
 		return true;
 	}
+	@Override
+	public String insertDataWS(Person person) throws LIMSRuntimeException {
+		String id=null;
+		try {
+			 id = (String)HibernateUtil.getSession().save(person);
+			person.setId(id);
 
+			//bugzilla 1824 inserts will be logged in history table
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = person.getSysUserId();
+			String tableName = "PERSON";
+			auditDAO.saveNewHistory(person,sysUserId,tableName);
+
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+		} catch (Exception e) {
+			//bugzilla 2154
+			LogEvent.logError("PersonDAOImpl","insertData()",e.toString());
+			throw new LIMSRuntimeException("Error in Person insertData()", e);
+		}
+		return id;
+		
+	}
 
 	public void updateData(Person person) throws LIMSRuntimeException {
 

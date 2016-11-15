@@ -18,7 +18,7 @@
 <%!
 
 String allowEdits = "true";
-
+String errorNewLine = "";
 %>
 
 <%
@@ -32,6 +32,7 @@ if (request.getAttribute(IActionConstants.ALLOW_EDITS_KEY) != null) {
 function validateForm(form) {
  return validatePanelForm(form);
 }
+ 
 </script>
 
 <table>
@@ -49,7 +50,7 @@ function validateForm(form) {
 							<bean:message key="panel.panelName"/>:<span class="requiredlabel">*</span>
 						</td>	
 						<td width="12"> 
-							<html:text name="<%=formName%>" property="panelName" size="12"/>
+							<html:text name="<%=formName%>" property="panelName" size="12" maxlength="64"/>
 						</td>
 		</tr>
  		<tr>
@@ -57,7 +58,24 @@ function validateForm(form) {
 							<bean:message key="panel.description"/>:<span class="requiredlabel">*</span>
 						</td>	
 						<td width="50"> 
-							<html:text name="<%=formName%>" property="description" size="50" />
+							<html:text name="<%=formName%>" property="description" size="50" maxlength="64"/>
+						</td>
+		</tr>
+		
+		 <tr>
+						<td class="label">
+							<bean:message key="panel.isActive"/>:<span class="requiredlabel">*</span>
+						</td>	
+						<td width="1"> 
+							<html:text name="<%=formName%>" property="isActive" size="1" onblur="this.value=this.value.toUpperCase()" maxlength="1" />
+						</td>
+		</tr>
+		 <tr>
+						<td class="label">
+							<bean:message key="panel.sortOrder"/>:<span class="requiredlabel">*</span>
+						</td>	
+						<td width="10"> 
+							<html:text name="<%=formName%>" property="sortOrder" size="10" />
 						</td>
 		</tr>
 	

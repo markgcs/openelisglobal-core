@@ -299,7 +299,7 @@ public class ResultsReportProvider extends BaseReportsProvider{
 
 						sampleHuman.setSampleId(sample.getId());
 						sampleHumanDAO.getDataBySample(sampleHuman);
-						sampleOrganization.setSample(sample);
+						sampleOrganization.setSampleId(sample.getId());
 						sampleOrganizationDAO
 								.getDataBySample(sampleOrganization);
 						sampleItem.setSample(sample);
@@ -365,7 +365,7 @@ public class ResultsReportProvider extends BaseReportsProvider{
 									+ StringUtil.trim(organization.getStreetAddress()) + " "
 									+ StringUtil.trim(organization.getMultipleUnit()));
 							reportSample.setOrganizationCityStateZip(" "
-									+ StringUtil.trim(organization.getCity()) + " "
+									+ StringUtil.trim(organization.getCity().getDictEntry()) + " "
 									+ StringUtil.trim(organization.getState()) + " "
 									+ StringUtil.trim(organization.getZipCode()));
 						}

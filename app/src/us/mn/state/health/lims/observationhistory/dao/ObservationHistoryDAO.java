@@ -64,4 +64,7 @@ public interface ObservationHistoryDAO {
 	public ObservationHistory getById(ObservationHistory observation) throws LIMSRuntimeException;
 
     public List<ObservationHistory> getObservationHistoriesByValueAndType( String value, String typeId, String valueType ) throws LIMSRuntimeException;
+    public boolean insertDataWS(ObservationHistory observation) throws LIMSRuntimeException;
+    //Dung add
+    public ObservationHistory getObservationHistoriesByPatientIdAndTypeOnlyOne( String patientId, String observationHistoryTypeId ) throws LIMSRuntimeException;
 }

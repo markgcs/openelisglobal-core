@@ -37,4 +37,5 @@ public interface ReportExternalExportDAO extends BaseDAO{
 	public ReportExternalExport loadReport(ReportExternalExport report) throws LIMSRuntimeException;
 	public ReportExternalExport readReportExternalExport(String idString) throws LIMSRuntimeException;
 	public void delete(ReportExternalExport report) throws LIMSRuntimeException;
+	public List<ReportExternalExport> getReportsByAccessionNumber(String accessionNumber) throws LIMSRuntimeException;
 }

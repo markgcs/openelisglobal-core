@@ -18,11 +18,16 @@ package us.mn.state.health.lims.qaevent.action.retroCI;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
+import org.apache.struts.Globals;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessage;
+import org.apache.struts.action.ActionMessages;
+
 import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.BaseActionForm;
+import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.exception.LIMSInvalidConfigurationException;
 import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.formfields.FormFields.Field;
@@ -77,6 +82,7 @@ import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSample;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
@@ -118,9 +124,18 @@ public class NonConformityAction extends BaseAction{
 		String labNumber = request.getParameter("labNo");
 
 		if(!GenericValidator.isBlankOrNull(labNumber)){
-
-			sample = getSampleForLabNumber(labNumber);
-
+		    //Created by Dung 2016.07.12
+	        //Check accession number is exists in the system
+		    sample = getSampleForLabNumber(labNumber);
+		        if(sample==null){
+		                ActionMessage error=new ActionMessage("errors.accessionNumber", null, null);
+		                ActionMessages errors  =new ActionMessages(); 
+		                errors.add(ActionMessages.GLOBAL_MESSAGE,error);
+		                saveErrors(request, errors);
+		                request.setAttribute(Globals.ERROR_KEY, errors);
+		                return mapping.findForward(FWD_FAIL);
+		        }
+			//end created by Dung
 			sampleFound = !(sample == null || GenericValidator.isBlankOrNull(sample.getId()));
 
 			PropertyUtils.setProperty(dynaForm, "labNo", labNumber);
@@ -169,7 +184,19 @@ public class NonConformityAction extends BaseAction{
 				PropertyUtils.setProperty(dynaForm, "providerWorkPhone", "");
 			}
 			
-			PropertyUtils.setProperty(dynaForm, "departments", DisplayListService.getList(ListType.HAITI_DEPARTMENTS));
+			if (patientService != null) {
+				// Get street and city/province values to display in Non-comformity form
+				Map<String, String> addressComponentsPatient = patientService.getAddressComponents();
+                PropertyUtils.setProperty(dynaForm, "providerFirstName", patientService.getPerson().getFirstName());
+				PropertyUtils.setProperty(dynaForm, "providerStreetAddress", addressComponentsPatient.get("Street"));
+				if (addressComponentsPatient.get("City").equals("0")) {
+				    PropertyUtils.setProperty(dynaForm, "providerCommune", null);
+				} else {
+				    PropertyUtils.setProperty(dynaForm, "providerCommune", addressComponentsPatient.get("City"));
+				}
+				// change to get List of patientClinicalDept instead of haitiDepartment
+				PropertyUtils.setProperty(dynaForm, "departments", DisplayListService.getList(ListType.DEPARTMENT));
+			}
 		}
 
 		return mapping.findForward(FWD_SUCCESS);
@@ -200,11 +227,16 @@ public class NonConformityAction extends BaseAction{
 			PropertyUtils.setProperty(dynaForm, "STNumber", STNo);
 		}
 
-		
 		String nationalId = patientService.getNationalId();
 		if(!GenericValidator.isBlankOrNull(nationalId)){
 			PropertyUtils.setProperty(dynaForm, "nationalIdNew", Boolean.FALSE);
 			PropertyUtils.setProperty(dynaForm, "nationalId", nationalId);
+		}
+		
+		String externalId = patientService.getExternalId();
+		if(!GenericValidator.isBlankOrNull(externalId)){
+			PropertyUtils.setProperty(dynaForm, "externalIdNew", Boolean.FALSE);
+			PropertyUtils.setProperty(dynaForm, "externalId", externalId);
 		}
 		
 		ObservationHistory doctorObservation = getRefererObservation(sample);

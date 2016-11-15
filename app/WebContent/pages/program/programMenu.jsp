@@ -35,7 +35,7 @@
 	<bean:define id="progID" name="prog" property="id"/>
 	  <tr>
 	   <td class="textcontent">
-	      <html:multibox name="<%=formName%>" property="selectedIDs">
+	      <html:multibox name="<%=formName%>" property="selectedIDs" onclick="output()">
 	         <bean:write name="progID" />
 	      </html:multibox>
      

@@ -42,9 +42,9 @@
 	   <th><%--bugzilla 1412 rearrange--%>
 	   	  <bean:message key="organization.organizationName"/>
 	   </th>
-	   <th>
+	  <%--  <th>
 	   	  <bean:message key="organization.parent"/>
-	   </th>
+	   </th> --%>
 	   <th>
 	   	  <%= StringUtil.getContextualMessageForKey("organization.short") %>
 	   </th>
@@ -67,9 +67,9 @@
 	   	  <bean:message key="organization.zipCode"/>
 	   </th>
 	   <% } %>
-	   <th>
+	  <%--  <th>
 	   	  <bean:message key="organization.clia.number"/>
-	   </th>
+	   </th> --%>
 	   <% if( useMLS ){ %>
 	   <th>
 	   	  <bean:message key="organization.mls.lab"/>
@@ -98,12 +98,12 @@
 	   <td class="textcontent">
 	   	  <bean:write name="org" property="organizationName"/>
 	   </td>
-	   <td class="textcontent">
+	  <%--  <td class="textcontent">
 	    <logic:notEmpty name="org" property="organization">
 	        <bean:write name="org" property="organization.organizationName"/>
 	    </logic:notEmpty>
 	      &nbsp;
-	   </td>
+	   </td> --%>
 	   <td class="textcontent">
 	      <logic:notEmpty name="org" property="shortName">
 	   	  <bean:write name="org" property="shortName"/>
@@ -120,7 +120,7 @@
 	   	  &nbsp;
 	   </td>
 	   <td class="textcontent">
-	   	  <bean:write name="org" property="city"/>
+	   	  <bean:write name="org" property="city.dictEntry"/>
 	   	  &nbsp;
 	   </td>
 	   <% if( useOrgState ){ %>
@@ -135,10 +135,10 @@
 	   	  &nbsp;
 	   </td>
 	   <% } %>
-	   <td class="textcontent">
+	<%--    <td class="textcontent">
 	   	  <bean:write name="org" property="cliaNum"/>
 	   	  &nbsp;
-	   </td>
+	   </td> --%>
 	   <% if( useMLS ){ %>
 	   <td class="textcontent">
 	     <bean:write name="org" property="mlsLabFlag"/>

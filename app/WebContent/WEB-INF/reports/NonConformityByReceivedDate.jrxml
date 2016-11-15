@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="NonConformityByReceivedDate" pageWidth="792" pageHeight="595" orientation="Landscape" columnWidth="752" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="MessageResources">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="NonConformityByReceivedDate" pageWidth="792" pageHeight="595" orientation="Landscape" columnWidth="752" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30">
 	<property name="ireport.scriptlethandling" value="0"/>
 	<property name="ireport.encoding" value="UTF-8"/>
 	<property name="ireport.zoom" value="0.9810479449593481"/>
@@ -67,7 +67,7 @@
 					<textElement textAlignment="Left" verticalAlignment="Middle">
 						<font size="11" isBold="true" isItalic="true"/>
 					</textElement>
-					<textFieldExpression class="java.lang.String"><![CDATA[$R{report.orderNo}]]></textFieldExpression>
+					<textFieldExpression class="java.lang.String"><![CDATA[$P{localization}.get("orderNo")]]></textFieldExpression>
 				</textField>
 				<textField isStretchWithOverflow="true" isBlankWhenNull="true">
 					<reportElement key="textField" positionType="FixRelativeToBottom" mode="Transparent" x="87" y="10" width="165" height="18" forecolor="#000000" backcolor="#CCCCFF"/>
@@ -246,17 +246,11 @@
 			</textField>
 			<subreport>
 				<reportElement x="107" y="1" width="535" height="77"/>
-				<subreportParameter name="leftHeaderImage">
-					<subreportParameterExpression><![CDATA[$P{leftHeaderImage}]]></subreportParameterExpression>
-				</subreportParameter>
-				<subreportParameter name="SUBREPORT_DIR">
-					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
-				</subreportParameter>
 				<subreportParameter name="labName2">
 					<subreportParameterExpression><![CDATA[$P{labName2}]]></subreportParameterExpression>
 				</subreportParameter>
-				<subreportParameter name="REPORT_LOCALE">
-					<subreportParameterExpression><![CDATA[$P{REPORT_LOCALE}]]></subreportParameterExpression>
+				<subreportParameter name="directorName">
+					<subreportParameterExpression><![CDATA[$P{directorName}]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="labName1">
 					<subreportParameterExpression><![CDATA[$P{labName1}]]></subreportParameterExpression>
@@ -264,11 +258,14 @@
 				<subreportParameter name="reportTitle">
 					<subreportParameterExpression><![CDATA[$P{reportTitle}]]></subreportParameterExpression>
 				</subreportParameter>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
 				<subreportParameter name="rightHeaderImage">
 					<subreportParameterExpression><![CDATA[$P{rightHeaderImage}]]></subreportParameterExpression>
 				</subreportParameter>
-				<subreportParameter name="directorName">
-					<subreportParameterExpression><![CDATA[$P{directorName}]]></subreportParameterExpression>
+				<subreportParameter name="leftHeaderImage">
+					<subreportParameterExpression><![CDATA[$P{leftHeaderImage}]]></subreportParameterExpression>
 				</subreportParameter>
 				<dataSourceExpression><![CDATA[new net.sf.jasperreports.engine.JREmptyDataSource()]]></dataSourceExpression>
 				<subreportExpression class="java.lang.String"><![CDATA[$P{SUBREPORT_DIR} + $P{headerName}]]></subreportExpression>

@@ -29,6 +29,7 @@ import org.apache.struts.action.ActionMapping;
 
 import us.mn.state.health.lims.common.action.BaseMenuAction;
 import us.mn.state.health.lims.common.util.DateUtil;
+import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.login.dao.LoginDAO;
 import us.mn.state.health.lims.login.daoimpl.LoginDAOImpl;
@@ -56,16 +57,29 @@ public class UnifiedSystemUserMenuAction extends BaseMenuAction {
 
 		String stringStartingRecNo = (String) request.getAttribute("startingRecNo");
 		int startingRecNo = Integer.parseInt(stringStartingRecNo);
+		
+		String searchString = (String) request.getParameter("searchString");
+        String doingSearch = (String) request.getParameter("search");
 
 		SystemUserDAO systemUserDAO = new SystemUserDAOImpl();
-		systemUsers = systemUserDAO.getPageOfSystemUsers(startingRecNo);
-
+		
+		if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES)) {
+		    systemUsers = systemUserDAO.getPageOfSearchSystemUsers(searchString);
+        } else {
+            systemUsers = systemUserDAO.getPageOfSystemUsers(startingRecNo);
+        }
+		
 		List<UnifiedSystemUser> unifiedUsers = getUnifiedUsers(systemUsers);
 		
 		request.setAttribute("menuDefinition", "UnifiedSystemUserMenuDefinition");
-
+		request.setAttribute(MENU_SEARCH_BY_TABLE_COLUMN, "systemuser.loginName");
 		
 		setDisplayPageBounds(request, systemUsers.size(), startingRecNo, systemUserDAO, SystemUser.class);
+		
+		if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES) ) {
+            request.setAttribute(IN_MENU_SELECT_LIST_HEADER_SEARCH, "true");
+            request.setAttribute(MENU_SELECT_LIST_HEADER_SEARCH_STRING, searchString);
+        }
 		
 		return unifiedUsers;
 	}

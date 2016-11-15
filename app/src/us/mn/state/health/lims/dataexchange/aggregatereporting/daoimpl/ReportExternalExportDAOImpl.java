@@ -223,4 +223,26 @@ public class ReportExternalExportDAOImpl extends BaseDAOImpl implements ReportEx
 			handleException(e, "delete");
 		}
 	}
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<ReportExternalExport> getReportsByAccessionNumber(String accessionNumber) throws LIMSRuntimeException {
+        String sql = "from ReportExternalExport rq where rq.data like :accessionNumber";
+
+        try {
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setParameter("accessionNumber", "%"+accessionNumber+"%");
+            List<ReportExternalExport> reports = query.list();
+
+            closeSession();
+
+            return reports;
+        } catch (HibernateException e) {
+            handleException(e, "getReportsByAccessionNumber");
+        }
+
+        return null;
+    }
 }

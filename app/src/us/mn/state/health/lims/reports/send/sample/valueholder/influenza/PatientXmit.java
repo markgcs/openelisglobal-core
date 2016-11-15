@@ -1,129 +1,146 @@
 /**
-* The contents of this file are subject to the Mozilla Public License
-* Version 1.1 (the "License"); you may not use this file except in
-* compliance with the License. You may obtain a copy of the License at
-* http://www.mozilla.org/MPL/ 
-* 
-* Software distributed under the License is distributed on an "AS IS"
-* basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
-* License for the specific language governing rights and limitations under
-* the License.
-* 
-* The Original Code is OpenELIS code.
-* 
-* Copyright (C) The Minnesota Department of Health.  All Rights Reserved.
-*/
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/ 
+ * 
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations under
+ * the License.
+ * 
+ * The Original Code is OpenELIS code.
+ * 
+ * Copyright (C) The Minnesota Department of Health.  All Rights Reserved.
+ */
 package us.mn.state.health.lims.reports.send.sample.valueholder.influenza;
 
-import us.mn.state.health.lims.common.util.StringUtil;
 
 /**
- * @author diane benz 
- *  bugzilla 2393
+ * @author diane benz bugzilla 2393
  */
-public class PatientXmit extends
-		us.mn.state.health.lims.patient.valueholder.Patient {
+public class PatientXmit extends us.mn.state.health.lims.patient.valueholder.Patient {
 
-	private String lastName;
+    private String lastName;
 
-	private String firstName;
-	
-	private String middleName;
+    private String firstName;
 
-	private String streetAddress;
-	
-	private String multipleUnit;
+    private String middleName;
 
-	private String city;
+    private String streetAddress;
 
-	private String state;
+    private String multipleUnit;
 
-	private String zipCode;
-	
-	private String county;
-	
-	public PatientXmit() {
-	}
+    private String city;
 
-	public String getCounty() {
-		return county;
-	}
+    private String state;
 
-	public void setCounty(String county) {
-		this.county = county;
-	}
+    private String zipCode;
 
-	public String getCity() {
-		if (!StringUtil.isNullorNill(city)) {
-			city.trim();
-		}
-		return city;
-	}
+    private String county;
 
-	public void setCity(String city) {
-		this.city = city;
-	}
+    public PatientXmit() {
+    }
 
-	public String getState() {
-		if (!StringUtil.isNullorNill(state)) {
-			state.trim();
-		}
-		return state;
-	}
+    public String getCounty() {
+        return county;
+    }
 
-	public void setState(String state) {
-		this.state = state;
-	}
+    public void setCounty(String county) {
+        this.county = county;
+    }
 
-	public String getStreetAddress() {
-		return streetAddress;
-	}
+    public String getCity() {
+        // nhuql.gv CLOSE follow request of FindBugs
+        // if (!StringUtil.isNullorNill(city)) {
+        // city.trim();
+        // }
+        // END nhuql.gv CLOSE
 
-	public void setStreetAddress(String streetAddress) {
-		this.streetAddress = streetAddress;
-	}
+        // nhuql.gv ADD
 
-	public String getZipCode() {
-		if (!StringUtil.isNullorNill(zipCode)) {
-			zipCode.trim();
-		}
-		return zipCode;
-	}
+        // comment out, this method trimEnd is not found in svn.
+        city = org.apache.commons.lang.StringUtils.EMPTY;// StringUtil.trimEnd(city);
+        return city;
+    }
 
-	public void setZipCode(String zipCode) {
-		this.zipCode = zipCode;
-	}
+    public void setCity(String city) {
+        this.city = city;
+    }
 
-	public String getLastName() {
-		return lastName;
-	}
+    public String getState() {
+        // nhuql.gv CLOSE follow request of FindBugs
+        // if (!StringUtil.isNullorNill(state)) {
+        // state.trim();
+        // }
+        // END nhuql.gv CLOSE
 
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
+        // nhuql.gv ADD
+        // comment out, this method trimEnd is not found in svn.
+        city = org.apache.commons.lang.StringUtils.EMPTY;// StringUtil.trimEnd(city);
+        return city;
+    }
 
-	public String getFirstName() {
-		return firstName;
-	}
+    public void setState(String state) {
+        this.state = state;
+    }
 
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
+    public String getStreetAddress() {
+        return streetAddress;
+    }
 
-	public String getMiddleName() {
-		return middleName;
-	}
+    public void setStreetAddress(String streetAddress) {
+        this.streetAddress = streetAddress;
+    }
 
-	public void setMiddleName(String middleName) {
-		this.middleName = middleName;
-	}
+    public String getZipCode() {
+        // nhuql.gv CLOSE follow request of FindBugs
+        // if (!StringUtil.isNullorNill(zipCode)) {
+        // zipCode.trim();
+        // }
+        // END nhuql.gv CLOSE
 
-	public String getMultipleUnit() {
-		return multipleUnit;
-	}
+        // nhuql.gv ADD
 
-	public void setMultipleUnit(String multipleUnit) {
-		this.multipleUnit = multipleUnit;
-	}
+        // comment out, this method trimEnd is not found in svn.
+        zipCode = org.apache.commons.lang.StringUtils.EMPTY;// StringUtil.trimEnd(zipCode);
+        return zipCode;
+    }
+
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getMiddleName() {
+        return middleName;
+    }
+
+    public void setMiddleName(String middleName) {
+        this.middleName = middleName;
+    }
+
+    public String getMultipleUnit() {
+        return multipleUnit;
+    }
+
+    public void setMultipleUnit(String multipleUnit) {
+        this.multipleUnit = multipleUnit;
+    }
 
 }

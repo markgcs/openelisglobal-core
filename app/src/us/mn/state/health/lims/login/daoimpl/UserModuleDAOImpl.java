@@ -25,6 +25,7 @@ import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.security.PageIdentityUtil;
+import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.login.dao.LoginDAO;
 import us.mn.state.health.lims.login.dao.UserModuleDAO;
 import us.mn.state.health.lims.login.valueholder.Login;
@@ -33,6 +34,7 @@ import us.mn.state.health.lims.systemusermodule.dao.PermissionAgentModuleDAO;
 import us.mn.state.health.lims.systemusermodule.daoimpl.PermissionAgentFactory;
 import us.mn.state.health.lims.systemusermodule.daoimpl.SystemUserModuleDAOImpl;
 import us.mn.state.health.lims.systemusermodule.valueholder.SystemUserModule;
+import us.mn.state.health.lims.common.action.IActionConstants;;
 
 /**
  * @author Hung Nguyen (Hung.Nguyen@health.state.mn.us)
@@ -58,8 +60,9 @@ public class UserModuleDAOImpl extends BaseDAOImpl implements UserModuleDAO {
 		boolean isFound = false;
 		try {
 			UserSessionData usd = (UserSessionData) request.getSession().getAttribute(USER_SESSION_DATA);
-			PermissionAgentModuleDAO permissionAgentModuleDAO = PermissionAgentFactory.getPermissionAgentImpl();//  new SystemUserModuleDAOImpl();
-			isFound = permissionAgentModuleDAO.doesUserHaveAnyModules(usd.getSystemUserId());
+			//PermissionAgentModuleDAO permissionAgentModuleDAO = PermissionAgentFactory.getPermissionAgentImpl();//  new SystemUserModuleDAOImpl();
+			SystemUserModuleDAOImpl systemUserMod = new SystemUserModuleDAOImpl();
+			isFound = systemUserMod.doesUserHaveAnyModules(usd.getSystemUserId());
 		} catch (LIMSRuntimeException lre) {
 			// bugzilla 2154
 			LogEvent.logError("UserModuleDAOImpl", "isUserModuleFound()", lre.toString());
@@ -90,7 +93,7 @@ public class UserModuleDAOImpl extends BaseDAOImpl implements UserModuleDAO {
 
 					// we want to check only part of action class name
 					// because each module/action can have up to 5 or 6 names
-					if (actionName.equals(userAssignedModule) || actionName.startsWith(userAssignedModule + "Menu")) {
+					if (isVerifyUserModuleOfValidation (request, actionName, userAssignedModule) || actionName.equals(userAssignedModule) || actionName.startsWith(userAssignedModule + "Menu")) {
 						isFound = true;
 						setupUserButtons(request, systemUserModule, actionName);
 						// bugzilla 2154
@@ -264,11 +267,14 @@ public class UserModuleDAOImpl extends BaseDAOImpl implements UserModuleDAO {
 			//actionName.  This does not seem correct.
 			if ((actionName == null) || (actionName.length() == 0)) {
 				actionName = userAssignedModule;
+					
 			} else if (actionName.equals("QuickEntryAddTestPopup")) {
 				actionName = "QuickEntry";
+				
 			} else if (actionName.equals("TestManagementAddTestPopup")) {
 				actionName = "TestManagement";
 				// bugzilla 1844: removing HumanSampleOneAddTestPopup
+				
 			} else if ( actionName.equals("TestAnalyteTestResultAddDictionaryRGPopup") || 
 				actionName.equals("TestAnalyteTestResultAddNonDictionaryRGPopup") ||
 				actionName.equals("TestAnalyteTestResultAddRGPopup") ||
@@ -277,9 +283,11 @@ public class UserModuleDAOImpl extends BaseDAOImpl implements UserModuleDAO {
 				actionName.equals("TestAnalyteTestResultEditDictionaryRGPopup") ||
 				actionName.equals("TestAnalyteTestResultEditNonDictionaryRGPopup") ) {
 				actionName = "TestAnalyteTestResult";
+				
 			} else if ( actionName.equals("QaEventsEntryAddQaEventsToTestsPopup") || 
 				actionName.equals("QaEventsEntryAddActionsToQaEventsPopup")) {
 				actionName = "QaEventsEntry";
+				
 			}
 			// bugzilla 2204
 			else if (actionName.equals("NotesPopup")) {
@@ -401,5 +409,31 @@ public class UserModuleDAOImpl extends BaseDAOImpl implements UserModuleDAO {
 		} else {
 			request.setAttribute(DEACTIVATE_DISABLED, TRUE);
 		}
+	}
+	
+	private boolean isVerifyUserModuleOfValidation(HttpServletRequest request, String actionName, String userAssignedModule) {
+		boolean canAccess = false;
+		String testSection = request.getParameter("type");
+		String accessionNumber = request.getParameter("accessionNumber");
+		String report = request.getParameter("report");
+		if (userAssignedModule.contains(":")){	
+			String assignedTestSection = userAssignedModule.substring(userAssignedModule.indexOf(":") + 1);
+			if(!StringUtil.isNullorNill(testSection) && testSection.equals(assignedTestSection)){
+				canAccess = true;
+			} else if(!StringUtil.isNullorNill(report) && report.equals(assignedTestSection)){
+				canAccess = true;
+			}
+		} else if (!StringUtil.isNullorNill(testSection) && actionName.equals(IActionConstants.VALIDATION) && (testSection.equals("accessionnumber") || !StringUtil.isNullorNill(accessionNumber))) {
+			if (userAssignedModule.equals(IActionConstants.VALIDATION_BY_ACCESSION_NUMBER) || userAssignedModule.equals("ResultValidationSave")){
+				canAccess = true;
+			}
+			
+		} else if (actionName.equalsIgnoreCase(IActionConstants.LOGBOOK_RESULTS) && actionName.equals(userAssignedModule)) {
+			if (!StringUtil.isNullorNill(testSection)) {
+				canAccess = true;
+			}
+		}
+			
+		return canAccess;
 	}
 }

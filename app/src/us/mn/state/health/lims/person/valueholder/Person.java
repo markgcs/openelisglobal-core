@@ -51,12 +51,22 @@ public class Person extends BaseObject {
 	private String fax;
 
 	private String email;
+	//Dung add
+	private String age;
 
 	private Set patients = new HashSet(0);
 	
 	public Person() {
 		super();
 
+	}
+
+	public String getAge() {
+		return age;
+	}
+
+	public void setAge(String age) {
+		this.age = age;
 	}
 
 	public void setId(String id) {

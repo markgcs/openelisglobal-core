@@ -62,6 +62,7 @@ public class PatientHistoryService extends HistoryService {
 		attributeToIdentifierMap.put(NATIONAL_ID_ATTRIBUTE, StringUtil.getMessageForKey("sample.entry.project.subjectNumber"));
 		attributeToIdentifierMap.put(FIRST_NAME_ATTRIBUTE, StringUtil.getMessageForKey("person.firstName"));
 		attributeToIdentifierMap.put(LAST_NAME_ATTRIBUTE, StringUtil.getMessageForKey("person.lastName"));
+		attributeToIdentifierMap.put(EXTERNAL_ID_ATTRIBUTE, StringUtil.getMessageForKey("patient.externalId"));
 
 		newValueMap = new HashMap<String, String>();
 		newValueMap.put(GENDER_ATTRIBUTE, patient.getGender());
@@ -82,14 +83,13 @@ public class PatientHistoryService extends HistoryService {
 	protected void addInsertion(History history, List<AuditTrailItem> items) {
 		setAndAddIfValueNotNull(items, history, DOB_ATTRIBUTE);
 		setAndAddIfValueNotNull(items, history, GENDER_ATTRIBUTE);
-		identifier = "Subject No.";
+		identifier = StringUtil.getMessageForKey("report.subjectNo");
 		setAndAddIfValueNotNull(items, history, NATIONAL_ID_ATTRIBUTE);
 
-		identifier = "Site Subject No.";
+		identifier = StringUtil.getMessageForKey("report.siteSubjectNo");
 		setAndAddIfValueNotNull(items, history, EXTERNAL_ID_ATTRIBUTE);
 		setAndAddIfValueNotNull(items, history, FIRST_NAME_ATTRIBUTE);
 		setAndAddIfValueNotNull(items, history, LAST_NAME_ATTRIBUTE);
-
 	}
 
 	@Override
@@ -102,7 +102,7 @@ public class PatientHistoryService extends HistoryService {
 		simpleChange(changeMap, changes, NATIONAL_ID_ATTRIBUTE);
 		simpleChange(changeMap, changes, FIRST_NAME_ATTRIBUTE);
 		simpleChange(changeMap, changes, LAST_NAME_ATTRIBUTE);
-
+		simpleChange(changeMap, changes, EXTERNAL_ID_ATTRIBUTE);
 	}
 
 	@Override

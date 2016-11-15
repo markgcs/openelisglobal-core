@@ -289,10 +289,10 @@ public class ProgramDAOImpl extends BaseDAOImpl implements ProgramDAO {
 
 			// not case sensitive hemolysis and Hemolysis are considered
 			// duplicates
-			String sql = "from Program t where (trim(lower(t.programName)) = :param and t.id != :param2) or (trim(lower(t.code)) = :param3 and t.id != :param2)";
+			String sql = "from Program t where (trim(lower(t.programName)) = :proName and t.id != :programId) or (trim(lower(t.code)) = :code and t.id != :programId)";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(
 					sql);
-			query.setParameter("param", program.getProgramName().toLowerCase().trim());
+			query.setParameter("proName", program.getProgramName().toLowerCase().trim());
 	
 			// initialize with 0 (for new records where no id has been generated
 			// yet
@@ -304,8 +304,10 @@ public class ProgramDAOImpl extends BaseDAOImpl implements ProgramDAO {
 			if (!StringUtil.isNullorNill(program.getCode())) {
 				programCode = program.getCode().trim().toLowerCase();
 			}
-			query.setParameter("param2", programId);
-			query.setParameter("param3", programCode);
+			
+			query.setInteger("programId", Integer.parseInt(programId));
+			query.setParameter("code", programCode);
+			
 
 			list = query.list();
 			HibernateUtil.getSession().flush();
@@ -325,4 +327,26 @@ public class ProgramDAOImpl extends BaseDAOImpl implements ProgramDAO {
 		}
 	}
 
+	//get program by program code
+	public Program getProgramByProgramCode(String programCode) throws LIMSRuntimeException {
+	    Program program = null;
+	    
+	    try {
+            String sql = "from Program p where p.code = :programCode";
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setString("programCode",programCode);
+
+            List list = query.list();
+            if (list.size() > 0) {
+                program = (Program) list.get(0);
+            }
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch (Exception e) {
+            //bugzilla 2154
+            LogEvent.logError("ProgramDAOImpl","getProgramByProgramCode()",e.toString());
+            throw new LIMSRuntimeException("Error in Program getProgramByProgramCode()", e);
+        }
+	    return program;
+	}
 }

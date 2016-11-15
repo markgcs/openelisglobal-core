@@ -62,6 +62,21 @@ public class AjaxXMLServlet extends AjaxServlet {
 			response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 		}
 	}
+	
+	public void sendData(String string1,
+            HttpServletRequest request,  HttpServletResponse response)
+            throws IOException, ServletException {
+
+        if (!StringUtil.isNullorNill(string1)) {
+            response.setContentType("text/xml");
+            response.setHeader("Cache-Control", "no-cache");
+            response.getWriter().write("<popupData>");
+            response.getWriter().write("</popupData>");
+            
+        } else {
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        }
+    }
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException, LIMSRuntimeException {

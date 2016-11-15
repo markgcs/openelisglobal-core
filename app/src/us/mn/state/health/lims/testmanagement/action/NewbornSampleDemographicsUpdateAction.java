@@ -288,7 +288,7 @@ public class NewbornSampleDemographicsUpdateAction extends BaseAction {
 			o = organizationDAO.getOrganizationByLocalAbbreviation(o, true);
 			SampleOrganization sampleOrganization = new SampleOrganization();
 			SampleOrganizationDAO sampleOrganizationDAO = new SampleOrganizationDAOImpl();
-			sampleOrganization.setSample(sample);
+			sampleOrganization.setSampleId(sample.getId());
 			sampleOrganizationDAO.getDataBySample(sampleOrganization);
 			sampleOrganization.setSample(sample);			
 			sampleOrganization.setOrganization(o);

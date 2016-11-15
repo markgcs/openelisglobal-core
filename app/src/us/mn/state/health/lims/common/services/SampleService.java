@@ -60,6 +60,7 @@ public class SampleService {
     private static final SampleQaEventDAO sampleQaEventDAO  = new SampleQaEventDAOImpl();
     private static final SampleRequesterDAO sampleRequesterDAO = new SampleRequesterDAOImpl();
     private static final PersonDAO personDAO = new PersonDAOImpl();
+    private static final Set<Integer> CONFIRMATION_STATUS_SET = new HashSet<Integer>(  );
     public static final String TABLE_REFERENCE_ID;
     private static Long PERSON_REQUESTER_TYPE_ID;
     private static Long ORGANIZATION_REQUESTER_TYPE_ID;
@@ -85,7 +86,9 @@ public class SampleService {
     public SampleService( String accessionNumber){
         this.sample = sampleDAO.getSampleByAccessionNumber( accessionNumber );
     }
-
+    static {
+        CONFIRMATION_STATUS_SET.add( Integer.parseInt( StatusService.getInstance().getStatusID( StatusService.AnalysisStatus.ReferredIn ) ) );
+    }
 	/**
 	 * Gets the date of when the order was completed
 	 * @return The date of when it was completed, null if it was not yet completed
@@ -147,7 +150,7 @@ public class SampleService {
         return sample.getReceived24HourTimeForDisplay();
     }
     public boolean isConfirmationSample(){
-        return sample != null && sample.getIsConfirmation();
+        return !analysisDAO.getAnalysesBySampleIdAndStatusId( sample.getId(), CONFIRMATION_STATUS_SET ).isEmpty();
     }
 
     public Sample getSample(){
@@ -207,4 +210,16 @@ public class SampleService {
         return null;
     }
 
+    boolean isConfirmationOrder(){
+        if( sample != null){
+            List<Analysis> analysisList = analysisDAO.getAnalysesBySampleId( sample.getId() );
+            for(Analysis analysis : analysisList){
+                if( StatusService.getInstance().matches( analysis.getStatusId(), StatusService.AnalysisStatus.ReferredIn )){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

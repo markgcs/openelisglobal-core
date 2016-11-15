@@ -196,7 +196,9 @@ function  /*void*/ savePage__(action) {
 
 function /*void*/ setSaveButton() {
 	var validToSave = fieldValidator.isAllValid();
-	$("saveButtonId").disabled = !validToSave;
+    if($("saveButtonId") != null) {
+		$("saveButtonId").disabled = !validToSave;
+	}
 }
 
 </script>

@@ -53,4 +53,9 @@ public interface SystemUserDAO extends BaseDAO {
 	public SystemUser getDataForLoginUser(String name)throws LIMSRuntimeException;
 
 	public SystemUser getUserById(String userId) throws LIMSRuntimeException; 
+	
+	public boolean duplicateSystemUserExists(SystemUser systemUser) throws LIMSRuntimeException;
+	
+	public List<SystemUser> getPageOfSearchSystemUsers (String stringSearch) throws LIMSRuntimeException;
+
 }

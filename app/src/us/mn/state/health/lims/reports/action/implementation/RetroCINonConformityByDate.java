@@ -17,12 +17,19 @@
 */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 
 public class RetroCINonConformityByDate extends NonConformityByDate implements IReportCreator {
 
 	@Override
 	protected String getHeaderName() {
 		return "RetroCIHeader.jasper";
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
 	}
 
 }

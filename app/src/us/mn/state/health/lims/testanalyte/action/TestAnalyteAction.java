@@ -70,7 +70,16 @@ public class TestAnalyteAction extends BaseAction {
 			TestAnalyteDAO testAnalyteDAO = new TestAnalyteDAOImpl();
 			testAnalyteDAO.getData(testAnalyte);
 
+			// initialize testName
+			if (testAnalyte.getTest() != null) {
+				testAnalyte.setTestName( TestService.getUserLocalizedTestName( testAnalyte.getTest() ));
+			}
 
+			// initialize analyteName
+			if (testAnalyte.getAnalyte() != null) {
+				testAnalyte.setAnalyteName(testAnalyte.getAnalyte()
+						.getAnalyteName());
+			}
 			
 			isNew = false; // this is to set correct page title
 

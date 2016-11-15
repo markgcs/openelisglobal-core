@@ -80,6 +80,25 @@
   </html:link>
 </li>
 <% } %>
+<%-- li>
+    <html:link action="/NoteMenu">
+    <bean:message key="note.browse.title" />
+  </html:link>
+</li --%>
+<% if (adminFields.useField(Field.CityMenu)) { %>
+<li>
+    <html:link action="/CityMenu">
+    <bean:message key="city.browse.title" />
+  </html:link>
+</li>
+<% } %>
+<% if (adminFields.useField(Field.DistrictMenu)) { %>
+<li>
+    <html:link action="/DistrictMenu">
+    <bean:message key="district.browse.title" />
+  </html:link>
+</li>
+<% } %>
 <% if(adminFields.useField(Field.OrganizationMenu)){ %>
 <li>
     <html:link action="/OrganizationMenu">
@@ -171,6 +190,13 @@
   </html:link>
 </li>
 <% } %>
+<% if(adminFields.useField(Field.SampleLabelMenu)){ %>
+<li>
+  <html:link action="/SampleLabelConfigurationMenu">
+    <bean:message key="sample.label.browse.title" />
+  </html:link>
+</li>
+<% } %>
 <% if(adminFields.useField(Field.SampleEntryMenu)){ %>
 <li>
   <html:link action="/SampleEntryConfigMenu">
@@ -178,16 +204,13 @@
   </html:link>
 </li>
 <% } %>
+<% if(adminFields.useField(Field.TEST_MANAGEMENT)){ %>
 <li>
     <html:link action="/TestManagementConfigMenu">
         <bean:message key="configuration.test.management" />
     </html:link>
 </li>
-<li>
-    <html:link action="/BatchTestReassignment">
-        <bean:message key="configuration.batch.test.reassignment" />
-    </html:link>
-</li>
+<% } %>
 <% if(adminFields.useField(Field.PATIENT_ENTRY_CONFIGURATION)){ %>
 <li>
     <html:link action="/PatientConfigurationMenu">
@@ -308,6 +331,13 @@
   </html:link>
 </li>
 <% } %>
+<% if(adminFields.useField(Field.TypeOfSampleSourceMenu)){ %>
+<li>
+  <html:link action="/TypeOfSampleSourceMenu">
+    <bean:message key="typeofsample.source" />
+  </html:link>
+</li>
+<% } %>
 <% if(adminFields.useField(Field.TypeOfSampleTestMenu)){ %>
 <li>
   <html:link action="/TypeOfSampleTestMenu">
@@ -350,12 +380,14 @@
   </html:link>
 </li>
 <% } %>
+<hr>
+<% if(adminFields.useField(Field.OpenReports)){ %>
 <li>
-  <html:link action="/ListPlugins">
-    <bean:message key="plugin.menu.list.plugins" />
+  <html:link href="OpenReportsAdmin.do?action=limsloginadmin">
+    <bean:message key="openreports.admin.title" />
   </html:link>
 </li>
-<hr>
+<% } %>
 <% if(adminFields.useField(Field.SystemUserModuleMenu)){ %>
 <li>
   <html:link action="/SystemUserModuleMenu">
@@ -376,5 +408,12 @@
   </html:link>
 </li>
 <%} %>
+<% if(adminFields.useField(Field.SystemUserSectionMenu)){ %>
+<li>
+    <html:link action="/SystemUserSectionMenu">
+    <bean:message key="systemusersection.browse.title" />
+  </html:link>
+</li>
+<% } %>
 </ul>
 </table>

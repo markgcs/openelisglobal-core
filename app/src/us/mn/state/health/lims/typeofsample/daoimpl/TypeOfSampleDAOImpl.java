@@ -184,25 +184,7 @@ public class TypeOfSampleDAOImpl extends BaseDAOImpl implements TypeOfSampleDAO 
 			throw new LIMSRuntimeException(
 					"Error in TypeOfSample getAllTypeOfSamples()", e);
 		}
-		return list;
-	}
 
-	@SuppressWarnings("unchecked")
-	public List<TypeOfSample> getAllTypeOfSamplesSortOrdered() throws LIMSRuntimeException {
-		List<TypeOfSample> list = new ArrayList<TypeOfSample>();
-		try {
-			String sql = "from TypeOfSample order by sort_order";
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(
-					sql);
-			list = query.list();
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
-		} catch (Exception e) {
-			LogEvent.logError("TypeOfSampleDAOImpl","getAllTypeOfSamplesSortOrdered()",e.toString());
-			throw new LIMSRuntimeException(
-					"Error in TypeOfSample getAllTypeOfSamplesSortOrdered()", e);
-		}		
-	
 		return list;
 	}
 
@@ -261,9 +243,9 @@ public class TypeOfSampleDAOImpl extends BaseDAOImpl implements TypeOfSampleDAO 
 			String sql = "";
 			// bugzilla 1387 added domain parm
 			if (!StringUtil.isNullorNill(domain)) {
-				sql = "from TypeOfSample t where upper(t.description) like upper(:param) and t.domain = :param2 order by upper(t.description)";
+				sql = "from TypeOfSample t where upper(t.description) like upper(:param) and t.domain = :param2 and t.active = true order by upper(t.description)";
 			} else {
-				sql = "from TypeOfSample t where upper(t.description) like upper(:param) order by upper(t.description)";
+				sql = "from TypeOfSample t where upper(t.description) like upper(:param) and t.active = true order by upper(t.description)";
 
 			}
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(

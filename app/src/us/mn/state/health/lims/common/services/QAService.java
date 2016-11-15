@@ -244,6 +244,9 @@ public class QAService {
 	}
 
 	private static boolean nonconformingByDepricatedStatus(Sample sample) {
+		if(sample.getStatusId()==null){ 
+			return false;
+		}
 		return sample.getStatusId().equals(StatusService.getInstance().getStatusID(OrderStatus.NonConforming_depricated) );
 	}
 	

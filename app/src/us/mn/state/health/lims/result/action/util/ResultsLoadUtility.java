@@ -17,9 +17,22 @@
  */
 package us.mn.state.health.lims.result.action.util;
 
+import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.apache.struts.action.DynaActionForm;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
@@ -29,12 +42,24 @@ import us.mn.state.health.lims.analyte.valueholder.Analyte;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.formfields.FormFields.Field;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.NoteService;
+import us.mn.state.health.lims.common.services.NoteService.NoteType;
+import us.mn.state.health.lims.common.services.PatientService;
+import us.mn.state.health.lims.common.services.ResultLimitService;
+import us.mn.state.health.lims.common.services.ResultService;
+import us.mn.state.health.lims.common.services.SampleService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.services.StatusService.OrderStatus;
-import us.mn.state.health.lims.common.services.NoteService.NoteType;
-import us.mn.state.health.lims.common.util.*;
+import us.mn.state.health.lims.common.services.TestIdentityService;
+import us.mn.state.health.lims.common.services.TestService;
+import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
+import us.mn.state.health.lims.common.util.DAOImplFactory;
+import us.mn.state.health.lims.common.util.DateUtil;
+import us.mn.state.health.lims.common.util.IdValuePair;
+import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
 import us.mn.state.health.lims.dictionary.daoimpl.DictionaryDAOImpl;
 import us.mn.state.health.lims.dictionary.valueholder.Dictionary;
@@ -68,6 +93,7 @@ import us.mn.state.health.lims.statusofsample.util.StatusRules;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.test.beanItems.TestResultItem.ResultDisplayType;
 import us.mn.state.health.lims.test.dao.TestDAO;
@@ -76,10 +102,8 @@ import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.testreflex.action.util.TestReflexUtil;
 import us.mn.state.health.lims.testreflex.valueholder.TestReflex;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
-import us.mn.state.health.lims.common.services.TypeOfSampleService;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import us.mn.state.health.lims.typeofsample.util.TypeOfSampleUtil;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult.ResultType;
 
 public class ResultsLoadUtility {
 
@@ -147,7 +171,7 @@ public class ResultsLoadUtility {
 			systemUserDAO.getData(systemUser);
 
 			if (systemUser.getId() != null) {
-				currentUserName = systemUser.getFirstName() + " " + systemUser.getLastName();
+				currentUserName = systemUser.getLoginName();
 			}
 		}
 	}
@@ -171,7 +195,33 @@ public class ResultsLoadUtility {
 
 		return getGroupedTestsForSamples();
 	}
+	   public List<TestResultItem> getGroupedTestsForSample(Sample sample, Patient patient, Set<SystemUserSection> userSession) {
 
+	        reflexGroup = 1;
+	        activeKits = null;
+	        samples = new ArrayList<Sample>();
+
+	        if (sample != null) {
+	            samples.add(sample);
+	        }
+
+	        patientService = new PatientService( patient );
+
+	        return getGroupedTestsForSamples(userSession);
+	    }
+       public List<TestResultItem> getGroupedTestsForPatient(Patient patient, Set<SystemUserSection> userSession) {
+
+           reflexGroup = 1;
+           activeKits = null;
+           inventoryNeeded = false;
+
+           patientService = new PatientService( patient );
+
+           SampleHumanDAO sampleHumanDAO = new SampleHumanDAOImpl();
+           samples = sampleHumanDAO.getSamplesForPatient(patient.getId());
+
+           return getGroupedTestsForSamples(userSession);
+       }
 	public List<TestResultItem> getGroupedTestsForPatient(Patient patient) {
 		reflexGroup = 1;
 		activeKits = null;
@@ -184,7 +234,6 @@ public class ResultsLoadUtility {
 
 		return getGroupedTestsForSamples( );
 	}
-
 	/*
 	 * @deprecated -- unsafe to use outside of beans with firstName, lastName,
 	 * dob, gender, st, nationalId
@@ -212,12 +261,11 @@ public class ResultsLoadUtility {
 	}
 
 	public List<TestResultItem> getUnfinishedTestResultItemsInTestSection(String testSectionId) {
-
 		List<Analysis> analysisList = analysisDAO.getAllAnalysisByTestSectionAndStatus(testSectionId, analysisStatusList, sampleStatusList);
 
 		return getGroupedTestsForAnalysisList(analysisList, SORT_FORWARD);
 	}
-
+	
 	public List<TestResultItem> getGroupedTestsForAnalysisList(List<Analysis> filteredAnalysisList, boolean forwardSort)
 			throws LIMSRuntimeException {
 
@@ -228,6 +276,7 @@ public class ResultsLoadUtility {
 		List<TestResultItem> selectedTestList = new ArrayList<TestResultItem>();
 
 		for (Analysis analysis : filteredAnalysisList) {
+		    
             patientService = new PatientService( new SampleService( analysis.getSampleItem().getSample() ).getPatient() );
 
 			String patientName = "";
@@ -241,7 +290,7 @@ public class ResultsLoadUtility {
 			}
 
 			currSample = analysis.getSampleItem().getSample();
-			List<TestResultItem> testResultItemList = getTestResultItemFromAnalysis(analysis, patientName, patientInfo, nationalId);
+			List<TestResultItem> testResultItemList = getTestResultItemFromAnalysis(analysis, patientName, patientInfo, nationalId, "", "");
 
 			for (TestResultItem selectionItem : testResultItemList) {
 				selectedTestList.add(selectionItem);
@@ -260,21 +309,138 @@ public class ResultsLoadUtility {
 		return selectedTestList;
 	}
 
+	public List<TestResultItem> getGroupedTestsForAnalysisList(List<Object[]> filteredAnalysisList, Set<SystemUserSection> session, boolean isAdmin)
+			throws LIMSRuntimeException {
+
+		activeKits = null;
+		inventoryNeeded = false;
+		reflexGroup = 1;
+
+		List<TestResultItem> selectedTestList = new ArrayList<TestResultItem>();
+
+		for (Object[] analysisAndInfo : filteredAnalysisList) {
+		    // Added by trungtt.kd
+			String analysisId = (String) ((BigDecimal)analysisAndInfo[0]).toString();
+			Analysis analysis = (Analysis) analysisDAO.getAnalysisById(analysisId);
+			String emergency = (String) (analysisAndInfo[3] != null ? analysisAndInfo[3] : "") ;
+			String projectName = (String) (analysisAndInfo[4] != null ? analysisAndInfo[4] : "");
+			for (SystemUserSection system : session) {
+                if(analysis.getTestSection().getId().equals(system.getTestSection().getId()) || isAdmin){
+                    system.setTestSectionId(system.getTestSection().getId());
+                    analysis.setStatusUserSession(new SystemUserSection());
+                    analysis.setStatusUserSession(system);
+                    break;
+                }else {
+                    analysis.getStatusUserSession().setHasAssign("N");
+                    analysis.getStatusUserSession().setHasCancel("N");
+                    analysis.getStatusUserSession().setHasComplete("N");
+                    analysis.getStatusUserSession().setHasRelease("N");
+                    analysis.getStatusUserSession().setHasView("N");
+                }
+            }
+			// Added End
+            patientService = new PatientService( new SampleService( analysis.getSampleItem().getSample() ).getPatient() );
+
+			String patientName = "";
+			String patientInfo;
+			String nationalId = patientService.getNationalId();
+			if (depersonalize) {
+				patientInfo = GenericValidator.isBlankOrNull(nationalId) ? patientService.getExternalId() : nationalId;
+			} else {
+				patientName = patientService.getLastFirstName();
+				patientInfo = nationalId + ", " + patientService.getGender() + ", " + patientService.getBirthdayForDisplay();
+			}
+
+			currSample = analysis.getSampleItem().getSample();
+			List<TestResultItem> testResultItemList = getTestResultItemFromAnalysis(analysis, patientName, patientInfo, nationalId, emergency, projectName);
+
+			for (TestResultItem selectionItem : testResultItemList) {
+				selectedTestList.add(selectionItem);
+			}
+		}
+
+		setSampleGroupingNumbers(selectedTestList);
+		addUserSelectionReflexes(selectedTestList);
+
+		return selectedTestList;
+	}
+	
+	public List<TestResultItem> getUnfinishedTestResultItemsInTestSection(String testSectionId, Set<SystemUserSection> session, String receivedDate) {
+        List<Analysis> analysisList = analysisDAO.getAllAnalysisByTestSectionAndStatusAndDate(testSectionId, analysisStatusList, sampleStatusList, receivedDate);
+
+        return getGroupedTestsForAnalysisList(analysisList, SORT_FORWARD,session);
+    }
+
+    public List<TestResultItem> getGroupedTestsForAnalysisList(List<Analysis> filteredAnalysisList, boolean forwardSort,Set<SystemUserSection> session)
+            throws LIMSRuntimeException {
+        activeKits = null;
+        inventoryNeeded = false;
+        reflexGroup = 1;
+
+        List<TestResultItem> selectedTestList = new ArrayList<TestResultItem>();
+
+        for (Analysis analysis : filteredAnalysisList) {
+            //added by Dung 2016-07-22 check to authentication of the analysis
+            for (SystemUserSection system : session) {
+                if(analysis.getTestSection().getId().equals(system.getTestSection().getId())){
+                    system.setTestSectionId(system.getTestSection().getId());
+                    analysis.setStatusUserSession(new SystemUserSection());
+                    analysis.setStatusUserSession(system);
+                    break;
+                }else {
+                    analysis.getStatusUserSession().setHasAssign("N");
+                    analysis.getStatusUserSession().setHasCancel("N");
+                    analysis.getStatusUserSession().setHasComplete("N");
+                    analysis.getStatusUserSession().setHasRelease("N");
+                    analysis.getStatusUserSession().setHasView("N");
+                }
+            }
+            patientService = new PatientService( new SampleService( analysis.getSampleItem().getSample() ).getPatient() );
+
+            String patientName = "";
+            String patientInfo;
+            String nationalId = patientService.getNationalId();
+            if (depersonalize) {
+                patientInfo = GenericValidator.isBlankOrNull(nationalId) ? patientService.getExternalId() : nationalId;
+            } else {
+                patientName = patientService.getLastFirstName();
+                patientInfo = nationalId + ", " + patientService.getGender() + ", " + patientService.getBirthdayForDisplay();
+            }
+
+            currSample = analysis.getSampleItem().getSample();
+            List<TestResultItem> testResultItemList = getTestResultItemFromAnalysis(analysis, patientName, patientInfo, nationalId, "", "");
+
+            for (TestResultItem selectionItem : testResultItemList) {
+                selectedTestList.add(selectionItem);
+            }
+        }
+
+        if (forwardSort) {
+            sortByAccessionAndSequence(selectedTestList);
+        } else {
+            reverseSortByAccessionAndSequence(selectedTestList);
+        }
+
+        setSampleGroupingNumbers(selectedTestList);
+        addUserSelectionReflexes(selectedTestList);
+
+        return selectedTestList;
+    }
+
 	private void reverseSortByAccessionAndSequence(List<? extends ResultItem> selectedTest) {
 		Collections.sort(selectedTest, new Comparator<ResultItem>() {
 			public int compare(ResultItem a, ResultItem b) {
-				int accessionSort = b.getSequenceAccessionNumber().compareTo(a.getSequenceAccessionNumber());
+				int accessionSort = a.getSequenceAccessionNumber().compareTo(b.getSequenceAccessionNumber());
 
-				if (accessionSort == 0) { //only the accession number sorting is reversed
-					if (!GenericValidator.isBlankOrNull(a.getTestSortOrder()) && !GenericValidator.isBlankOrNull(b.getTestSortOrder())) {
+				if( accessionSort == 0){ // reverted sort back to ascending order of sequence_accession_number (1st priority)
+					if( !GenericValidator.isBlankOrNull(a.getTestSortOrder()) && !GenericValidator.isBlankOrNull(b.getTestSortOrder())){ // test.sort_order (2nd priority)
 						try {
 							return Integer.parseInt(a.getTestSortOrder()) - Integer.parseInt(b.getTestSortOrder());
 						} catch (NumberFormatException e) {
 							return a.getTestName().compareTo(b.getTestName());
 						}
-
 					} else {
-						return a.getTestName().compareTo(b.getTestName());
+						return a.getTestName().compareTo(b.getTestName()); // test.name (3rd priority)
 					}
 				}
 
@@ -333,7 +499,8 @@ public class ResultsLoadUtility {
 	}
 
 
-	private List<TestResultItem> getTestResultItemFromAnalysis(Analysis analysis, String patientName, String patientInfo, String nationalId)
+	private List<TestResultItem> getTestResultItemFromAnalysis(Analysis analysis, String patientName, String patientInfo, String nationalId,
+			String emergency, String projectName)
 			throws LIMSRuntimeException {
 		List<TestResultItem> testResultList = new ArrayList<TestResultItem>();
 
@@ -382,7 +549,7 @@ public class ResultsLoadUtility {
 
 				testKit = getInventoryForResult(result);
 
-				multiSelectionResult = TypeOfTestResultService.ResultType.isMultiSelectVariant( result.getResultType());
+				multiSelectionResult = ResultType.isMultiSelectVariant( result.getResultType());
 			}
 
 			String initialConditions = getInitialSampleConditionString(sampleItem);
@@ -391,8 +558,12 @@ public class ResultsLoadUtility {
 
 			TestResultItem resultItem = createTestResultItem(new AnalysisService( analysis ), testKit, notes, sampleItem.getSortOrder(), result,
 					sampleItem.getSample().getAccessionNumber(), patientName, patientInfo, techSignature, techSignatureId,
-					initialConditions,  TypeOfSampleService.getTypeOfSampleNameForId(sampleItem.getTypeOfSampleId()));
+					initialConditions,  TypeOfSampleUtil.getTypeOfSampleNameForId(sampleItem.getTypeOfSampleId()));
 			resultItem.setNationalId(nationalId);
+			// Added emergency and projectName by trungtt.kd
+			resultItem.setEmergency(emergency);
+			resultItem.setProjectName(projectName);
+			// End add.
 			testResultList.add(resultItem);
 
 			if (multiSelectionResult) {
@@ -409,10 +580,16 @@ public class ResultsLoadUtility {
 			StringBuilder conditions = new StringBuilder();
 
 			for (ObservationHistory observation : observationList) {
-				Dictionary dictionary = dictionaryDAO.getDictionaryById(observation.getValue());
-				if (dictionary != null) {
-					conditions.append(dictionary.getLocalizedName());
-					conditions.append(", ");
+				if ("L".equals(observation.getValueType())) {
+					 conditions.append(observation.getValue());
+					 conditions.append("; ");
+				} else {
+					Dictionary dictionary = dictionaryDAO.getDictionaryById(observation.getValue());
+
+					if (dictionary != null) {
+						conditions.append(dictionary.getLocalizedName());
+						conditions.append("; ");
+					}
 				}
 			}
 
@@ -457,6 +634,30 @@ public class ResultsLoadUtility {
 
 		return testList;
 	}
+	
+   private List<TestResultItem> getGroupedTestsForSamples(Set<SystemUserSection> session) {
+
+        List<TestResultItem> testList = new ArrayList<TestResultItem>();
+        TestResultItem[] tests = getSortedTestsFromSamples(session);
+        String currentAccessionNumber = "";
+
+        for ( TestResultItem testItem : tests) {
+        	
+            if (!currentAccessionNumber.equals(testItem.getAccessionNumber())) {
+            	// Commented by Mark 2016-10-18 (removed the null test entry)
+                /*TestResultItem separatorItem = new TestResultItem();
+                separatorItem.setIsGroupSeparator( true );
+                separatorItem.setAccessionNumber( testItem.getAccessionNumber() );
+                separatorItem.setReceivedDate( testItem.getReceivedDate() );
+                testList.add(separatorItem);*/
+                currentAccessionNumber = testItem.getAccessionNumber();
+                reflexGroup++;
+            }
+            testList.add(testItem);
+        }
+        
+        return testList;
+    }
 
 	private TestResultItem[] getSortedTestsFromSamples() {
 
@@ -471,7 +672,7 @@ public class ResultsLoadUtility {
 
 				for (Analysis analysis : analysisList) {
 
-					List<TestResultItem> selectedItemList = getTestResultItemFromAnalysis(analysis, NO_PATIENT_NAME, NO_PATIENT_INFO, "");
+					List<TestResultItem> selectedItemList = getTestResultItemFromAnalysis(analysis, NO_PATIENT_NAME, NO_PATIENT_INFO, "","","");
 
 					for (TestResultItem selectedItem : selectedItemList) {
 						testList.add(selectedItem);
@@ -489,7 +690,52 @@ public class ResultsLoadUtility {
 
 		return testArray;
 	}
+    private TestResultItem[] getSortedTestsFromSamples(Set<SystemUserSection> session) {
 
+        List<TestResultItem> testList = new ArrayList<TestResultItem>();
+
+        for (Sample sample : samples) {
+            currSample = sample;
+            List<SampleItem> sampleItems = getSampleItemsForSample(sample);
+
+            for (SampleItem item : sampleItems) {
+                List<Analysis> analysisList = getAnalysisForSampleItem(item);
+
+                for (Analysis analysis : analysisList) {
+                    //added by Dung 2016-07-22 check to authentication of the analysis
+                    for (SystemUserSection system : session) {
+                        if(analysis.getTestSection().getId().equals(system.getTestSection().getId())){
+                            system.setTestSectionId(system.getTestSection().getId());
+                            analysis.setStatusUserSession(new SystemUserSection());
+                            analysis.setStatusUserSession(system);
+                            break;
+                            }else {
+                                analysis.getStatusUserSession().setHasAssign("N");
+                                analysis.getStatusUserSession().setHasCancel("N");
+                                analysis.getStatusUserSession().setHasComplete("N");
+                                analysis.getStatusUserSession().setHasRelease("N");
+                                analysis.getStatusUserSession().setHasView("N");
+                            }
+                    }
+
+                    List<TestResultItem> selectedItemList = getTestResultItemFromAnalysis(analysis, NO_PATIENT_NAME, NO_PATIENT_INFO, "","","");
+
+                    for (TestResultItem selectedItem : selectedItemList) {
+                        testList.add(selectedItem);
+                    }
+                }
+            }
+        }
+
+        reverseSortByAccessionAndSequence(testList);
+        setSampleGroupingNumbers(testList);
+        addUserSelectionReflexes(testList);
+
+        TestResultItem[] testArray = new TestResultItem[testList.size()];
+        testList.toArray(testArray);
+
+        return testArray;
+    }
 	private void addUserSelectionReflexes(List<TestResultItem> testList) {
 		TestReflexUtil reflexUtil = new TestReflexUtil();
 
@@ -531,7 +777,6 @@ public class ResultsLoadUtility {
 					}
 					groupedSibReflexMapping.put(testReflex.getId(), resultItem);
 				}
-
 			}
 
 		}
@@ -605,8 +850,13 @@ public class ResultsLoadUtility {
 
 		String uom = testService.getUOM( isCD4Conclusion );
 
-		String testDate = GenericValidator.isBlankOrNull(analysisService.getCompletedDateForDisplay()) ? getCurrentDate()
-				: analysisService.getCompletedDateForDisplay();
+		String completedDate;
+		if(GenericValidator.isBlankOrNull(analysisService.getCompletedDateForDisplay()) && StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted).equals(analysisService.getStatusId())){
+			completedDate = getCurrentDate();
+		} else {
+			completedDate = analysisService.getCompletedDateForDisplay();
+		}
+		
         ResultDisplayType resultDisplayType = testService.getDisplayTypeForTestMethod(  );
         if(resultDisplayType != ResultDisplayType.TEXT){
             inventoryNeeded = true;
@@ -624,7 +874,8 @@ public class ResultsLoadUtility {
 		testItem.setPatientInfo(patientInfo );
 		testItem.setReportable(testService.isReportable());
 		testItem.setUnitsOfMeasure(uom);
-		testItem.setTestDate(testDate);
+		testItem.setCompletedDate(completedDate);
+		testItem.setStartedDate(analysisService.getStartedDateForDisplay());
 		testItem.setResultDisplayType(resultDisplayType);
 		testItem.setTestMethod(testMethodName);
 		testItem.setAnalysisMethod(analysisService.getAnalysisType());
@@ -641,13 +892,13 @@ public class ResultsLoadUtility {
 		testItem.setTestKitId(testKitId);
 		testItem.setTestKitInventoryId(testKitInventoryId);
 		testItem.setTestKitInactive(testKitInactive);
-		testItem.setReadOnly( isReadOnly(isConclusion, isCD4Conclusion) && result != null && result.getId() != null);
+		testItem.setReadOnly(isLockCurrentResults() && result != null && result.getId() != null);
 		testItem.setReferralId(referralId);
 		testItem.setReferredOut(!GenericValidator.isBlankOrNull(referralId) && !referralCanceled);
         testItem.setShadowReferredOut( testItem.isReferredOut() );
 		testItem.setReferralReasonId(referralReasonId);
 		testItem.setReferralCanceled(referralCanceled);
-		testItem.setInitialSampleCondition(initialSampleConditions);
+		testItem.setInitialSampleCondition(initialSampleConditions==null ? StringUtil.getMessageForKey("sample.entry.initial.condition.select.title") :initialSampleConditions);
 		testItem.setSampleType(sampleType);
 		testItem.setTestSortOrder(testService.getSortOrder());
 		testItem.setFailedValidation(statusRules.hasFailedValidation(analysisService.getStatusId()));
@@ -670,14 +921,11 @@ public class ResultsLoadUtility {
         if( NUMERIC_RESULT_TYPE.equals( testResults.get( 0 ).getTestResultType()  )){
             testItem.setSignificantDigits( Integer.parseInt( testResults.get( 0 ).getSignificantDigits() ));
         }
+        testItem.setStatusUserSession(analysisService.getAnalysis().getStatusUserSession());
 		return testItem;
 	}
 
-	private boolean isReadOnly(boolean isConclusion, boolean isCD4Conclusion) {
-		return isConclusion || isCD4Conclusion || isLockCurrentResults();
-	}
-
-	private void setResultLimitDependencies(ResultLimit resultLimit, TestResultItem testItem, List<TestResult> testResults){
+    private void setResultLimitDependencies(ResultLimit resultLimit, TestResultItem testItem, List<TestResult> testResults){
 		if( resultLimit != null){
 			testItem.setResultLimitId(resultLimit.getId());
 			testItem.setLowerNormalRange(resultLimit.getLowNormal() == Double.NEGATIVE_INFINITY ? 0 : resultLimit.getLowNormal());
@@ -703,7 +951,7 @@ public class ResultsLoadUtility {
 		List<IdValuePair> values = null;
 		Dictionary dictionary;
 
-		if (testResults != null && !testResults.isEmpty() && TypeOfTestResultService.ResultType.isDictionaryVariant( testResults.get( 0 ).getTestResultType() )) {
+		if (testResults != null && !testResults.isEmpty() && ResultType.isDictionaryVariant( testResults.get( 0 ).getTestResultType() )) {
 			values = new ArrayList<IdValuePair>();
 
 			Collections.sort(testResults, new Comparator<TestResult>() {
@@ -720,7 +968,7 @@ public class ResultsLoadUtility {
 			
 			String qualifiedDictionaryIds = "";
 			for (TestResult testResult : testResults) {
-				if ( TypeOfTestResultService.ResultType.isDictionaryVariant( testResult.getTestResultType() )) {
+				if ( ResultType.isDictionaryVariant( testResult.getTestResultType() )) {
 					dictionary = new Dictionary();
 					dictionary.setId(testResult.getValue());
 					dictionaryDAO.getData(dictionary);
@@ -790,7 +1038,7 @@ public class ResultsLoadUtility {
 	private List<IdValuePair> getAnyDictionaryValues(Result result) {
 		List<IdValuePair> values = null;
 
-		if (result != null && TypeOfTestResultService.ResultType.isDictionaryVariant( result.getResultType() )) {
+		if (result != null && ResultType.isDictionaryVariant( result.getResultType() )) {
 			values = new ArrayList<IdValuePair>();
 
 			Dictionary dictionaryValue = new Dictionary();

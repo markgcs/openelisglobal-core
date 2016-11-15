@@ -74,7 +74,8 @@ public class BaseWorkplanAction extends BaseAction {
 		CYTOBACTERIOLOGY,
 		MYCOLOGY,
 		SEROLOGY_IMMUNOLOGY,
-        MALARIA
+        MALARIA,
+        MICROBIOLOGY
 	}
 
 	protected WorkplanType workplanType = WorkplanType.UNKNOWN;	
@@ -152,7 +153,9 @@ public class BaseWorkplanAction extends BaseAction {
 	}
 
 	protected String getTestId(String testName) {
-		Test test = testDAO.getTestByName(testName);
+		Test test = new Test();
+		test.setTestName(testName);
+		test = testDAO.getTestByName(test);
 		return test.getId();
 
 	}

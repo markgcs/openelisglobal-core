@@ -17,6 +17,7 @@
 package us.mn.state.health.lims.dataexchange.order.daoimpl;
 
 import java.util.List;
+import java.util.Vector;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
@@ -33,14 +34,14 @@ import us.mn.state.health.lims.hibernate.HibernateUtil;
 public class ElectronicOrderDAOImpl extends BaseDAOImpl implements ElectronicOrderDAO{
 
 	@Override
-	public List<ElectronicOrder> getElectronicOrdersByExternalId(String id) throws LIMSRuntimeException{
+	public List getElectronicOrdersByExternalId(String id) throws LIMSRuntimeException{
+        List eOrders = new Vector();
 		String sql = "from ElectronicOrder eo where eo.externalId = :externalid order by id";
 
 		try{
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setString("externalid", id);
-			@SuppressWarnings("unchecked")
-			List<ElectronicOrder> eOrders = query.list();
+			eOrders = query.list();
 			closeSession();
 			return eOrders;
 		}catch(HibernateException e){

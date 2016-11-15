@@ -16,6 +16,12 @@
 */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import us.mn.state.health.lims.common.action.BaseActionForm;
@@ -41,11 +47,6 @@ import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.sampleqaevent.dao.SampleQaEventDAO;
 import us.mn.state.health.lims.sampleqaevent.daoimpl.SampleQaEventDAOImpl;
 import us.mn.state.health.lims.sampleqaevent.valueholder.SampleQaEvent;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
 
 public abstract class NonConformityByDate extends Report implements IReportCreator {
 	private String lowDateStr;
@@ -104,7 +105,7 @@ public abstract class NonConformityByDate extends Report implements IReportCreat
     /**
      *
      */
-    private void createReportItems() {
+	private void createReportItems() {
         List<Sample> samples = sampleDAO.getSamplesReceivedInDateRange(lowDateStr, highDateStr);
         for (Sample sample : samples) {
             this.sample = sample;
@@ -198,5 +199,26 @@ public abstract class NonConformityByDate extends Report implements IReportCreat
 	}
 
     protected abstract String getHeaderName();
+    
+    @Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+        super.initializeReport();
+        lowDateStr = hashmap.get("lowerDateRange");
+        highDateStr = hashmap.get("upperDateRange");
+        dateRange = new DateRange(lowDateStr, highDateStr);
+        
+        createReportParameters();
+        errorFound = !validateSubmitParameters();
+        if ( errorFound ) {
+            return;
+        }
+        reportItems = new ArrayList<NonConformityReportData>();
+
+        createReportItems();
+        if ( this.reportItems.size() == 0 ) {
+            add1LineErrorMessage("report.error.message.noPrintableItems");
+        }
+        Collections.sort(reportItems, new ReportItemsComparator() );
+   	}
     
 }

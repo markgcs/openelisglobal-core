@@ -31,6 +31,7 @@ import us.mn.state.health.lims.requester.daoimpl.SampleRequesterDAOImpl;
 import us.mn.state.health.lims.requester.valueholder.RequesterType;
 import us.mn.state.health.lims.requester.valueholder.SampleRequester;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -46,7 +47,7 @@ public class RequesterService{
     private PersonService personService;
     private Organization organization;
 
-    public static enum Requester{
+    public enum Requester{
         PERSON,
         ORGANIZATION;
 

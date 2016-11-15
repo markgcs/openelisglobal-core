@@ -17,9 +17,7 @@ package us.mn.state.health.lims.test.valueholder;
 
 import java.sql.Timestamp;
 
-import us.mn.state.health.lims.common.services.TestSectionService;
 import us.mn.state.health.lims.common.valueholder.EnumValueItemImpl;
-import us.mn.state.health.lims.localization.valueholder.Localization;
 import us.mn.state.health.lims.organization.valueholder.Organization;
 import us.mn.state.health.lims.common.valueholder.ValueHolder;
 import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
@@ -47,8 +45,6 @@ public class TestSection extends EnumValueItemImpl {
 	private String selectedParentTestSectionId;
 	
 	private ValueHolderInterface parentTestSection;
-
-    private ValueHolderInterface localization;
 	
 	private String isActive;
 	
@@ -57,7 +53,6 @@ public class TestSection extends EnumValueItemImpl {
 		super();
 		this.organization = new ValueHolder();
 		this.parentTestSection = new ValueHolder();
-        this.localization = new ValueHolder();
 	}
 
 	public String getId() {
@@ -99,9 +94,16 @@ public class TestSection extends EnumValueItemImpl {
 		return (Organization) this.organization.getValue();
 	}
 
+	protected ValueHolderInterface getOrganizationHolder() {
+		return this.organization;
+	}
 
 	public void setOrganization(Organization organization) {
 		this.organization.setValue(organization);
+	}
+
+	protected void setOrganizationHolder(ValueHolderInterface organization) {
+		this.organization = organization;
 	}
 
 	public void setSelectedOrganizationId(String selectedOrganizationId) {
@@ -120,12 +122,20 @@ public class TestSection extends EnumValueItemImpl {
 		return this.lastupdated;
 	}
 	
+	//bugzilla 2025
 	public TestSection getParentTestSection() {
 	    return (TestSection) this.parentTestSection.getValue();
 	}
     
 	public void setParentTestSection(TestSection parentTestSection) {
 		this.parentTestSection.setValue(parentTestSection);
+	}
+	
+	protected ValueHolderInterface getTestSectionHolder() {
+		return this.parentTestSection;
+	}
+	protected void setTestSectionHolder(ValueHolderInterface parentTestSection) {
+		this.parentTestSection = parentTestSection;
 	}
 	
 	public void setSelectedParentTestSectionId (String selectedParentTestSectionId) {
@@ -138,7 +148,7 @@ public class TestSection extends EnumValueItemImpl {
 
 	@Override
 	protected String getDefaultLocalizedName() {
-		return TestSectionService.getUserLocalizedTesSectionName(this);
+		return getTestSectionName();
 	}
 
 
@@ -157,15 +167,7 @@ public class TestSection extends EnumValueItemImpl {
 	public void setIsActive(String isActive) {
 		this.isActive = isActive;
 	}
-
-    public Localization getLocalization() {
-        return (Localization)localization.getValue();
-    }
-
-    public void setLocalization(Localization localization) {
-        this.localization.setValue( localization );
-    }
-
-
+	
+	
 
 }

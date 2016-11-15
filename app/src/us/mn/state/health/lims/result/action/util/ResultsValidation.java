@@ -10,7 +10,6 @@ import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.formfields.FormFields.Field;
 import us.mn.state.health.lims.common.provider.validation.DateValidationProvider;
 import us.mn.state.health.lims.common.services.AnalysisService;
-import us.mn.state.health.lims.common.services.TypeOfTestResultService;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.validator.ActionError;
@@ -18,6 +17,7 @@ import us.mn.state.health.lims.result.dao.ResultDAO;
 import us.mn.state.health.lims.result.daoimpl.ResultDAOImpl;
 import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,14 +36,14 @@ public class ResultsValidation {
 	public  List<ActionError> validateItem(TestResultItem item ) {
 		List<ActionError> errors = new ArrayList<ActionError>();
 
-		validateTestDate(item, errors);
+		//validateTestDate(item, errors);
 
 		if (!item.isRejected())
 		validateResult(item, errors);
-
-		if( noteRequiredForChangedResults && !item.isRejected()) {
-			validateRequiredNote( item, errors);
-		}
+		//Dũng add fix not is not required
+//		if( noteRequiredForChangedResults && !item.isRejected()) {
+//			validateRequiredNote( item, errors);
+//		}
 		
 		if (supportReferrals) {
 			validateReferral(item, errors);
@@ -89,10 +89,10 @@ public class ResultsValidation {
 	private void validateTestDate(TestResultItem item, List<ActionError> errors) {
 
 		DateValidationProvider dateValidator = new DateValidationProvider();
-		Date date = dateValidator.getDate(item.getTestDate());
+		Date date = dateValidator.getDate(item.getStartedDate());
 
 		if (date == null) {
-			errors.add(new ActionError("errors.date", new StringBuilder(item.getTestDate())));
+			errors.add(new ActionError("errors.date", new StringBuilder(item.getStartedDate())));
 		} else if (!IActionConstants.VALID.equals(dateValidator.validateDate(date, DateValidationProvider.PAST))) {
 			errors.add(new ActionError("error.date.inFuture"));
 		}
@@ -102,13 +102,13 @@ public class ResultsValidation {
         String resultValue = testResultItem.getShadowResultValue();
 	    if (GenericValidator.isBlankOrNull(resultValue) && testResultItem.isRejected())
 	        return;
-
-		if (!(ResultUtil.areNotes(testResultItem) || 
-				(supportReferrals && ResultUtil.isReferred(testResultItem)) || 
-				ResultUtil.areResults(testResultItem) || 
-				ResultUtil.isForcedToAcceptance(testResultItem))) { 
-			errors.add(new ActionError("errors.result.required"));
-		}
+//Dũng comment not validate Note in result
+//		if (!(ResultUtil.areNotes(testResultItem) || 
+//				(supportReferrals && ResultUtil.isReferred(testResultItem)) || 
+//				ResultUtil.areResults(testResultItem) || 
+//				ResultUtil.isForcedToAcceptance(testResultItem))) { 
+//			errors.add(new ActionError("errors.result.required"));
+//		}
 		
 		if (!GenericValidator.isBlankOrNull(resultValue) && "N".equals(testResultItem.getResultType())) {
 			if( resultValue.equals(SPECIAL_CASE)){
@@ -121,9 +121,9 @@ public class ResultsValidation {
 			}
 		}
 		
-		if( testResultItem.isHasQualifiedResult() && GenericValidator.isBlankOrNull(testResultItem.getQualifiedResultValue())){
+		/*if( testResultItem.isHasQualifiedResult() && GenericValidator.isBlankOrNull(testResultItem.getQualifiedResultValue())){
 			errors.add(new ActionError("errors.missing.result.details", new StringBuilder("Result")));
-		}
+		}*/
 	}
 	
 	private void validateReferral(TestResultItem item, List<ActionError> errors) {
@@ -146,7 +146,7 @@ public class ResultsValidation {
 
     private boolean resultHasChanged( TestResultItem item ){
 
-        if( TypeOfTestResultService.ResultType.isMultiSelectVariant( item.getResultType() )){
+        if( TypeOfTestResult.ResultType.isMultiSelectVariant( item.getResultType() )){
             List<Result> resultList = new AnalysisService( item.getAnalysisId() ).getResults();
             ArrayList<String> dictionaryIds = new ArrayList<String>( resultList.size() );
             for(Result result : resultList){

@@ -21,6 +21,7 @@ import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -136,7 +137,35 @@ public class SampleDAOImpl extends BaseDAOImpl implements SampleDAO {
 		}
 		return true;
 	}
+	/* 
+	 * Dung add insert data for webservice 
+	 * parameter is Sample Class
+	 */
+	@Override
+	public String insertDataSampleWithAccessionNumber(Sample sample)
+			throws LIMSRuntimeException {
+		String id="";
+			try
+			{
+				
+				id = (String) HibernateUtil.getSession().save(sample);
+				sample.setId(id);
 
+				AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+				auditDAO.saveNewHistory(sample, sample.getSysUserId(), "SAMPLE");
+
+				HibernateUtil.getSession().flush();
+				HibernateUtil.getSession().clear();
+
+			}
+			catch (Exception e)
+			{
+				//bugzilla 2154
+				LogEvent.logError("SampleDAOImpl","insertData()",e.toString());
+				throw new LIMSRuntimeException("Error in Sample insertData()", e);
+			}
+			return id;
+	}
 	public void updateData(Sample sample) throws LIMSRuntimeException {
 
 		Sample oldData = (Sample) readSample(sample.getId());
@@ -512,7 +541,9 @@ public class SampleDAOImpl extends BaseDAOImpl implements SampleDAO {
     @Override
     public List<Sample> getSamplesReceivedInDateRange(String receivedDateStart, String receivedDateEnd) throws LIMSRuntimeException {
         List<Sample> list;
-
+        if(!DateUtil.isDateValid(receivedDateStart, DateUtil.FORMAT_DD_MM_YYYY)){
+        	return null;
+        }
         Calendar start = getCalendarForDateString(receivedDateStart);
         if ( GenericValidator.isBlankOrNull(receivedDateEnd)) {
             receivedDateEnd = receivedDateStart;
@@ -578,7 +609,7 @@ public class SampleDAOImpl extends BaseDAOImpl implements SampleDAO {
 	public List<Sample> getSamplesByProjectAndStatusIDAndAccessionRange(String projectId, List<Integer> inclusiveStatusIdList, String minAccession,
 			String maxAccession) throws LIMSRuntimeException {
 
-		String sql = "from Sample s where s.statusId in (:statusList) and " +
+		String sql = "select from Sample s where s.statusId in (:statusList) and " +
 		             "s.accessionNumber >= :minAccess and s.accessionNumber <= :maxAccess and " +
 		             "s.id in (select sp.sample.id from SampleProject sp where sp.project.id = :projectId)";
 		try{
@@ -603,7 +634,7 @@ public class SampleDAOImpl extends BaseDAOImpl implements SampleDAO {
 	@SuppressWarnings("unchecked")
 	public List<Sample> getSamplesByAccessionRange(String minAccession,	String maxAccession) throws LIMSRuntimeException {
 
-		String sql = "from Sample s where s.accessionNumber >= :minAccess and s.accessionNumber <= :maxAccess";
+		String sql = "select from Sample s where s.accessionNumber >= :minAccess and s.accessionNumber <= :maxAccess";
 		try{
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setString("minAccess", minAccession);
@@ -688,22 +719,5 @@ public class SampleDAOImpl extends BaseDAOImpl implements SampleDAO {
 		return null;
 	}
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public List<Sample> getConfirmationSamplesReceivedInDateRange(Date receivedDateStart, Date receivedDateEnd) throws LIMSRuntimeException {
-        String sql = "from Sample s where s.isConfirmation = true and s.receivedTimestamp BETWEEN :lowDate AND :highDate";
-        try{
-            Query query = HibernateUtil.getSession().createQuery(sql);
-            query.setDate("lowDate", receivedDateStart);
-            query.setDate("highDate", receivedDateEnd);
 
-            List<Sample> list = query.list();
-            closeSession();
-            return list;
-        }catch (HibernateException e){
-            handleException(e, "getResultsInDateRange");
-        }
-
-        return null;
-    }
 }

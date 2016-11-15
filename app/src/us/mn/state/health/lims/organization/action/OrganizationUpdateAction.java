@@ -39,10 +39,12 @@ import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.provider.validation.CityStateZipComboValidationProvider;
 import us.mn.state.health.lims.common.provider.validation.CityValidationProvider;
 import us.mn.state.health.lims.common.provider.validation.ZipValidationProvider;
-import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.common.util.validator.ActionError;
+import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
+import us.mn.state.health.lims.dictionary.daoimpl.DictionaryDAOImpl;
+import us.mn.state.health.lims.dictionary.valueholder.Dictionary;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.organization.dao.OrganizationDAO;
 import us.mn.state.health.lims.organization.dao.OrganizationOrganizationTypeDAO;
@@ -52,6 +54,7 @@ import us.mn.state.health.lims.organization.valueholder.Organization;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -79,6 +82,7 @@ public class OrganizationUpdateAction extends BaseAction {
 
 	private static OrganizationDAO organizationDAO = new OrganizationDAOImpl();
 	private static OrganizationAddressDAO orgAddressDAO = new OrganizationAddressDAOImpl();
+	private static String UNKNOWN_CITY_ID = "2380";
 
 	private OrganizationAddress departmentAddress;
 	private boolean updateDepartment = false;
@@ -122,27 +126,40 @@ public class OrganizationUpdateAction extends BaseAction {
 		ActionMessages errors = dynaForm.validate(mapping, request);
 
 		try {
-			errors = validateAll(errors, dynaForm);
+			errors = validateAll(request, errors, dynaForm);
 		} catch (Exception e) {
 			LogEvent.logError("OrganizationUpdateAction", "performAction()", e.toString());
 			ActionError error = new ActionError("errors.ValidationException", null, null);
 			errors.add(ActionMessages.GLOBAL_MESSAGE, error);
 		}
 
-		if (errors != null && errors.size() > 0) {
+		if (errors != null && errors.size() > 1) {
 			saveErrors(request, errors);
 			return mapping.findForward(FWD_FAIL);
 		}
 
-		String start = request.getParameter("startingRecNo");
-		String direction = request.getParameter("direction");
+		String start = (String) request.getParameter("startingRecNo");
+		String direction = (String) request.getParameter("direction");
 
 		Organization organization = new Organization();
 		organization.setSysUserId(currentUserId);
+       
+		List states = null;
 
-		List states = getPossibleStates(dynaForm);
+		states = getPossibleStates(dynaForm, states);
 
 		PropertyUtils.copyProperties(organization, dynaForm);
+        // Get City object from cityId
+        DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
+        Dictionary city = new Dictionary();
+        // Set city is 'unknown' when cityId is null
+        if (StringUtil.isNullorNill(organization.getSelectedCityId())) {
+            city = dictionaryDAO.getDataForId(UNKNOWN_CITY_ID);
+        } else {
+            city = dictionaryDAO.getDataForId(organization.getSelectedCityId());
+        }
+        // Set City value for organization
+        organization.setCity(city);
 
 		if (FormFields.getInstance().useField(FormFields.Field.OrganizationParent)) {
 			String parentOrgName = (String) dynaForm.get("parentOrgName");
@@ -173,7 +190,7 @@ public class OrganizationUpdateAction extends BaseAction {
 			LogEvent.logError("OrganizationUpdateAction", "performAction()", lre.toString());
 			tx.rollback();
 			errors = new ActionMessages();
-			ActionError error;
+			ActionError error = null;
 			if (lre.getException() instanceof org.hibernate.StaleObjectStateException) {
 				// how can I get popup instead of struts error at the top of
 				// page?
@@ -223,11 +240,10 @@ public class OrganizationUpdateAction extends BaseAction {
 			request.setAttribute(ID, organization.getId());
 		}
 
+
 		if (isNew){
 			forward = FWD_SUCCESS_INSERT;
 		}
-
-        DisplayListService.refreshList(DisplayListService.ListType.REFERRAL_ORGANIZATIONS);
 
 		return getForward(mapping.findForward(forward), id, start, direction);
 
@@ -330,10 +346,11 @@ public class OrganizationUpdateAction extends BaseAction {
 
 	}
 
-	private List getPossibleStates(BaseActionForm dynaForm) {
-        List states = null;
+	private List getPossibleStates(BaseActionForm dynaForm, List states) {
 		if (useState) {
+			states = new ArrayList();
 
+			// bugzilla 1545
 			CityStateZipDAO cityStateZipDAO = new CityStateZipDAOImpl();
 
 			if (dynaForm.get("states") != null) {
@@ -361,7 +378,8 @@ public class OrganizationUpdateAction extends BaseAction {
 		}
 	}
 
-	protected ActionMessages validateAll( ActionMessages errors, BaseActionForm dynaForm) throws Exception {
+	// bugzilla 1765 made changes to validation for city state zip
+	protected ActionMessages validateAll(HttpServletRequest request, ActionMessages errors, BaseActionForm dynaForm) throws Exception {
 
 		// city validation against database (reusing ajax validation logic
 		CityValidationProvider cityValidator = new CityValidationProvider();
@@ -380,7 +398,7 @@ public class OrganizationUpdateAction extends BaseAction {
 		String messageKey2 = "person.zipCode";
 		String messageKey3 = "person.state";
 
-		String result;
+		String result = null;
 
 		// A valid city exists in the city_state_zip table so unless we are
 		// using zip and state then don't do the check

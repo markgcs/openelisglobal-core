@@ -38,7 +38,9 @@ public interface TestSectionDAO extends BaseDAO {
 
 	public List<TestSection> getAllTestSections() throws LIMSRuntimeException;
 
-	public List getAllTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException;
+    public List getAllTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException;
+
+    public List getAllAdminTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException;
 
 	public List getPageOfTestSections(int startingRecNo) throws LIMSRuntimeException;
 
@@ -63,6 +65,5 @@ public interface TestSectionDAO extends BaseDAO {
 	public TestSection getTestSectionByName(String testSection) throws LIMSRuntimeException;
 
 	public TestSection getTestSectionById(String testSectionId) throws LIMSRuntimeException;
-
-    public List<TestSection> getAllInActiveTestSections() throws LIMSRuntimeException;
+	
 }

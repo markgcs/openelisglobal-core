@@ -195,7 +195,7 @@ public class SampleXMLBySampleProcessAction extends BaseAction {
 			orgName.append(organization.getStreetAddress());
 			orgName.append(SystemConfiguration.getInstance()
 					.getDefaultTransmissionTextSeparator());
-			orgName.append(organization.getCity());
+			orgName.append(organization.getCity().getDictEntry());
 			orgName.append(SystemConfiguration.getInstance()
 					.getDefaultTransmissionTextSeparator());
 			orgName.append(organization.getState());
@@ -243,7 +243,7 @@ public class SampleXMLBySampleProcessAction extends BaseAction {
 
 			sampleHuman.setSampleId(sample.getId());
 			sampleHumanDAO.getDataBySample(sampleHuman);
-			sampleOrganization.setSample(sample);
+			sampleOrganization.setSampleId(sample.getId());
 			sampleOrganizationDAO.getDataBySample(sampleOrganization);
 			//bugzilla 1773 need to store sample not sampleId for use in sorting
 			sampleItem.setSample(sample);
@@ -308,7 +308,7 @@ public class SampleXMLBySampleProcessAction extends BaseAction {
 
 							sampleHuman.setSampleId(sampleXmit.getId());
 							sampleHumanDAO.getDataBySample(sampleHuman);
-							sampleOrganization.setSample(sampleXmit);
+							sampleOrganization.setSampleId(sampleXmit.getId());
 							sampleOrganizationDAO
 									.getDataBySample(sampleOrganization);
                             //bugzilla 1827 set id = external id AFTER getting data
@@ -353,7 +353,7 @@ public class SampleXMLBySampleProcessAction extends BaseAction {
 										.getOrganizationName());
 								facility.setDepartment(o.getOrganizationName());
 								facility.setStreetAddress(o.getStreetAddress());
-								facility.setCity(o.getCity());
+								facility.setCity(o.getCity().getDictEntry());
 								facility.setState(o.getState());
 								facility.setZipCode(o.getZipCode());
 							}

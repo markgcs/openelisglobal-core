@@ -38,7 +38,6 @@ import org.hibernate.Transaction;
 import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
-import us.mn.state.health.lims.common.provider.validation.PasswordValidationFactory;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.common.util.validator.ActionError;
@@ -46,9 +45,18 @@ import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.login.dao.LoginDAO;
 import us.mn.state.health.lims.login.daoimpl.LoginDAOImpl;
 import us.mn.state.health.lims.login.valueholder.Login;
+import us.mn.state.health.lims.systemmodule.dao.SystemModuleDAO;
+import us.mn.state.health.lims.systemmodule.daoimpl.SystemModuleDAOImpl;
+import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
+import us.mn.state.health.lims.systemusermodule.dao.PermissionAgentModuleDAO;
+import us.mn.state.health.lims.systemusermodule.daoimpl.RoleModuleDAOImpl;
+import us.mn.state.health.lims.systemusermodule.daoimpl.SystemUserModuleDAOImpl;
+import us.mn.state.health.lims.systemusermodule.valueholder.PermissionModule;
+import us.mn.state.health.lims.systemusermodule.valueholder.RoleModule;
+import us.mn.state.health.lims.systemusermodule.valueholder.SystemUserModule;
 import us.mn.state.health.lims.userrole.dao.UserRoleDAO;
 import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 import us.mn.state.health.lims.userrole.valueholder.UserRole;
@@ -59,6 +67,8 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 	private static final String RESERVED_ADMIN_NAME = "admin";
 	private boolean passwordUpdated = false;
 	private String userLoginName = "";
+	private String reqId = "";
+	private int MINIMUM_PASSWORD_LENGTH = 8;
 
 	protected ActionForward performAction(ActionMapping mapping, ActionForm form, HttpServletRequest request, HttpServletResponse response)
 			throws Exception {
@@ -68,6 +78,7 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 		request.setAttribute(NEXT_DISABLED, "false");
 
 		String id = request.getParameter(ID);
+		reqId = id;
 
 		String forward = FWD_SUCCESS;
 
@@ -109,38 +120,44 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 		passwordUpdated = passwordHasBeenUpdated(loginUserNew, dynaForm);
 		validateUser(dynaForm, errors, loginUserNew, loginUserId);
 
-		if (errors.size() > 0) {
-			saveErrors(request, errors);
-			request.setAttribute(Globals.ERROR_KEY, errors);
-			return FWD_FAIL;
-		}
-
 		String loggedOnUserId = getSysUserId(request);
 
 		Login loginUser = createLoginUser(dynaForm, loginUserId, loginUserNew, loggedOnUserId);
 		SystemUser systemUser = createSystemUser(dynaForm, systemUserId, systemUserNew, loggedOnUserId);
 
 		String[] selectedRoles = (String[]) dynaForm.get("selectedRoles");
+		String[] selectedModules = (String[]) dynaForm.get("selectedModules");
 
 		UserRoleDAO usrRoleDAO = new UserRoleDAOImpl();
 		SystemUserDAO systemUserDAO = new SystemUserDAOImpl();
+		SystemModuleDAO systemModuleDAO = new SystemModuleDAOImpl();
+		SystemUserModuleDAOImpl sysUserModuleDAO = new SystemUserModuleDAOImpl();
 
 		Transaction tx = HibernateUtil.getSession().beginTransaction();
-
 		try {
-
-			if (loginUserNew) {
-				loginDAO.insertData(loginUser);
+			if (systemUserDAO.duplicateSystemUserExists(systemUser)) {
+				// Display error for duplication of full_name input in system_user table
+				errors.add(ActionErrors.GLOBAL_MESSAGE, new ActionError("errors.fullName.duplicated", new StringBuilder(systemUser.getFirstName() + " " + systemUser.getLastName())));
+				
 			} else {
-				loginDAO.updateData(loginUser);
+				if (loginUserNew) {
+					loginDAO.insertData(loginUser);
+				} else {
+					loginDAO.updateData(loginUser);
+				}
+				if (systemUserNew) {
+					systemUserDAO.insertData(systemUser);
+				} else {
+					systemUserDAO.updateData(systemUser);
+				}
 			}
 
-			if (systemUserNew) {
-				systemUserDAO.insertData(systemUser);
-			} else {
-				systemUserDAO.updateData(systemUser);
+			if (errors.size() > 0) {
+				saveErrors(request, errors);
+				request.setAttribute(Globals.ERROR_KEY, errors);
+				return FWD_FAIL;
 			}
-
+			
 			List<String> currentUserRoles = usrRoleDAO.getRoleIdsForUser(systemUser.getId());
 			List<UserRole> deletedUserRoles = new ArrayList<UserRole>();
 
@@ -151,6 +168,24 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 					userRole.setRoleId(selectedRoles[i]);
 					userRole.setSysUserId(loggedOnUserId);
 					usrRoleDAO.insertData(userRole);
+					
+					PermissionAgentModuleDAO roleModuleDAO = new RoleModuleDAOImpl();
+					List<RoleModule> roleModules = roleModuleDAO.getAllPermissionModulesByAgentId(Integer.parseInt(userRole.getRoleId()));
+					for( RoleModule roleModule : roleModules){
+						PermissionModule sysUserMod = sysUserModuleDAO.getAllPermissionModulesBySystemUserandModuleId(systemUser.getId(), roleModule.getSystemModule().getId());
+						if (sysUserMod == null) {
+							sysUserMod = new SystemUserModule();
+							sysUserMod.setPermissionAgent(systemUser);
+							sysUserMod.setSysUserId(systemUser.getId());
+							sysUserMod.setSystemModule(roleModule.getSystemModule());
+							sysUserMod.setHasAdd("Y");
+							sysUserMod.setHasDelete("Y");
+							sysUserMod.setHasSelect("Y");
+							sysUserMod.setHasUpdate("Y");
+							sysUserModuleDAO.insertData(sysUserMod);
+						}
+					}
+					
 				} else {
 					currentUserRoles.remove(selectedRoles[i]);
 				}
@@ -162,11 +197,69 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 				userRole.setRoleId(roleId);
 				userRole.setSysUserId(loggedOnUserId);
 				deletedUserRoles.add(userRole);
+				
+				PermissionAgentModuleDAO roleModuleDAO = new RoleModuleDAOImpl();
+				List<RoleModule> roleModules = roleModuleDAO.getAllPermissionModulesByAgentId(Integer.parseInt(roleId));
+				List<SystemUserModule> listSysModules = new ArrayList<SystemUserModule>();
+				for (RoleModule roleMod : roleModules) {
+					SystemUserModule sysUserMod = sysUserModuleDAO.getAllPermissionModulesBySystemUserandModuleId(systemUser.getId(), roleMod.getSystemModule().getId());
+					if (sysUserMod != null) {
+						sysUserMod.setSysUserId(loggedOnUserId);
+						listSysModules.add(sysUserMod);
+					}
+				}
+				if (listSysModules.size() > 0) {
+					sysUserModuleDAO.deleteData(listSysModules);
+				}
+				listSysModules = new ArrayList<SystemUserModule>();
 			}
 
 			if (deletedUserRoles.size() > 0) {
 				usrRoleDAO.deleteData(deletedUserRoles);
 			}
+			
+			// For only few chosen modules
+			List<SystemUserModule> listSysUserModules = sysUserModuleDAO.getAllPermissionModulesByAgentId(Integer.parseInt(systemUser.getId()));
+			List<String> currentUserModules = new ArrayList<String>();
+			for (SystemUserModule sysModu : listSysUserModules) {
+				currentUserModules.add(sysModu.getSystemModule().getId());
+			}
+			List<SystemUserModule> deletedUserModules = new ArrayList<SystemUserModule>();
+
+			for (int i = 0; i < selectedModules.length; i++) {
+				
+				if (!currentUserModules.contains(selectedModules[i])) {
+					PermissionModule sysUserMod = sysUserModuleDAO.getAllPermissionModulesBySystemUserandModuleId(systemUser.getId(), selectedModules[i]);
+					
+					if (sysUserMod == null) {
+						sysUserMod = new SystemUserModule();
+						sysUserMod.setPermissionAgent(systemUser);
+						sysUserMod.setSysUserId(systemUser.getId());
+						SystemModule systemMod = (SystemModule) systemModuleDAO.readSystemModule(selectedModules[i]);
+						sysUserMod.setSystemModule(systemMod);
+						sysUserMod.setHasAdd("Y");
+						sysUserMod.setHasDelete("Y");
+						sysUserMod.setHasSelect("Y");
+						sysUserMod.setHasUpdate("Y");
+						sysUserModuleDAO.insertData(sysUserMod);
+					}
+				} else {
+					currentUserModules.remove(selectedModules[i]);
+				}
+			}
+
+			for (String moduleId : currentUserModules) {
+				SystemUserModule sysUserMod = sysUserModuleDAO.getAllPermissionModulesBySystemUserandModuleId(systemUser.getId(), moduleId);
+				if (sysUserMod != null) {
+					sysUserMod.setSysUserId(loggedOnUserId);
+					deletedUserModules.add(sysUserMod);
+				}
+			}
+
+			if (deletedUserModules.size() > 0) {
+				sysUserModuleDAO.deleteData(deletedUserModules);
+			}
+			
 		} catch (LIMSRuntimeException lre) {
 			tx.rollback();
 
@@ -178,9 +271,9 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 			}
 
 			persisteError(request, error);
-
 			disableNavigationButtons(request);
 			forward = FWD_FAIL;
+			
 		} finally {
 			if (!tx.wasRolledBack()) {
 				tx.commit();
@@ -192,7 +285,7 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 
 		return forward;
 	}
-
+	
 	private boolean passwordHasBeenUpdated(boolean loginUserNew, BaseActionForm dynaForm) {
 		if (loginUserNew) {
 			return true;
@@ -209,7 +302,7 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 
 		if (GenericValidator.isBlankOrNull(userLoginName)) {
 			errors.add(ActionErrors.GLOBAL_MESSAGE, new ActionError("errors.loginName.required"));
-		}else if (checkForDuplicateName ) {
+		} else if (checkForDuplicateName ) {
 			Login login = loginDAO.getUserProfile(userLoginName);
 			if (login != null) {
 				errors.add(ActionErrors.GLOBAL_MESSAGE, new ActionError("errors.loginName.duplicated", new StringBuilder(userLoginName)));
@@ -265,7 +358,12 @@ public class UnifiedSystemUserUpdateAction extends BaseAction {
 	}
 
 	private boolean passwordValid(String password) {
-		return PasswordValidationFactory.getPasswordValidator().passwordValid(password);
+		//return PasswordValidationFactory.getPasswordValidator().passwordValid(password);
+		boolean isValid = false;
+		if (password.length() >= MINIMUM_PASSWORD_LENGTH) {
+			isValid = true;
+		}
+		return isValid;
 	}
 
 	private Login createLoginUser(BaseActionForm dynaForm, String loginUserId, boolean loginUserNew, String loggedOnUserId) {

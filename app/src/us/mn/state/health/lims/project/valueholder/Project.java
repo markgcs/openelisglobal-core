@@ -25,6 +25,9 @@ import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
 import us.mn.state.health.lims.organization.valueholder.Organization;
 import us.mn.state.health.lims.scriptlet.valueholder.Scriptlet;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
+import us.mn.state.health.lims.program.dao.ProgramDAO;
+import us.mn.state.health.lims.program.daoimpl.ProgramDAOImpl;
+import us.mn.state.health.lims.program.valueholder.Program;
 
 import java.sql.Date;
 import java.util.Set;
@@ -58,7 +61,9 @@ public class Project extends BaseObject {
 
 	private String referenceTo;
 
-	private String programCode;
+    private String programCode;
+
+    private String programName;
 
 	private String sysUserId;
 
@@ -79,7 +84,7 @@ public class Project extends BaseObject {
 	 * All organization defined as associated with this project.
 	 */
 	private Set<Organization> organizations;
-
+	
 	public String getConcatProjNameDesc() {	
 			if (null == this.description){
 				return this.projectName;				
@@ -188,7 +193,31 @@ public class Project extends BaseObject {
 		return programCode;
 	}
 
-	public void setSysUserId(String sysUserId) {
+	/**
+     * Get programName 
+     *
+     * @return programName
+     */
+    public String getProgramName() {
+        String proName = "";
+        ProgramDAO programDAO = new ProgramDAOImpl();
+        Program program = programDAO.getProgramByProgramCode(getProgramCode()); 
+        if (program != null) {
+            proName = program.getProgramName();
+        }
+        return proName;
+    }
+
+    /**
+     * Set programName 
+     *
+     * @param programName the programName to set
+     */
+    public void setProgramName(String programName) {
+        this.programName = programName;
+    }
+
+    public void setSysUserId(String sysUserId) {
 		this.sysUserId = sysUserId;
 	}
 
@@ -289,5 +318,5 @@ public class Project extends BaseObject {
 
     public Set<Organization> getOrganizations() {
         return organizations;
-    }    
+    }
 }

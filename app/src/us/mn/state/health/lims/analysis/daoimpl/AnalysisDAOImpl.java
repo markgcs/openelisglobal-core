@@ -17,9 +17,13 @@
  */
 package us.mn.state.health.lims.analysis.daoimpl;
 
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.sql.Array;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
@@ -38,6 +42,8 @@ import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.log.LogEvent;
+import us.mn.state.health.lims.common.services.StatusService;
+import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
@@ -49,9 +55,11 @@ import us.mn.state.health.lims.test.valueholder.Test;
 /**
  * @author diane benz
  */
-public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
+public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO,Serializable {
 
-	@SuppressWarnings("rawtypes")
+    private static final long serialVersionUID = 1L;
+
+    @SuppressWarnings("rawtypes")
 	public void deleteData(List analyses) throws LIMSRuntimeException {
 		// add to audit trail
 		try {
@@ -127,6 +135,41 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 
 		return true;
 	}
+	
+	/* (non-Javadoc)
+	 * add for web service
+	 */
+	@Override
+	public String insertDataWS(Analysis analysis, boolean duplicateCheck) throws LIMSRuntimeException {
+		String id=null;
+		try {
+
+			if (duplicateCheck) {
+				if (duplicateAnalysisExists(analysis)) {
+					throw new LIMSDuplicateRecordException("Duplicate record exists for this sample and test "
+							+ analysis.getTest().getTestDisplayValue());
+				}
+			}
+			id = (String) HibernateUtil.getSession().save(analysis);
+			analysis.setId(id);
+
+			// bugzilla 1824 inserts will be logged in history table
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = analysis.getSysUserId();
+			String tableName = "ANALYSIS";
+			auditDAO.saveNewHistory(analysis, sysUserId, tableName);
+
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+
+		} catch (Exception e) {
+
+			LogEvent.logError("AnalysisDAOImpl", "insertData()", e.toString());
+			throw new LIMSRuntimeException("Error in Analysis insertData()", e);
+		}
+
+		return id;
+	}
 
     public void updateData( Analysis analysis){
         updateData( analysis, false );
@@ -159,6 +202,48 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 			throw new LIMSRuntimeException("Error in Analysis updateData()", e);
 		}
 	}
+	
+	public void updateAnalysisStatus(Analysis analysis) throws LIMSRuntimeException {
+		//Analysis oldData = readAnalysis(analysis.getId());
+
+
+		try {
+			HibernateUtil.getSession().merge(analysis);
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+			HibernateUtil.getSession().evict(analysis);
+			HibernateUtil.getSession().refresh(analysis);
+		} catch (Exception e) {
+			LogEvent.logError("AnalysisDAOImpl", "updateAnalysisStatus()", e.toString());
+			throw new LIMSRuntimeException("Error in Analysis updateAnalysisStatus()", e);
+		}
+	}
+	
+	/**
+	 * Update existing Analysis data (used only by addAIMTestResult Web Service)
+	 */
+	public void updateDataAIM(List<BigDecimal> listAnalysisId, String strSysUserId) throws LIMSRuntimeException {
+        try {
+            for (BigDecimal analysisId : listAnalysisId) {
+                Analysis oldData = readAnalysis(String.valueOf(analysisId));
+                AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+                String event = IActionConstants.AUDIT_TRAIL_UPDATE;
+                String tableName = "ANALYSIS";
+                Analysis analysisPut = new Analysis();
+                analysisPut = getAnalysisByIdAIM(String.valueOf(analysisId));
+                analysisPut.setStatusId("16");
+                analysisPut.setLastupdated(new Timestamp(new java.util.Date().getTime()));
+                HibernateUtil.getSession().update(analysisPut);
+                auditDAO.saveHistory(analysisPut, oldData, strSysUserId, event, tableName);
+            }
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        } catch (Exception e) {
+            LogEvent.logError("AnalysisDAOImpl", "updateDataAIM()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis updateDataAIM()", e);
+        }
+    }
 
 	public void getData(Analysis analysis) throws LIMSRuntimeException {
 
@@ -311,6 +396,129 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 
 		return list;
 	}
+	
+   @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestAndStatusAndDate(String testId, List<Integer> statusIdList, String receivedDate, String startedDate, String completedDate)
+    		throws LIMSRuntimeException {
+        List list = new Vector();
+        String[] listTestId = testId.split(",");
+        List<Integer> testIds = new ArrayList<>();
+        for (String id : listTestId) {
+        	testIds.add(Integer.valueOf(id));
+		}
+        try {
+        	String sqlString = "SELECT a.id as analysisId, s.accession_number, s.received_date, o.value, p.name "
+        		+ "FROM analysis a "
+        		+ "JOIN sample_item si ON si.id = a.sampitem_id "
+        		+ "JOIN sample s ON s.id = si.samp_id "
+        		+ "LEFT JOIN observation_history o ON s.id = o.sample_id "
+        		+ "AND o.observation_history_type_id = 5 "
+        		+ "LEFT JOIN sample_projects sp ON s.id = sp.samp_id "
+        		+ "LEFT JOIN project p ON sp.proj_id = p.id "
+        		+ "WHERE a.test_id IN (:testId) and a.status_id IN (:statusIdList) ";
+//            String sql = "FROM Analysis a INNER JOIN a.sampleItem.sample as s, "
+//            		+ "ObservationHistory o , "
+//            		+ "WHERE a.test = :testId and a.statusId IN (:statusIdList) "
+//            		+ "AND o.observationHistoryTypeId = 5 " // Get Emergency
+//            		+ "AND a.sampleItem.sample.id = o.sampleId ";
+            if (!StringUtil.isNullorNill(receivedDate)) {
+            	sqlString += "AND to_char(s.received_date,'dd/MM/yyyy')= '" + receivedDate + "' ";
+            } 
+            if (!StringUtil.isNullorNill(completedDate)) {
+            	sqlString += "AND to_char(a.completed_date,'dd/MM/yyyy')= '" + completedDate + "' ";
+            }
+            if (!StringUtil.isNullorNill(startedDate)) {
+            	sqlString += "AND to_char(a.started_date,'dd/MM/yyyy')= '" + startedDate + "' ";
+            }
+            sqlString += "ORDER by o.value, p.name, s.accession_number";
+            org.hibernate.Query query = HibernateUtil.getSession().createSQLQuery(sqlString);
+            query.setParameterList("testId", testIds);
+            query.setParameterList("statusIdList", statusIdList);
+            list = query.list();
+            
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        } catch (Exception e) {
+            LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestAndStatusAndDate()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestAndStatusAndDate()", e);
+        }
+
+        return list;
+    }
+   
+   public List getAllAnalysisByTestAndStatusAndDateAndAcessionNumber(String accessionNumberFrom, String accessionNumberTo,
+		   String testId, String resultStatus, String receivedDate, String startedDate, String completedDate)
+   		throws LIMSRuntimeException {
+       List list = new Vector();
+       String[] listTestId = testId.split(",");
+       List<Integer> testIds = new ArrayList<>();
+       for (String id : listTestId) {
+       	testIds.add(Integer.valueOf(id));
+		}
+       boolean isAccessionNumberFromUsed = false;
+       boolean isAccessionNumberToUsed = false;
+       try {
+			String sqlString = "SELECT a.id as analysisId, s.accession_number, s.received_date, o.value, p.name "
+				+ "FROM analysis a "
+				+ "JOIN sample_item si ON si.id = a.sampitem_id "
+				+ "JOIN sample s ON s.id = si.samp_id "
+				+ "LEFT JOIN observation_history o ON s.id = o.sample_id "
+				+ "AND o.observation_history_type_id = 5 "
+				+ "LEFT JOIN sample_projects sp ON s.id = sp.samp_id "
+				+ "LEFT JOIN project p ON sp.proj_id = p.id "
+				+ "WHERE a.test_id IN (:testId) ";
+			
+			if (!StringUtil.isNullorNill(accessionNumberFrom) && !StringUtil.isNullorNill(accessionNumberTo)) {
+				sqlString += "AND s.accession_number >= :accessionNumberFrom and s.accession_number <= :accessionNumberTo ";
+			    isAccessionNumberFromUsed = true;
+			    isAccessionNumberToUsed = true;
+			} else if (!StringUtil.isNullorNill(accessionNumberFrom) && StringUtil.isNullorNill(accessionNumberTo)) {
+				sqlString += "AND s.accession_number = :accessionNumberFrom ";
+			    isAccessionNumberFromUsed = true;
+			} else if (StringUtil.isNullorNill(accessionNumberFrom) && !StringUtil.isNullorNill(accessionNumberTo)) {
+				sqlString += "AND s.accession_number = :accessionNumberTo ";
+			    isAccessionNumberToUsed = true;
+			}
+            if (!StringUtil.isNullorNill(receivedDate)) {
+            	sqlString += "AND to_char(s.received_date,'dd/MM/yyyy')= '" + receivedDate + "' ";
+            } 
+            if (!StringUtil.isNullorNill(completedDate)) {
+            	sqlString += "AND to_char(a.completed_date,'dd/MM/yyyy')= '" + completedDate + "' ";
+            }
+            if (!StringUtil.isNullorNill(startedDate)) {
+            	sqlString += "AND to_char(a.started_date,'dd/MM/yyyy')= '" + startedDate + "' ";
+            }
+            if (Integer.parseInt(resultStatus) > 1) {
+            	sqlString += "AND a.status_id <> 4";
+            // No result value
+            } else if (Integer.parseInt(resultStatus) == 1) {
+            	sqlString += "AND a.status_id = 4";
+            }
+           
+            sqlString += "ORDER by o.value, p.name, s.accession_number";
+            org.hibernate.Query query = HibernateUtil.getSession().createSQLQuery(sqlString);
+            
+            if (isAccessionNumberToUsed) {
+                query.setString("accessionNumberTo", accessionNumberTo);
+            }
+            if (isAccessionNumberFromUsed) {
+            	query.setString("accessionNumberFrom", accessionNumberFrom);
+            }
+           
+            query.setParameterList("testId", testIds);
+            list = query.list();
+           
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+           
+       } catch (Exception e) {
+           LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestAndStatusAndDate()", e.toString());
+           throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestAndStatusAndDate()", e);
+       }
+
+       return list;
+   }
 
 	@SuppressWarnings("rawtypes")
 	public List getAllAnalysisByTestsAndStatus(List<String> testIdList, List<Integer> statusIdList) throws LIMSRuntimeException {
@@ -350,40 +558,177 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 			list = query.list();
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
+			
 		} catch (Exception e) {
-
 			LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestAndExcludedStatuses()", e.toString());
 			throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestAndExcludedStatuses()", e);
 		}
 
 		return list;
 	}
+	
+	@SuppressWarnings("unchecked")
+    public List<Analysis> getAllAnalysisByAccessionNumbersAndExcludedStatus(String accessionNumberFrom, String accessionNumberTo, List<Integer> statusIdList) throws LIMSRuntimeException {
+        List<Analysis> list = new ArrayList<Analysis>();
+        boolean isAccessionNumberFromUsed = false;
+        boolean isAccessionNumberToUsed = false;
+        try {
+        	// return empty list if both accession numbers are null/empty
+            if (StringUtil.isNullorNill(accessionNumberFrom) && StringUtil.isNullorNill(accessionNumberTo)) {
+            	return list;
+            }
+            String sql = "from Analysis a ";
+            if (!StringUtil.isNullorNill(accessionNumberFrom) && !StringUtil.isNullorNill(accessionNumberTo)) {
+                sql += "where a.sampleItem.sample.accessionNumber >= :accessionNumberFrom and a.sampleItem.sample.accessionNumber <= :accessionNumberTo ";
+                isAccessionNumberFromUsed = true;
+                isAccessionNumberToUsed = true;
+            } else if (!StringUtil.isNullorNill(accessionNumberFrom) && StringUtil.isNullorNill(accessionNumberTo)) {
+                sql += "where a.sampleItem.sample.accessionNumber = :accessionNumberFrom ";
+                isAccessionNumberFromUsed = true;
+            } else if (StringUtil.isNullorNill(accessionNumberFrom) && !StringUtil.isNullorNill(accessionNumberTo)) {
+                sql += "where a.sampleItem.sample.accessionNumber = :accessionNumberTo ";
+                isAccessionNumberToUsed = true;
+            }
+            sql += "and a.statusId not IN (:statusIdList) order by a.sampleItem.sample.accessionNumber";
+            
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            if (isAccessionNumberToUsed) {
+                query.setString("accessionNumberTo", accessionNumberTo);
+            }
+            if (isAccessionNumberFromUsed) {
+            	query.setString("accessionNumberFrom", accessionNumberFrom);
+            }
+            query.setParameterList("statusIdList", statusIdList);
+            list = query.list();
+            
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        } catch (Exception e) {
+            LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByAccessionNumbersAndExcludedStatus()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByAccessionNumbersAndExcludedStatus()", e);
+        }
 
+        return list;
+    }
+	
 	@SuppressWarnings("rawtypes")
-	public List getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession)
+	public List getAllAnalysisByTestSectionAndStatus(String testSectionId, String testId, List<Integer> statusIdList, String receivedDate, boolean sortedByDateAndAccession)
 			throws LIMSRuntimeException {
+	    
 		List list = new Vector();
+		String sql="";
+		
+		if(!StringUtil.isNullorNill(receivedDate) && !StringUtil.isNullorNill(testSectionId) && !StringUtil.isNullorNill(testId)){
+		    try {
+                sql = "from Analysis a where a.testSection.id = " + Integer.parseInt(testSectionId) + " and a.test.id = " + Integer.parseInt(testId) + " "
+                        + "and to_char(a.sampleItem.sample.receivedTimestamp,'dd/MM/yyyy')= "+"'"+receivedDate+"'"+" and a.statusId IN (:statusIdList) order by a.id";
+		    } catch (Exception e) {
+                // TODO: handle exception
+                return new Vector();
+            }
+		}
+		if(StringUtil.isNullorNill(receivedDate) && !StringUtil.isNullorNill(testSectionId) && !StringUtil.isNullorNill(testId)){
+		    sql = "from Analysis a where a.testSection.id = " + Integer.parseInt(testSectionId) + " and a.test.id = " + Integer.parseInt(testId) + " and a.statusId IN (:statusIdList) order by a.id";
+		}
+		if(!StringUtil.isNullorNill(receivedDate) && !StringUtil.isNullorNill(testSectionId) && StringUtil.isNullorNill(testId)){
+		    sql = "from Analysis a where a.testSection.id = " + Integer.parseInt(testSectionId) +
+		    		" and to_char(a.sampleItem.sample.receivedTimestamp,'dd/MM/yyyy')= "+"'"+receivedDate+"'"+" and a.statusId IN (:statusIdList) order by a.id";
+		}
+		// Commented by Mark 2016-08-30 04:38PM
+		// Scenario not possible anymore since testSection and test are required fields
+		/*if(!StringUtil.isNullorNill(receivedDate) && StringUtil.isNullorNill(testSectionId)){
+            try {
+                sql = "from Analysis a where to_char(a.sampleItem.sample.receivedTimestamp,'dd/MM/yyyy')= "+"'"+receivedDate+"'"+" and a.statusId IN (:statusIdList) order by a.id";
+            } catch (Exception e) {
+                // TODO: handle exception
+                return new Vector();
+            }
+		}*/
 		try {
-			String sql = "from Analysis a where a.testSection.id = :testSectionId and a.statusId IN (:statusIdList) order by a.id";
-
 			if (sortedByDateAndAccession) {
 				//sql += " order by a.sampleItem.sample.receivedTimestamp  asc, a.sampleItem.sample.accessionNumber";
 			}
-
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setInteger("testSectionId", Integer.parseInt(testSectionId));
 			query.setParameterList("statusIdList", statusIdList);
 			list = query.list();
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
+			
 		} catch (Exception e) {
-
-			LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestSectionAndStatuses()", e.toString());
-			throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestSectionAndStatuses()", e);
+			LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestSectionAndStatus()", e.toString());
+			throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestSectionAndStatus()", e);
 		}
 
 		return list;
 	}
+	
+   @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession)
+            throws LIMSRuntimeException {
+        List list = new Vector();
+        try {
+            String sql = "from Analysis a where a.testSection.id = :testSectionId and a.statusId IN (:statusIdList) order by a.id";
+
+            if (sortedByDateAndAccession) {
+                //sql += " order by a.sampleItem.sample.receivedTimestamp  asc, a.sampleItem.sample.accessionNumber";
+            }
+
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setInteger("testSectionId", Integer.parseInt(testSectionId));
+            query.setParameterList("statusIdList", statusIdList);
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch (Exception e) {
+
+            LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestSectionAndStatus()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestSectionAndStatus()", e);
+        }
+
+        return list;
+    }
+   
+    @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestSectionAndStatusAndDate(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession,
+                                                        String receivedDate, String startedDate, String completedDate) throws LIMSRuntimeException {
+       List list = new Vector();
+       try {
+    	   String sqlString = "SELECT a.id as analysisId, s.accession_number, s.received_date, o.value, p.name "
+           		+ "FROM analysis a "
+           		+ "JOIN sample_item si ON si.id = a.sampitem_id "
+           		+ "JOIN sample s ON s.id = si.samp_id "
+           		+ "LEFT JOIN observation_history o ON s.id = o.sample_id "
+           		+ "AND o.observation_history_type_id = 5 "
+           		+ "LEFT JOIN sample_projects sp ON s.id = sp.samp_id "
+           		+ "LEFT JOIN project p ON sp.proj_id = p.id "
+           		+ "WHERE a.test_sect_id = :testSectionId and a.status_id IN (:statusIdList) ";
+    	   
+           if (!StringUtil.isNullorNill(receivedDate)) {
+           	sqlString += "AND to_char(s.received_date,'dd/MM/yyyy')= '" + receivedDate + "' ";
+           } 
+           if (!StringUtil.isNullorNill(completedDate)) {
+           	sqlString += "AND to_char(a.completed_date,'dd/MM/yyyy')= '" + completedDate + "' ";
+           }
+           if (!StringUtil.isNullorNill(startedDate)) {
+           	sqlString += "AND to_char(a.started_date,'dd/MM/yyyy')= '" + startedDate + "' ";
+           }
+           sqlString += "ORDER by o.value, p.name, s.accession_number";
+           org.hibernate.Query query = HibernateUtil.getSession().createSQLQuery(sqlString);
+           query.setInteger("testSectionId", Integer.parseInt(testSectionId));
+           query.setParameterList("statusIdList", statusIdList);
+           list = query.list();
+           
+           HibernateUtil.getSession().flush();
+           HibernateUtil.getSession().clear();
+           
+       } catch (Exception e) {
+           LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestSectionAndStatusAndDate()", e.toString());
+           throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestSectionAndStatusAndDate()", e);
+       }
+
+       return list;
+    }
 
 	@SuppressWarnings("rawtypes")
 	public List getAllAnalysisByTestSectionAndExcludedStatus(String testSectionId, List<Integer> statusIdList) throws LIMSRuntimeException {
@@ -436,9 +781,8 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 		}
 
 		List<Analysis> analysisList = null;
-
 		try {
-			String sql = "from Analysis a where a.sampleItem.id = :sampleItemId and a.statusId not in ( :statusList )";
+			String sql = "from Analysis a where a.sampleItem.id = :sampleItemId and a.statusId not in ( :statusList ) order by a.sampleItem.id, a.test.testName";
 
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setInteger("sampleItemId", Integer.parseInt(sampleItem.getId()));
@@ -1041,10 +1385,34 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 	}
 
 	@SuppressWarnings("unchecked")
+    public List<Analysis> getAnalysesForResultStatusId(String resultStatus) throws LIMSRuntimeException {
+        List<Analysis> list = null;
+        try {
+            String sql = "";
+            // Has result value
+            if (Integer.parseInt(resultStatus) > 1) {
+                sql += "from Analysis a where a.id in (select distinct r.analysis from Result r where r.value IS NOT NULL)";
+            // No result value
+            } else {
+                sql += "from Analysis a where a.id not in (select distinct r.analysis from Result r where r.value IS NOT NULL)";
+                        //+ "or (a.id in (select distinct r.analysis from Result r where r.value IS NULL or r.value = ''))";
+            }
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            list = query.list();
+            closeSession();
+            
+            return list;
+            
+        } catch (HibernateException he) {
+            handleException(he, "getAnalysesForResultStatusId");
+        }
+	    
+        return null;
+    }
+	
+	@SuppressWarnings("unchecked")
 	public List<Analysis> getAnalysesForStatusId(String statusId) throws LIMSRuntimeException {
-
 		List<Analysis> list = null;
-
 		try {
 			String sql = "from Analysis a where a.statusId = :statusId";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
@@ -1062,16 +1430,16 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public List<Analysis> getAnalysisStartedOnExcludedByStatusId(Date collectionDate, Set<Integer> statusIds) throws LIMSRuntimeException {
+	public List<Analysis> getAnalysisStartedOnExcludedByStatusId(Date startedDate, Set<Integer> statusIds) throws LIMSRuntimeException {
 		if (statusIds == null || statusIds.isEmpty()) {
-			return getAnalysisStartedOn(collectionDate);
+			return getAnalysisStartedOn(startedDate);
 		}
 
 		String sql = "from Analysis a where a.startedDate = :startedDate and a.statusId not in ( :statusList )";
 
 		try {
 			Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setDate("startedDate", collectionDate);
+			query.setDate("startedDate", startedDate);
 			query.setParameterList("statusList", statusIds);
 
 			List<Analysis> analysisList = query.list();
@@ -1083,10 +1451,27 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 
 		return null;
 	}
+	
+	@SuppressWarnings("unchecked")
+    public List<Analysis> getAnalysisResultOn(Date resultDate) throws LIMSRuntimeException {
+        try {
+            String sql = "from Analysis a where a.completedDate = :completedDate";
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setDate("completedDate", resultDate);
+
+            List<Analysis> list = query.list();
+            closeSession();
+            return list;
+
+        } catch (HibernateException he) {
+            handleException(he, "getAnalysisResultOn");
+        }
+
+        return null;
+    }
 
 	@SuppressWarnings("unchecked")
 	public List<Analysis> getAnalysisStartedOn(Date collectionDate) throws LIMSRuntimeException {
-
 		try {
 			String sql = "from Analysis a where a.startedDate = :startedDate";
 			Query query = HibernateUtil.getSession().createQuery(sql);
@@ -1103,14 +1488,41 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 		return null;
 	}
 
+	
+	@SuppressWarnings("unchecked")
+    @Override
+    public List<Analysis> getAnalysisResultOnExcludedByStatusId(Date resultDate, Set<Integer> statusIds) throws LIMSRuntimeException {
+        if (statusIds == null || statusIds.isEmpty()) {
+            return getAnalysisResultOn(resultDate);
+        }
+        //Dung change 2016.06.30
+        //part timestamp to date
+        String sql = "from Analysis a where date(a.completedDate) = :completedDate and a.statusId not in ( :statusList )";
+        try {
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setDate("completedDate", resultDate);
+            query.setParameterList("statusList", statusIds);
+
+            List<Analysis> analysisList = query.list();
+            closeSession();
+            return analysisList;
+            
+        } catch (HibernateException e) {
+            handleException(e, "getAnalysisResultOnExcludedByStatusId");
+        }
+
+        return null;
+    }
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<Analysis> getAnalysisCollectedOnExcludedByStatusId(Date collectionDate, Set<Integer> statusIds) throws LIMSRuntimeException {
 		if (statusIds == null || statusIds.isEmpty()) {
 			return getAnalysisStartedOn(collectionDate);
 		}
-
-		String sql = "from Analysis a where a.sampleItem.collectionDate = :startedDate and a.statusId not in ( :statusList )";
+		//Dung change 2016.06.30
+		//part timestap to date
+		String sql = "from Analysis a where date(a.sampleItem.collectionDate) = :startedDate and a.statusId not in ( :statusList )";
 
 		try {
 			Query query = HibernateUtil.getSession().createQuery(sql);
@@ -1261,6 +1673,32 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 
 		return null;
 	}
+	
+	@SuppressWarnings("unchecked")
+    public List<Analysis> getAllAnalysisByTestSectionAndStatusAndDate(String testSectionId, List<Integer> analysisStatusList,
+            List<Integer> sampleStatusList, String receivedDate) throws LIMSRuntimeException {
+
+	    List<Analysis> analysisList = new ArrayList<Analysis>();
+        String sql = "From Analysis a WHERE a.testSection.id = :testSectionId AND a.statusId IN (:analysisStatusList) AND a.sampleItem.sample.statusId IN (:sampleStatusList)";
+        if (!StringUtil.isNullorNill(receivedDate)) {
+            sql += " and to_char(a.sampleItem.sample.receivedTimestamp,'dd/MM/yyyy')= '" + receivedDate + "'";
+        } 
+        try {
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setInteger("testSectionId", Integer.parseInt(testSectionId));
+            query.setParameterList("analysisStatusList", analysisStatusList);
+            query.setParameterList("sampleStatusList", sampleStatusList);
+            analysisList = query.list();
+
+            closeSession();
+
+        } catch (HibernateException e) {
+            LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByTestSectionAndStatusAndDate()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByTestSectionAndStatusAndDate()", e);
+        }
+
+        return analysisList;
+    }
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -1431,5 +1869,73 @@ public class AnalysisDAOImpl extends BaseDAOImpl implements AnalysisDAO {
 		
 		return null;
 	}
+	
+	/**
+	 * Retrieve Analysis data by analysisId (used only by addAIMTestResult Web Service)
+	 */
+    @Override
+    public Analysis getAnalysisByIdAIM(String analysisId) throws LIMSRuntimeException {
+        try {
+            Analysis analysis = (Analysis) HibernateUtil.getSession().get(Analysis.class, analysisId);
+            HibernateUtil.getSession().flush();
+            return analysis;
+        } catch (Exception e) {
+            handleException(e, "getAnalysisByIdAIM");
+        }
+        
+        return null;
+    }
 
+	@SuppressWarnings("rawtypes")
+    @Override
+	public List getAllAnalysisByAccessionNumberAndStatus(String accessionNumber,
+			List<Integer> statusIdList, boolean sortedByDateAndAccession)
+			throws LIMSRuntimeException {
+		List list = new Vector();
+		try {
+			//String sql = "from Analysis a where a.sampleItem.sample.accessionNumber = :accessionNumber and a.statusId IN (:statusIdList) order by a.id";
+			String sql = "from Analysis a where a.sampleItem.sample.accessionNumber = :accessionNumber and a.statusId IN (:statusIdList) order by a.id";
+			if (sortedByDateAndAccession) {
+				//sql += " order by a.sampleItem.sample.receivedTimestamp  asc, a.sampleItem.sample.accessionNumber";
+			}
+
+			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+			query.setString("accessionNumber", accessionNumber);
+			query.setParameterList("statusIdList", statusIdList);
+			list = query.list();
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+		} catch (Exception e) {
+
+			LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByAccessionNumberAndStatus()", e.toString());
+			throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByAccessionNumberAndStatus()", e);
+		}
+
+		return list;
+	}
+	
+	/** 
+	 * Get all test ids of this sample item has been in the system
+	 *
+	 * @param sampleItemId
+	 * @return
+	 * @throws LIMSRuntimeException
+	 */
+	@SuppressWarnings({"rawtypes" })
+    public List getTestIdBySampleItemId(String sampleItemId) throws LIMSRuntimeException {
+	    List list=new ArrayList<>();
+	    try {
+	        String sql ="SELECT a.test.id from Analysis AS a where a.sampleItem.id= :sampleItemId AND a.statusId!= :statusId";
+	        Query query= HibernateUtil.getSession().createQuery(sql);
+	        query.setInteger("sampleItemId", Integer.parseInt(sampleItemId));
+	        //add: do not get test with statusId = 15 (AnalysisStatus.Cancel) which means "Test was requested but then canceled"
+	        int excludedAnalysisStatus= Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Canceled));
+	        query.setInteger("statusId",excludedAnalysisStatus);
+	        list=query.list();
+        } catch (Exception e) {
+            LogEvent.logError("AnalysisDAOImpl", "getAllAnalysisByAccessionNumberAndStatus()", e.toString());
+            throw new LIMSRuntimeException("Error in Analysis getAllAnalysisByAccessionNumberAndStatus()", e);
+        }
+	    return list;
+    }
 }

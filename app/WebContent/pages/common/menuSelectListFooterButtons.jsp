@@ -26,7 +26,7 @@
  
         %>
 	   <td >
-  			<html:button onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=1');return false;" property="previous" disabled="<%=Boolean.valueOf(previousDisabled).booleanValue()%>">
+  			<html:button styleClass="btn btn-default" onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=1');return false;" property="previous" disabled="<%=Boolean.valueOf(previousDisabled).booleanValue()%>">
   			   <bean:message key="label.button.previous"/>
   			</html:button>
 	   </td>
@@ -34,7 +34,7 @@
 	   &nbsp;
 	   </td>
 	   <td>
-  			<html:button onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=2');return false;" property="next"  disabled="<%=Boolean.valueOf(nextDisabled).booleanValue()%>">
+  			<html:button styleClass="btn btn-default" onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=2');return false;" property="next"  disabled="<%=Boolean.valueOf(nextDisabled).booleanValue()%>">
   			   <bean:message key="label.button.next"/>
   			</html:button>
 	   </td>

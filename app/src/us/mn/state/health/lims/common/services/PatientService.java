@@ -19,6 +19,7 @@ package us.mn.state.health.lims.common.services;
 import org.apache.commons.validator.GenericValidator;
 import us.mn.state.health.lims.address.daoimpl.AddressPartDAOImpl;
 import us.mn.state.health.lims.address.valueholder.AddressPart;
+import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.gender.dao.GenderDAO;
 import us.mn.state.health.lims.gender.daoimpl.GenderDAOImpl;
@@ -37,7 +38,7 @@ import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.samplehuman.dao.SampleHumanDAO;
 import us.mn.state.health.lims.samplehuman.daoimpl.SampleHumanDAOImpl;
 
-import java.sql.Timestamp;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,8 @@ public class PatientService implements IPatientService {
     public static final String ADDRESS_ZIP = "zip";
     public static final String ADDRESS_COUNTRY = "Country";
     public static final String ADDRESS_CITY = "City";
+    public static final String ADDRESS_WARD = "ward";
+    public static final String ADDRESS_DISTRICT = "district";
 
 	public static String PATIENT_GUID_IDENTITY;
 	public static String PATIENT_NATIONAL_IDENTITY;
@@ -62,6 +65,7 @@ public class PatientService implements IPatientService {
     public static String PATIENT_MOTHER_IDENTITY;
     public static String PATIENT_INSURANCE_IDENTITY;
     public static String PATIENT_OCCUPATION_IDENTITY;
+    public static String PATIENT_EMPLOYER_NAME_IDENTITY;
     public static String PATIENT_ORG_SITE_IDENTITY;
     public static String PATIENT_MOTHERS_INITIAL_IDENTITY;
     public static String PATIENT_EDUCATION_IDENTITY;
@@ -122,6 +126,11 @@ public class PatientService implements IPatientService {
         patientType = identityTypeDAOImpl.getNamedIdentityType("OCCUPATION");
         if( patientType != null){
             PATIENT_OCCUPATION_IDENTITY = patientType.getId();
+        }
+
+        patientType = identityTypeDAOImpl.getNamedIdentityType("EMPLOYER_NAME");
+        if( patientType != null){
+            PATIENT_EMPLOYER_NAME_IDENTITY = patientType.getId();
         }
 
         patientType = identityTypeDAOImpl.getNamedIdentityType("ORG_SITE");
@@ -277,7 +286,7 @@ public class PatientService implements IPatientService {
 	 */
 	@Override
 	public String getLastName(){
-		return personService.getLastName();
+		return FormFields.getInstance().useField(FormFields.Field.SINGLE_NAME_FIELD) ? "" : personService.getLastName();
 	}
 	
 	/* (non-Javadoc)
@@ -285,7 +294,7 @@ public class PatientService implements IPatientService {
 	 */
 	@Override
 	public String getLastFirstName(){
-		return personService.getLastFirstName();
+		return FormFields.getInstance().useField(FormFields.Field.SINGLE_NAME_FIELD) ? personService.getFirstName() : personService.getLastFirstName();
 	}
 	/* (non-Javadoc)
 	 * @see us.mn.state.health.lims.common.services.IPatientService#getGender()
@@ -317,18 +326,13 @@ public class PatientService implements IPatientService {
 	}
 	
 	/* (non-Javadoc)
-	 * @see us.mn.state.health.lims.common.services.IPatientService#getEnteredDOB()
+	 * @see us.mn.state.health.lims.common.services.IPatientService#getDOB()
 	 */
 	@Override
-	public String getEnteredDOB(){
+	public String getDOB(){
 			return patient != null ? patient.getBirthDateForDisplay() : "";
 	}
-
-	@Override
-	public Timestamp getDOB() {
-		return patient != null ? patient.getBirthDate() : null;
-	}
-
+	
 	/* (non-Javadoc)
 	 * @see us.mn.state.health.lims.common.services.IPatientService#getPhone()
 	 */
@@ -401,6 +405,11 @@ public class PatientService implements IPatientService {
     }
 
     @Override
+    public String getEmployerName(){
+        return getIdentityInfo(PATIENT_EMPLOYER_NAME_IDENTITY);
+    }
+
+    @Override
     public String getOrgSite(){
         return getIdentityInfo(PATIENT_ORG_SITE_IDENTITY);
     }
@@ -439,4 +448,10 @@ public class PatientService implements IPatientService {
     public String getPCNumber(){
         return getIdentityInfo(PATIENT_PC_NUMBER_IDENTITY);
     }
+
+	@Override
+	public String getPatientAgeUnit() {
+		return patient != null ? patient.getPatientAgeUnit() : "";
+	}
+
 }

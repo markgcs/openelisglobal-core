@@ -15,22 +15,26 @@
 */
 package us.mn.state.health.lims.sample.action;
 
-import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.struts.action.ActionForm;
-import org.apache.struts.action.ActionForward;
-import org.apache.struts.action.ActionMapping;
-import us.mn.state.health.lims.common.action.BaseAction;
-import us.mn.state.health.lims.common.action.BaseActionForm;
-import us.mn.state.health.lims.common.util.DateUtil;
-import us.mn.state.health.lims.common.util.SystemConfiguration;
-import us.mn.state.health.lims.sample.valueholder.Sample;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
+
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionForward;
+import org.apache.struts.action.ActionMapping;
+
+import us.mn.state.health.lims.common.action.BaseAction;
+import us.mn.state.health.lims.common.action.BaseActionForm;
+import us.mn.state.health.lims.common.services.DisplayListService;
+import us.mn.state.health.lims.common.services.DisplayListService.ListType;
+import us.mn.state.health.lims.common.util.DateUtil;
+import us.mn.state.health.lims.common.util.SystemConfiguration;
+import us.mn.state.health.lims.sample.valueholder.Sample;
 
 /**
  * The QuickEntryAction class represents the initial 
@@ -56,10 +60,29 @@ public class QuickEntryAction
 		ArrayList selectedTestIds = new ArrayList();
 		session.setAttribute("selectedTestIds", selectedTestIds);
 
-		BaseActionForm dynaForm = (BaseActionForm)form;
+		BaseActionForm dynaForm = (BaseActionForm) form;
 
 		// Initialize the form.
 		dynaForm.initialize(mapping);
+		
+		PropertyUtils.setProperty(dynaForm, "currentDate", DateUtil.getCurrentDateAsText());
+		PropertyUtils.setProperty(dynaForm, "sampleTypes", DisplayListService.getList(ListType.SAMPLE_TYPE_ACTIVE));
+		PropertyUtils.setProperty(dynaForm, "sampleSources", DisplayListService.getList(ListType.SAMPLE_SOURCE));
+		PropertyUtils.setProperty(dynaForm, "initConditionFormErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_FORM_ERRORS));
+		PropertyUtils.setProperty(dynaForm, "initConditionLabelErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_LABEL_ERRORS));
+		PropertyUtils.setProperty(dynaForm, "initConditionMiscList", DisplayListService.getList(ListType.SAMPLE_ENTRY_INIT_COND_MISC));
+		PropertyUtils.setProperty(dynaForm, "rejectionReasonFormErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_FORM_ERRORS));
+		PropertyUtils.setProperty(dynaForm, "rejectionReasonLabelErrorsList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_LABEL_ERRORS));
+		PropertyUtils.setProperty(dynaForm, "rejectionReasonMiscList", DisplayListService.getList(ListType.SAMPLE_ENTRY_REJECTION_MISC));
+        PropertyUtils.setProperty(dynaForm, "genderList", DisplayListService.getList(ListType.GENDERS));
+        PropertyUtils.setProperty(dynaForm, "cityList", DisplayListService.getList(ListType.CITY));
+        PropertyUtils.setProperty(dynaForm, "districtList", DisplayListService.getList(ListType.DISTRICT));
+        PropertyUtils.setProperty(dynaForm, "departmentList", DisplayListService.getList(ListType.DEPARTMENT));
+        PropertyUtils.setProperty(dynaForm, "patientTypeList", DisplayListService.getList(ListType.PATIENT_TYPE));
+
+        // for backwards compatibility with non-modal version of sample entry
+		PropertyUtils.setProperty(dynaForm, "initialSampleConditionList", DisplayListService.getList(ListType.INITIAL_SAMPLE_CONDITION));
+		PropertyUtils.setProperty(dynaForm, "testSectionList", DisplayListService.getList(ListType.TEST_SECTION));
 
 		Sample	sample	= new Sample();
 
@@ -91,7 +114,7 @@ public class QuickEntryAction
 		PropertyUtils.copyProperties(form, sample);
 
 		PropertyUtils.setProperty(form, "currentDate",		dateAsText);
-		request.setAttribute("menuDefinition", "QuickEntryDefinition");
+		request.setAttribute("menuDefinition", "BatchEntryDefinition");
 		return mapping.findForward(forward);
 	}
 	//==============================================================

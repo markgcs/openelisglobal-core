@@ -86,10 +86,8 @@ public class TestReflexResolver {
 				List<Result> resultList = RESULT_DAO.getResultsByAnalysis(analysis);
 
 				for (Result result : resultList) {
-					if (result.getTestResult() != null
-                            && reflex.getTestResultId().equals(result.getTestResult().getId())
-                            && result.getAnalyte() != null
-							&& reflex.getTestAnalyte().getAnalyte().getId().equals(result.getAnalyte().getId())
+					if (reflex.getTestResultId().equals(result.getTestResultId())
+							&& reflex.getTestAnalyte().getAnalyte().getId().equals(result.getAnalyteId())
 							&& reflex.getTestId().equals(analysis.getTest().getId())) {
 
 						lastValidAnalysis = analysis;

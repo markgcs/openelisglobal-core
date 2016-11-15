@@ -16,23 +16,30 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
-import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.commons.validator.GenericValidator;
-import org.jfree.util.Log;
-import us.mn.state.health.lims.common.action.BaseActionForm;
-import us.mn.state.health.lims.common.util.StringUtil;
-import us.mn.state.health.lims.project.dao.ProjectDAO;
-import us.mn.state.health.lims.project.daoimpl.ProjectDAOImpl;
-import us.mn.state.health.lims.project.valueholder.Project;
-import us.mn.state.health.lims.reports.action.implementation.reportBeans.*;
+import static org.apache.commons.validator.GenericValidator.isBlankOrNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
-import static org.apache.commons.validator.GenericValidator.isBlankOrNull;
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.validator.GenericValidator;
+import org.jfree.util.Log;
+
+import us.mn.state.health.lims.common.action.BaseActionForm;
+import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.project.dao.ProjectDAO;
+import us.mn.state.health.lims.project.daoimpl.ProjectDAOImpl;
+import us.mn.state.health.lims.project.valueholder.Project;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.ARVFollowupColumnBuilder;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.ARVInitialColumnBuilder;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.CIColumnBuilder;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.CSVColumnBuilder;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.EIDColumnBuilder;
+import us.mn.state.health.lims.reports.action.implementation.reportBeans.RTNColumnBuilder;
 
 /**
  * @author Paul A. Hill (pahill@uw.edu)
@@ -88,7 +95,7 @@ public class ExportProjectByDate extends CSVSampleExportReport implements IRepor
 		
 		createReportItems();
 	}
-
+	
 	/**
 	 * check everything
 	 */
@@ -101,7 +108,7 @@ public class ExportProjectByDate extends CSVSampleExportReport implements IRepor
 	 *         false otherwise
 	 */
 	private boolean validateProject() {
-		if (isBlankOrNull(projectStr) || "0".equals(Integer.getInteger(projectStr))) {
+		if (isBlankOrNull(projectStr) || "0".equals(projectStr)) {
 			add1LineErrorMessage("report.error.message.project.missing");
 			return false;
 		}
@@ -206,4 +213,24 @@ public class ExportProjectByDate extends CSVSampleExportReport implements IRepor
 		projects.add(projectDAO.getProjectByName(project, false, false));
 		return projects;
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		errorFound = false;
+
+		lowDateStr = hashmap.get("lowerDateRange");
+		highDateStr = hashmap.get("upperDateRange");
+		projectStr = hashmap.get("projectCode");
+		dateRange = new DateRange(lowDateStr, highDateStr);
+		
+		createReportParameters();
+		errorFound = !validateSubmitParameters();
+		if (errorFound) {
+			return;
+		}
+		
+		createReportItems();
+	}
+
 }

@@ -145,14 +145,14 @@ public class ProjectUpdateAction extends BaseAction {
 		String scriptletName = (String) dynaForm.get("scriptletName");
 		scriptlet.setScriptletName(scriptletName);
 
-		ScriptletDAO scriptletDAO = new ScriptletDAOImpl();
-		Scriptlet scr = scriptletDAO.getScriptletByName(scriptlet);
+		//ScriptletDAO scriptletDAO = new ScriptletDAOImpl();
+		//Scriptlet scr = scriptletDAO.getScriptletByName(scriptlet);
 
 		// populate valueholder from form
 		PropertyUtils.copyProperties(project, dynaForm);
 
 		project.setSystemUser(sysUser);
-		project.setScriptlet(scr);
+		//project.setScriptlet(scr);
 		// there is no specification for sticker req flag, but it can't be null
 		// so default to N
 		if (project.getStickerReqFlag() == null) {
@@ -189,7 +189,9 @@ public class ProjectUpdateAction extends BaseAction {
 					java.util.Locale locale = (java.util.Locale) request.getSession()
 					.getAttribute("org.apache.struts.action.LOCALE");
 					//bugzilla 2438
-					String messageKey = "project.projectNameOrLocalAbbrev";
+				    //String messageKey = "project.projectNameOrLocalAbbrev";
+					//add to confirm message when having exception
+					String messageKey = "project.browse.title";
 					String msg =  ResourceLocator.getInstance().getMessageResources().getMessage(
 							locale, messageKey);
 					error = new ActionError("errors.DuplicateRecord.activate", msg,

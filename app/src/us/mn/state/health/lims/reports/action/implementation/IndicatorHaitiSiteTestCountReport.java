@@ -21,6 +21,7 @@ import org.apache.commons.validator.GenericValidator;
 import org.json.simple.parser.ContainerFactory;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.IdValuePair;
@@ -304,6 +305,11 @@ public class IndicatorHaitiSiteTestCountReport extends CSVExportReport implement
 		line.append(StringUtil.getMessageForKey("report.column.total"));
 		line.append(EOL);
 		return line.toString();
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
 	}
 
 }

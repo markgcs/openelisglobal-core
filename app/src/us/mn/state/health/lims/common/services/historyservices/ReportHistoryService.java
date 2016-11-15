@@ -20,29 +20,36 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
+
 import us.mn.state.health.lims.audittrail.action.workers.AuditTrailItem;
 import us.mn.state.health.lims.audittrail.valueholder.History;
+import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.services.ReportTrackingService;
 import us.mn.state.health.lims.common.services.ReportTrackingService.ReportType;
 import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.dataexchange.aggregatereporting.daoimpl.ReportExternalExportDAOImpl;
 import us.mn.state.health.lims.referencetables.dao.ReferenceTablesDAO;
 import us.mn.state.health.lims.referencetables.daoimpl.ReferenceTablesDAOImpl;
 import us.mn.state.health.lims.reports.valueholder.DocumentTrack;
 import us.mn.state.health.lims.sample.valueholder.Sample;
+import us.mn.state.health.lims.dataexchange.aggregatereporting.dao.ReportExternalExportDAO;
+import us.mn.state.health.lims.dataexchange.aggregatereporting.valueholder.ReportExternalExport;
 
 public class ReportHistoryService extends HistoryService {
 	private static String REPORT_TABLE_ID;
 	
 	static {
 		ReferenceTablesDAO tableDAO = new ReferenceTablesDAOImpl();
-		REPORT_TABLE_ID = tableDAO.getReferenceTableByName("document_track").getId();
+		REPORT_TABLE_ID = tableDAO.getReferenceTableByName("REPORT_EXTERNAL_EXPORT").getId();
 	}
 	
-	public ReportHistoryService(Sample sample) {
-		setUpForReport(sample);
+	public ReportHistoryService(Sample sample, String accessionNumber) {
+		setUpForReport(sample,accessionNumber);
 	}
 	
-	@SuppressWarnings("unchecked")
+	/*@SuppressWarnings("unchecked")
 	private void setUpForReport(Sample sample) {
 		List<DocumentTrack> documentList = new ReportTrackingService().getReportsForSample(sample, ReportType.PATIENT);
 
@@ -54,13 +61,49 @@ public class ReportHistoryService extends HistoryService {
 			historyList.addAll(auditTrailDAO.getHistoryByRefIdAndRefTableId(searchHistory));
 		}
 	}
-
-	@Override
+*/
+	@SuppressWarnings("unchecked")
+    private void setUpForReport(Sample sample, String accessionNumber) {
+	    ReportExternalExportDAO reportEExportDAO = new ReportExternalExportDAOImpl();
+        List<ReportExternalExport> reportList = reportEExportDAO.getReportsByAccessionNumber(accessionNumber);
+        
+        historyList = new ArrayList<History>();
+        for (ReportExternalExport reportEE : reportList) {
+            History searchHistory = new History();
+            searchHistory.setReferenceId(reportEE.getId());
+            searchHistory.setReferenceTable(REPORT_TABLE_ID);
+            historyList.addAll(auditTrailDAO.getHistoryByRefIdAndRefTableId(searchHistory));
+        }
+    }
+	
+	/*@Override
 	protected void addInsertion(History history, List<AuditTrailItem> items) {
 		identifier = new ReportTrackingService().getDocumentForId(history.getReferenceId()).getDocumentName();
 		AuditTrailItem item = getCoreTrail(history);
 		items.add(item);
-	}
+	}*/
+	
+	@Override
+    protected void addInsertion(History history, List<AuditTrailItem> items) {
+	    ReportExternalExportDAO reportEExportDAO = new ReportExternalExportDAOImpl();
+	    ReportExternalExport reportEExport = reportEExportDAO.readReportExternalExport(history.getReferenceId());
+	    
+	    String data = reportEExport.getData();
+	    // cut string to get report name
+	    try {
+	        String cutDataToGetReportName = data.substring(data.lastIndexOf(":") +1);
+	        String getSubstringForReportName = StringUtils.substringBefore(cutDataToGetReportName,";");
+	        identifier = getSubstringForReportName;
+	    } catch(Exception e) {
+	        LogEvent.logError("ReportHistoryService","addInsertion()",e.toString());
+	        throw new LIMSRuntimeException("Error in addInsertion()", e);
+	    }
+	    
+	    //end
+        
+        AuditTrailItem item = getCoreTrail(history);
+        items.add(item);
+    }
 
 	@Override
 	protected void getObservableChanges(History history, Map<String, String> changeMap, String changes) {

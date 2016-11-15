@@ -142,7 +142,7 @@ public class QaEventsEntryViewLineListingAction extends BaseAction {
 
 			DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
 			categoryDictionaries = dictionaryDAO
-			.getDictionaryEntrysByCategoryAbbreviation(SystemConfiguration
+			.getDictionaryEntrysByCategory(SystemConfiguration
 					.getInstance()
 					.getQaEventDictionaryCategoryCategory());
 

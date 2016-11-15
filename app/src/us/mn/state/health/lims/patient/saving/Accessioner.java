@@ -182,7 +182,8 @@ public abstract class Accessioner {
 	 * @throws NoSuchMethodException
 	 */
 	public static String findProjectFormName(DynaBean form) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		return ((ObservationData) (PropertyUtils.getProperty(form, "observations"))).getProjectFormName();
+		String projectFormName = ((ObservationData) (PropertyUtils.getProperty(form, "observations"))).getProjectFormName();
+		return projectFormName;
 	}
 
 	/**
@@ -258,6 +259,7 @@ public abstract class Accessioner {
 	protected List<SampleItem> sampleItemsToDelete = new ArrayList<SampleItem>();
 	private boolean aDifferentPatientRecord = false;
 	private ProjectData projectData;
+	private ObservationData observationData;
 
 	protected Accessioner(String sampleIdentifier, String patientIdentifier, String siteSubjectNo, String sysUserId) {
 		this();
@@ -479,7 +481,11 @@ public abstract class Accessioner {
 
 		String existingSiteSubjectNo = StringUtil.replaceNullWithEmptyString(patientInDB.getExternalId()).trim();
 
-		return !(!GenericValidator.isBlankOrNull(this.patientSiteSubjectNo) && this.patientSiteSubjectNo.equals(existingSiteSubjectNo));
+		if (!GenericValidator.isBlankOrNull(this.patientSiteSubjectNo) && this.patientSiteSubjectNo.equals(existingSiteSubjectNo)) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -487,7 +493,11 @@ public abstract class Accessioner {
 	 */
 	private boolean createPatientByIdentifiers() {
 		patientInDB = findPatientByIndentifiers();
-		return patientInDB != null || createNewPatient();
+		if (patientInDB == null) {
+			return createNewPatient();
+		} else {
+			return true;
+		}
 	}
 
 	private Patient findPatientByIndentifiers() {
@@ -595,7 +605,7 @@ public abstract class Accessioner {
 	 */
 	protected void populateObservationHistory() {
 		projectFormMapper.getDynaBean();
-		ObservationData observationData = (ObservationData) (projectFormMapper.getDynaBean().get("observations"));
+		observationData = (ObservationData) (projectFormMapper.getDynaBean().get("observations"));
 		this.observationHistories = projectFormMapper.readObservationHistories(observationData);
 		this.observationHistoryLists = projectFormMapper.readObservationHistoryLists(observationData);
 	}
@@ -643,7 +653,8 @@ public abstract class Accessioner {
 			if (size == 1) {
 				// if there is only one sample on the OLD patient of this sample
 				// we can delete it.
-				patientToDelete = knownPatientTemplate();
+				Patient patient = knownPatientTemplate();
+				patientToDelete = patient;
 				patientDAO.getData(patientToDelete);
 			}
 		}
@@ -694,7 +705,7 @@ public abstract class Accessioner {
 			return false;
 		}
 		SampleProject oldSampleProject = sampleProjectDAO.getSampleProjectBySampleId(this.sample.getId());
-		return oldSampleProject != null;
+		return (oldSampleProject == null) ? false : true;
 	}
 
 	/**
@@ -718,10 +729,10 @@ public abstract class Accessioner {
 					+ ". Unable to create sample to organization mapping.");
 		}
 
-		SampleOrganization oldSampleOrg;
+		SampleOrganization oldSampleOrg = null;
 		if (!isNewSample()) {
 			oldSampleOrg = new SampleOrganization();
-			oldSampleOrg.setSample(sample);
+			oldSampleOrg.setSampleId(sample.getId());
 			sampleOrganizationDAO.getDataBySample(oldSampleOrg);
 			if (oldSampleOrg.getOrganization() != null) { // there may not be an
 															// organiztion
@@ -822,8 +833,9 @@ public abstract class Accessioner {
 			TypeOfSample toSample = typeofSampleTest.typeOfSample;
 			List<Test> tests = typeofSampleTest.tests;
 			SampleItem item = buildSampleItem(sample, toSample, collectionDate);
-
-			sampleItemsAnalysis.add(new SampleItemAnalysisCollection(item, tests));
+			
+			String collectionDateTime = DateUtil.convertTimestampToStringDateAndTime(collectionDate);
+			sampleItemsAnalysis.add(new SampleItemAnalysisCollection(item, tests, collectionDateTime));
 		}
 	}
 
@@ -841,7 +853,7 @@ public abstract class Accessioner {
 		public List<Test> tests;
 		public String collectionDate;
 
-		public SampleItemAnalysisCollection(SampleItem item, List<Test> tests) throws Exception {
+		public SampleItemAnalysisCollection(SampleItem item, List<Test> tests, String collectionDate) throws Exception {
 			// Currently we allow a sampleItem w/o any tests requested,
 			// elsewhere we check that at least one test is ordered somewhere.
 			// if (tests.size() == 0) {

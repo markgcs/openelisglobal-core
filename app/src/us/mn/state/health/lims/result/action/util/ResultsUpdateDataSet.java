@@ -101,13 +101,16 @@ public class ResultsUpdateDataSet implements IResultSaveService{
             noteList.add( note );
         }
     }
+    //Modified by Trung 7-27-2016
+    //Fix the bug which can't set <blank>
     public void filterModifiedItems( List<TestResultItem> allItems ){
         for(TestResultItem item : allItems){
             if( isUpdated( item )){
                 modifiedItems.add(item);
             }else if( item.getIsModified()){
                 //this covers cases such as test date change or test method change w/o data update
-               analysisOnlyChangeResults.add( item );
+            	 modifiedItems.add(item);
+            	/*analysisOnlyChangeResults.add( item );*/
             }
         }
     }

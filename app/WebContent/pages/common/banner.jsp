@@ -35,6 +35,8 @@ function /*void*/ setLanguage( language ){
 	    update = confirm("Changing the language will affect all logged in users ");
 	} else if( language == 'fr-FR' ){
 		update = confirm( "Modification de la langue affectera tous les utilisateurs enregistrés");
+	} else if( language == 'vi-VN' ){
+		update = confirm( "Changing the language will affect all logged in users ");
 	}
 	
 	if( update ){
@@ -66,6 +68,10 @@ function displayHelp(){
 <script type="text/javascript" src="<%=basePath%>scripts/menu/superfish.js?ver=<%= Versioning.getBuildNumber() %>"></script>
 <script type="text/javascript" src="<%=basePath%>scripts/menu/supersubs.js?ver=<%= Versioning.getBuildNumber() %>"></script>
 <script type="text/javascript" src="<%=basePath%>scripts/menu/supposition.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<link rel="stylesheet" media="screen" type="text/css" href="<%=basePath%>css/bootstrap.min.css?ver=<%= Versioning.getBuildNumber() %>" />
+<link rel="stylesheet" media="screen" type="text/css" href="<%=basePath%>css/customBootstrapAdditions.css?ver=<%= Versioning.getBuildNumber() %>" />
+<!-- Need to reload the openElisCore stylesheet after loading bootstrap.min.css in order to override certain styles, h1 for example -->
+<link rel="stylesheet" media="screen" type="text/css" href="<%=basePath%>css/openElisCore.css?ver=<%= Versioning.getBuildNumber() %>" />
 <script type="text/javascript">
 	// initialize superfish menu plugin. supposition added to allow sub-menus on left when window size is too small.
 	jQuery(function(){
@@ -100,8 +106,8 @@ function displayHelp(){
   		</div>  
   		<div id="oe-version" style="display: block">
     		<div id="appVersion">
-    		<bean:message key="ellis.version" />:&nbsp;
-		    <%= ConfigurationProperties.getInstance().getPropertyValue(Property.releaseNumber)%>&nbsp;&nbsp;&nbsp;
+    		<bean:message key="ellis.version" />:&nbsp; 5.1
+		    <%-- <%= ConfigurationProperties.getInstance().getPropertyValue(Property.releaseNumber)%>&nbsp;&nbsp;&nbsp; --%>
 		    </div>
     
 		    <% if("true".equals(ConfigurationProperties.getInstance().getPropertyValueLowerCase(Property.TrainingInstallation))){ %>
@@ -123,6 +129,6 @@ function displayHelp(){
 
 
 <% if( languageSwitch && "loginForm".equals((String)request.getAttribute(IActionConstants.FORM_NAME)) ){ %>
-  <div id="language-chooser"><a href="#" onclick="setLanguage('fr-FR')">Français</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="setLanguage('en_US')">English</a></div>
+  <div id="language-chooser"><a href="#" onclick="setLanguage('fr-FR')">Français</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="setLanguage('en_US')">English</a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#" onclick="setLanguage('vi-VN')">Việt</a></div>
 <% } %>
 

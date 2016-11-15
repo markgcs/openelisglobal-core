@@ -23,18 +23,21 @@ import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.action.IActionConstants;
 
 public interface IReportCreator {
-    String INCOMPLETE_PARAMS = "Incompleate parameters";
-	String INVALID_PARAMS = "Invalid parameters";
-	String SUCCESS = IActionConstants.FWD_SUCCESS;
+    public String INCOMPLETE_PARAMS = "Incompleate parameters";
+	public String INVALID_PARAMS = "Invalid parameters";
+	public String SUCCESS = IActionConstants.FWD_SUCCESS;
 
-	void initializeReport(BaseActionForm dynaForm);
-	String getResponseHeaderName();
-	String getContentType();
-	String getResponseHeaderContent();
-	HashMap<String, ?> getReportParameters() throws IllegalStateException;
-	byte[] runReport( ) throws Exception;
-	void setReportPath( String path);
-	void setRequestedReport(String report);
-	List<String> getReportedOrders();
-
+	public void initializeReport(BaseActionForm dynaForm);
+	public void initializeReport(HashMap<String, String> hashmap);
+	public String getContentType();
+	public String getResponseHeaderName();
+	public String getResponseHeaderContent();
+	public HashMap<String, ?> getReportParameters() throws IllegalStateException;
+	public byte[] runReport( ) throws Exception;
+	public byte[] runReportForExcel( ) throws Exception;
+	public void setReportPath( String path);
+	public List<String> getReportedOrders();
+	public void setImageUrl(String url);
+	public String getReportName();
+	public void setRightImageUrl(String url);
 }

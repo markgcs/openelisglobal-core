@@ -47,7 +47,7 @@ public class AnalyzerResultsPaging {
 		List<AnalyzerResultItem> resultPage = paging.getPage(1, request.getSession());
 		if (resultPage != null) {
 			PropertyUtils.setProperty(dynaForm, "resultList", resultPage);
-			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(1, request.getSession()));
+			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(1, resultPage.size(), tests.size(), request.getSession()));
 		}
 	}
 
@@ -62,11 +62,14 @@ public class AnalyzerResultsPaging {
 		paging.updatePagedResults(request.getSession(), clientTests, bean, pagingHelper);
 
 		int page = Integer.parseInt(newPage);
-
 		List<AnalyzerResultItem> resultPage = paging.getPage(page, request.getSession());
 		if (resultPage != null) {
+			int	currentPageTotal = resultPage.size() * page;
+			if (resultPage.size() < IActionConstants.VALIDATION_PAGING_SIZE) {
+				currentPageTotal = (IActionConstants.VALIDATION_PAGING_SIZE * (page - 1)) + resultPage.size();
+			}
 			PropertyUtils.setProperty(dynaForm, "resultList", resultPage);
-			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(page, request.getSession()));
+			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(page, currentPageTotal, bean.getSearchTermToPage().size(), request.getSession()));
 		}
 	}
 
@@ -83,7 +86,7 @@ public class AnalyzerResultsPaging {
 	}
 
 	public void setEmptyPageBean(HttpServletRequest request, DynaActionForm dynaForm) throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
-		PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(0, request.getSession()));
+		PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(0, 0, 0, request.getSession()));
 	}
 
 	private static class TestItemPageHelper implements IPageDivider<List<AnalyzerResultItem>>, IPageUpdater<List<AnalyzerResultItem>>,

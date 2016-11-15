@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="WorkplanByTest" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30" resourceBundle="MessageResources" whenResourceMissingType="Key">
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="WorkplanByTest" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="30" bottomMargin="30">
 	<property name="ireport.scriptlethandling" value="0"/>
 	<property name="ireport.encoding" value="UTF-8"/>
 	<property name="ireport.zoom" value="1.5"/>
@@ -57,7 +57,7 @@
 				<textElement textAlignment="Left" verticalAlignment="Middle"/>
 				<textFieldExpression class="java.util.Date"><![CDATA[new java.util.Date()]]></textFieldExpression>
 			</textField>
-			<image isUsingCache="true">
+			<image>
 				<reportElement x="1" y="1" width="65" height="64"/>
 				<imageExpression class="java.io.InputStream"><![CDATA[$P{leftHeaderImage}]]></imageExpression>
 			</image>
@@ -135,7 +135,7 @@
 			<textField>
 				<reportElement x="344" y="0" width="79" height="16"/>
 				<textElement textAlignment="Left" verticalAlignment="Middle"/>
-				<textFieldExpression class="java.lang.String"><![CDATA[$R{report.results} + "/"]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$P{localization}.get("results")+ "/"]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="490" y="0" width="57" height="30"/>
@@ -281,7 +281,7 @@
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
 				<reportElement mode="Transparent" x="182" y="0" width="152" height="13" backcolor="#FFFFFF"/>
 				<textElement verticalAlignment="Middle"/>
-				<textFieldExpression class="java.lang.String"><![CDATA[$F{patientOrTestName} != null && !"".equals($F{patientOrTestName}) ? $F{patientOrTestName} : $R{report.patient.not.registered}]]></textFieldExpression>
+				<textFieldExpression class="java.lang.String"><![CDATA[$F{patientOrTestName} != null && !"".equals($F{patientOrTestName}) ? $F{patientOrTestName} : "Pas enregistré"]]></textFieldExpression>
 			</textField>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
 				<reportElement x="344" y="0" width="79" height="13" isPrintWhenDetailOverflows="true"/>

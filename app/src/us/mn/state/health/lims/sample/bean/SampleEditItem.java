@@ -1,9 +1,14 @@
 package us.mn.state.health.lims.sample.bean;
 
-public class SampleEditItem {
-	private String accessionNumber;
+import java.io.Serializable;
+
+public class SampleEditItem implements Serializable{
+    
+    private static final long serialVersionUID = 1L;
+    private String accessionNumber;
 	private String analysisId;
 	private String sampleType;
+	private String sampleTypeId;
 	private String testName;
 	private String sampleItemId;
 	private String testId;
@@ -18,18 +23,31 @@ public class SampleEditItem {
     private String collectionTime;
     private boolean sampleItemChanged = false;
     private boolean hasResults = false;
+    private String sampleItemExternalId;
 
+	public String getSampleItemExternalId() {
+		return sampleItemExternalId;
+	}
+	public void setSampleItemExternalId(String sampleItemExternalId) {
+		this.sampleItemExternalId = sampleItemExternalId;
+	}
 	public String getAccessionNumber() {
-		return accessionNumber;
+	    return accessionNumber;
 	}
 	public void setAccessionNumber(String accessionNumber) {
-		this.accessionNumber = accessionNumber;
+	    this.accessionNumber = accessionNumber;
 	}
 	public String getSampleType() {
 		return sampleType;
 	}
 	public void setSampleType(String sampleType) {
 		this.sampleType = sampleType;
+	}
+	public String getSampleTypeId() {
+		return sampleTypeId;
+	}
+	public void setSampleTypeId(String sampleTypeId) {
+		this.sampleTypeId = sampleTypeId;
 	}
 	public String getTestName() {
 		return testName;

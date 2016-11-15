@@ -15,14 +15,14 @@
         <many-to-one name="organization" class="us.mn.state.health.lims.organization.valueholder.Organization" fetch="select">
             <column name="ORG_ID" precision="10" scale="0" />
         </many-to-one>
+        <many-to-one name="city" class="us.mn.state.health.lims.dictionary.valueholder.Dictionary" fetch="select">
+            <column name="CITY" precision="10" scale="0" />
+        </many-to-one>
         <property name="orgMltOrgMltId" type="us.mn.state.health.lims.hibernate.resources.usertype.LIMSStringNumberUserType">
             <column name="ORG_MLT_ORG_MLT_ID" length="10" />
         </property>
         <property name="organizationName" type="java.lang.String">
             <column name="NAME" length="40" not-null="true" />
-        </property>
-        <property name="city" type="java.lang.String">
-            <column name="CITY" length="30" />
         </property>
         <property name="zipCode" type="java.lang.String">
             <column name="ZIP_CODE" length="10" />

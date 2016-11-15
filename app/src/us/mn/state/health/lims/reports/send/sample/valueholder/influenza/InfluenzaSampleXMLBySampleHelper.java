@@ -143,7 +143,7 @@ public class InfluenzaSampleXMLBySampleHelper {
 		
 		sampleHuman.setSampleId(sample.getId());
 		sampleHumanDAO.getDataBySample(sampleHuman);
-		sampleOrganization.setSample(sample);
+		sampleOrganization.setSampleId(sample.getId());
 		sampleOrganizationDAO.getDataBySample(sampleOrganization);
 		//bugzilla 1773 need to store sample not sampleId for use in sorting
 		sampleItem.setSample(sample);
@@ -200,7 +200,7 @@ public class InfluenzaSampleXMLBySampleHelper {
 		
 		sampleHuman.setSampleId(sampleXmit.getId());
 		sampleHumanDAO.getDataBySample(sampleHuman);
-		sampleOrganization.setSample(sampleXmit);
+		sampleOrganization.setSampleId(sampleXmit.getId());
 		sampleOrganizationDAO
 		.getDataBySample(sampleOrganization);
 		//bugzilla 1827 set id = external id AFTER getting data

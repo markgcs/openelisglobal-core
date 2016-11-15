@@ -39,11 +39,8 @@
 <script type="text/javascript" src="<%=basePath%>scripts/utilities.jsp"></script>
 <script type="text/javascript" src="scripts/jquery.asmselect.js?ver=<%= Versioning.getBuildNumber() %>"></script>
 <script type="text/javascript" src="scripts/ajaxCalls.js?ver=<%= Versioning.getBuildNumber() %>"></script>
-<script type="text/javascript" src="scripts/laborder.js?ver=<%= Versioning.getBuildNumber() %>"></script>
 
 <link rel="stylesheet" type="text/css" href="css/jquery.asmselect.css?ver=<%= Versioning.getBuildNumber() %>" />
-
-
 
 
 <script type="text/javascript" >
@@ -108,7 +105,6 @@ function addTypeToTable(table, sampleDescription, sampleType, currentTime, curre
 		var cellCount = 0;
 		newRow.id = "_" + rowLabel;
 
-
 		var selectionBox = newRow.insertCell(cellCount);
 		var sampleId = newRow.insertCell(++cellCount);
 		var type = newRow.insertCell(++cellCount);
@@ -167,11 +163,11 @@ function getSampleTypeHtml(  row, sampleDescription, sampleType ){
 }
 
 function getCollectionDateHtml( row, date ){ 
-	return "<input name='collectionDate' maxlength='10' size ='12' value='" + date + "' onchange=\"checkValidEntryDate(this, 'past', true);\" id='collectionDate_" + row + "' class='text' type='text'>";
+	return "<input name='collectionDate' maxlength='10' size ='12' value='" + date + "' onblur=\"this.value.indexOf('yyyy') == -1 && checkValidEntryDate(this, 'past', true); makeDirty();\" id='collectionDate_" + row + "' class='text' type='text'>";
 }
 
 function getCollectionTimeHtml( row, time ){
-	return "<input name='collectionTime' maxlength='10' size ='12' value='" + time + "' onkeyup='filterTimeKeys(this, event);' onblur='checkValidTime(this, true);' id='collectionTime_" + row + "' class='text' type='text'>";
+	return "<input name='collectionTime' maxlength='5' size ='12' value='" + time + "' onkeyup='filterTimeKeys(this, event);' onchange='checkValidTime(this, true);makeDirty();' id='collectionTime_" + row + "' class='text' type='text'>";
 }
 
 function getTestsHtml(row){
@@ -191,16 +187,6 @@ function getRemoveButtonHtml( row ){
 	return "<input name='remove' value='" + "<bean:message key="sample.entry.remove.sample"/>" + "' class='textButton' onclick='removeRow(" + row + ");testAndSetSave();' id='removeButton_" + row +"' type='button' >";
 }
 
-function getCurrentTime(){
-	var date = new Date();
-
-	return (formatToTwoDigits(date.getHours()) + ":"  + formatToTwoDigits(date.getMinutes()));
-}
-
-function formatToTwoDigits( number ){
-	return number > 9 ? number : "0" + number;
-}
-
 function removeAllRows(){
 	var table = $("samplesAddedTable");
 	var rows = table.rows.length;
@@ -210,6 +196,8 @@ function removeAllRows(){
 	}
 
 	$("samplesAdded").hide();
+	
+	testAndSetSave();
 }
 
 function removeRow( row ){
@@ -436,6 +424,13 @@ function getTestDisplayRowHtml( name, id, row ){
 	return "<input name='testName' class='testName'  value='" + id + "' id='testName_" + row  + "' type='hidden' >" + name;
 }
 
+
+
+function processGetTestFailure(xhr){
+	alert(2);
+  // alert(xhr.responseText);
+}
+
 function getValueFromXmlElement( parent, tag ){
 	var element = parent.getElementsByTagName( tag );
 
@@ -574,7 +569,7 @@ function sectionSelectionChanged( selectionElement ){
 
 function editSelectedTest( ){
 	if( currentCheckedType == -1 || currentTypeForTests != currentCheckedType  ){
-    	getTestsForSampleType(currentCheckedType, processGetTestSuccess); //this is an asynchronous call and setSampleType will be called on the return of the call
+    	getTestsForSampleType(currentCheckedType, processGetTestSuccess, processGetTestFailure); //this is an asynchronous call and setSampleType will be called on the return of the call
     }else{
     	setSampleTests();
     }

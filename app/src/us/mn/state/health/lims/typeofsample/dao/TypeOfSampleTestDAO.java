@@ -47,4 +47,7 @@ public interface TypeOfSampleTestDAO extends BaseDAO {
 	public TypeOfSampleTest getTypeOfSampleTestForTest(String testId) throws LIMSRuntimeException;
 	
 	public List<TypeOfSampleTest> getTypeOfSampleTestsForTest(String testId) throws LIMSRuntimeException;
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+    public List<TypeOfSampleTest> getTypeOfSampleTestsForSampleTypeAndTestId(String sampleTypeId,List liTest) throws LIMSRuntimeException;
+	public List<TypeOfSampleTest> getTypeOfSampleTestsForSampleType(String sampleTypeId,List<Integer> testIds) throws LIMSRuntimeException;
 }

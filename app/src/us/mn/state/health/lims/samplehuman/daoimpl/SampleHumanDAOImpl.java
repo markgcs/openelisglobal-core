@@ -38,7 +38,7 @@ import us.mn.state.health.lims.samplehuman.valueholder.SampleHuman;
 
 /**
  * $Header$
- *
+ * 
  * @author Hung Nguyen
  * @date created 08/04/2006
  * @version $Revision$
@@ -52,18 +52,22 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 			for (int i = 0; i < sampleHumans.size(); i++) {
 				SampleHuman data = (SampleHuman) sampleHumans.get(i);
 
-				SampleHuman oldData = (SampleHuman) readSampleHuman(data.getId());
+				SampleHuman oldData = (SampleHuman) readSampleHuman(data
+						.getId());
 				SampleHuman newData = new SampleHuman();
 
 				String sysUserId = data.getSysUserId();
 				String event = IActionConstants.AUDIT_TRAIL_DELETE;
 				String tableName = "SAMPLE_HUMAN";
-				auditDAO.saveHistory(newData, oldData, sysUserId, event, tableName);
+				auditDAO.saveHistory(newData, oldData, sysUserId, event,
+						tableName);
 			}
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "AuditTrail deleteData()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman AuditTrail deleteData()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "AuditTrail deleteData()",
+					e.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman AuditTrail deleteData()", e);
 		}
 
 		try {
@@ -77,12 +81,16 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 			}
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "deleteData()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman deleteData()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "deleteData()",
+					e.toString());
+			throw new LIMSRuntimeException("Error in SampleHuman deleteData()",
+					e);
 		}
 	}
 
-	public boolean insertData(SampleHuman sampleHuman) throws LIMSRuntimeException {
+	@Override
+	public boolean insertData(SampleHuman sampleHuman)
+			throws LIMSRuntimeException {
 
 		try {
 			String id = (String) HibernateUtil.getSession().save(sampleHuman);
@@ -99,8 +107,10 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "insertData()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman insertData()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "insertData()",
+					e.toString());
+			throw new LIMSRuntimeException("Error in SampleHuman insertData()",
+					e);
 		}
 
 		return true;
@@ -120,8 +130,10 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 			auditDAO.saveHistory(newData, oldData, sysUserId, event, tableName);
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "updateData()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman AuditTrail updateData()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "updateData()",
+					e.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman AuditTrail updateData()", e);
 		}
 
 		try {
@@ -132,14 +144,17 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 			HibernateUtil.getSession().refresh(sampleHuman);
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "updateData()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman updateData()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "updateData()",
+					e.toString());
+			throw new LIMSRuntimeException("Error in SampleHuman updateData()",
+					e);
 		}
 	}
 
 	public void getData(SampleHuman sampleHuman) throws LIMSRuntimeException {
 		try {
-			SampleHuman sampHuman = (SampleHuman)HibernateUtil.getSession().get(SampleHuman.class, sampleHuman.getId());
+			SampleHuman sampHuman = (SampleHuman) HibernateUtil.getSession()
+					.get(SampleHuman.class, sampleHuman.getId());
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 			if (sampHuman != null) {
@@ -157,24 +172,29 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 	public SampleHuman readSampleHuman(String idString) {
 		SampleHuman sh = null;
 		try {
-			sh = (SampleHuman) HibernateUtil.getSession().get(SampleHuman.class, idString);
+			sh = (SampleHuman) HibernateUtil.getSession().get(
+					SampleHuman.class, idString);
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
 			// bugzilla 2154
-			LogEvent.logError("SampleHumanDAOImpl", "readSampleHuman()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman readSampleHuman()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "readSampleHuman()",
+					e.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman readSampleHuman()", e);
 		}
 
 		return sh;
 	}
 
-	public void getDataBySample(SampleHuman sampleHuman) throws LIMSRuntimeException {
+	public void getDataBySample(SampleHuman sampleHuman)
+			throws LIMSRuntimeException {
 
 		try {
 			String sql = "from SampleHuman sh where samp_id = :param";
 			Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setInteger("param", Integer.parseInt(sampleHuman.getSampleId()));
+			query.setInteger("param",
+					Integer.parseInt(sampleHuman.getSampleId()));
 			List list = query.list();
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
@@ -184,38 +204,42 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 				PropertyUtils.copyProperties(sampleHuman, sh);
 			}
 		} catch (Exception e) {
-			LogEvent.logError("SampleHumanDAOImpl", "getDataBySample()", e.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman getDataBySample()", e);
+			LogEvent.logError("SampleHumanDAOImpl", "getDataBySample()",
+					e.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman getDataBySample()", e);
 		}
 
 	}
 
-	public Patient getPatientForSample(Sample sample) throws LIMSRuntimeException{
+	public Patient getPatientForSample(Sample sample)
+			throws LIMSRuntimeException {
 		Patient patient = null;
 		try {
 			String sql = "select patient from Patient as patient, SampleHuman as sampleHuman where sampleHuman.patientId = patient.id and sampleHuman.sampleId = :sId";
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setInteger("sId", Integer.parseInt(sample.getId()));
-			patient = (Patient)query.uniqueResult();
+			patient = (Patient) query.uniqueResult();
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 
-			
 		} catch (HibernateException he) {
-			LogEvent.logError("SampleHumanDAOImpl", "getPatientForSample()", he.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman getPatientForSample()", he);
+			LogEvent.logError("SampleHumanDAOImpl", "getPatientForSample()",
+					he.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman getPatientForSample()", he);
 		}
 
 		return patient;
 	}
 
-
-	public Provider getProviderForSample(Sample sample) throws LIMSRuntimeException{
+	public Provider getProviderForSample(Sample sample)
+			throws LIMSRuntimeException {
 		try {
 			String sql = "select provider from Provider as provider, SampleHuman as sampleHuman where sampleHuman.providerId = provider.id and sampleHuman.sampleId = :sId";
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setInteger("sId", Integer.parseInt(sample.getId()));
-			Provider provider = (Provider)query.uniqueResult();
+			Provider provider = (Provider) query.uniqueResult();
 			closeSession();
 
 			return provider;
@@ -225,9 +249,10 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 
 		return null;
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	public List<Sample> getSamplesForPatient(String patientID) throws LIMSRuntimeException {
+	public List<Sample> getSamplesForPatient(String patientID)
+			throws LIMSRuntimeException {
 
 		List<Sample> samples;
 
@@ -239,10 +264,68 @@ public class SampleHumanDAOImpl extends BaseDAOImpl implements SampleHumanDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (HibernateException he) {
-			LogEvent.logError("SampleHumanDAOImpl", "getSamplesForPatient()", he.toString());
-			throw new LIMSRuntimeException("Error in SampleHuman getSamplesForPatient()", he);
+			LogEvent.logError("SampleHumanDAOImpl", "getSamplesForPatient()",
+					he.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman getSamplesForPatient()", he);
 		}
 
 		return samples;
+	}
+
+	/**
+	 * @param patientID
+	 * @param accessNumber
+	 * @return Dung fix for search patient
+	 * 
+	 * @throws LIMSRuntimeException
+	 */
+	@SuppressWarnings("unchecked")
+	public Sample getSamplesForPatient(String patientID, String accessNumber)
+			throws LIMSRuntimeException {
+
+		Sample samples;
+
+		try {
+			String sql = "select sample from Sample as sample, SampleHuman as sampleHuman where "
+					+ "sampleHuman.sampleId = sample.id and sampleHuman.patientId = :patientId AND sample.accessionNumber= :accessNumber";
+			Query query = HibernateUtil.getSession().createQuery(sql);
+			query.setInteger("patientId", Integer.parseInt(patientID));
+			query.setString("accessNumber", accessNumber);
+			samples = (Sample) query.uniqueResult();
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+		} catch (HibernateException he) {
+			LogEvent.logError("SampleHumanDAOImpl", "getSamplesForPatient()",
+					he.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman getSamplesForPatient()", he);
+		}
+
+		return samples;
+	}
+
+	@Override
+	public Patient getPatientByAccessionNuber(String accessNumber)
+			throws LIMSRuntimeException {
+		Patient patient = null;
+
+		try {
+			String sql = "select p from Sample as s, SampleHuman as sh ,Patient AS p Where sh.sampleId = s.id  "
+					+ " AND p.id=sh.patientId "
+					+ " AND s.accessionNumber= :accessNumber";
+			Query query = HibernateUtil.getSession().createQuery(sql);
+			query.setParameter("accessNumber", accessNumber);
+			patient = (Patient) query.uniqueResult();
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+		} catch (HibernateException he) {
+			LogEvent.logError("SampleHumanDAOImpl",
+					"getPatientByAccessionNuber()", he.toString());
+			throw new LIMSRuntimeException(
+					"Error in SampleHuman getPatientByAccessionNuber()", he);
+		}
+
+		return patient;
 	}
 }

@@ -168,10 +168,12 @@
            <put name="rightAnalyte" value="analyteMenuDefinition" />
            <!--put name="rightTestAnalyteTestResult" value="testAnalyteTestResultMenuDefinition" /-->
            <put name="rightTestAnalyteTestResult" value="/pages/menu/masterListsTab/masterListsPageRightDefault.jsp" />
+           <put name="rightCity" value="cityMenuDefinition" />
            <put name="rightCodeElementType" value="codeElementTypeMenuDefinition" />
            <put name="rightCodeElementXref" value="/pages/menu/masterListsTab/masterListsPageRightDefault.jsp" />
            <put name="rightCounty" value="countyMenuDefinition" />
            <put name="rightDictionary" value="dictionaryMenuDefinition" />
+           <put name="rightDistrict" value="districtMenuDefinition" />
            <put name="rightDictionaryCategory" value="dictionaryCategoryMenuDefinition" />
            <put name="rightLabel" value="labelMenuDefinition" />
            <put name="rightMessageOrganization" value="messageOrganizationMenuDefinition" />
@@ -430,6 +432,9 @@
     <definition name="dictionaryMenuDefinition" extends="baseMenuSelectListDefinition">
        <put name="body" value="/pages/dictionary/dictionaryMenu.jsp" />
     </definition>
+    <definition name="districtMenuDefinition" extends="baseMenuSelectListDefinition">
+       <put name="body" value="/pages/district/districtMenu.jsp" />
+    </definition>
     
     <!--bugzilla 1413-->
     <definition name="dictionaryMenuBodyDefinition" path="/pages/menu/masterListsTab/masterListsPage.jsp" >
@@ -460,11 +465,11 @@
     <definition name="noteMenuDefinition" extends="baseMenuSelectListDefinition">
        <put name="body" value="/pages/note/noteMenu.jsp" />
     </definition>
-    
+
+<!-- ORGANIZATION DEFINITION -->    
      <definition name="organizationMenuDefinition" extends="baseMenuSelectListDefinition">
         <put name="body" value="/pages/organization/organizationMenu.jsp" />
      </definition>
-     
     <!--bugzilla 2372-->
     <definition name="organizationMenuBodyDefinition" path="/pages/menu/masterListsTab/masterListsPage.jsp" >
        <put name="left" value="/pages/menu/masterListsTab/masterListsPageLeft.jsp" />
@@ -474,12 +479,37 @@
        <put name="body" value="organizationMenuBodyDefinition" />
 	</definition> 
 	<!--end bugzilla 2372-->
-    
+
+<!-- CITY DEFINITION -->    
+    <definition name="cityMenuDefinition" extends="baseMenuSelectListDefinition">
+        <put name="body" value="/pages/city/cityMenu.jsp" />
+     </definition>
+    <definition name="cityMenuBodyDefinition" path="/pages/menu/masterListsTab/masterListsPage.jsp" >
+       <put name="left" value="/pages/menu/masterListsTab/masterListsPageLeft.jsp" />
+       <put name="right" value="cityMenuDefinition" />
+    </definition>
+    <definition name="cityMenuPageDefinition" extends="masterListsPageDefinition">
+       <put name="body" value="cityMenuBodyDefinition" />
+	</definition> 
+
+<!-- DISTRICT DEFINITION -->
+	<definition name="districtMenuDefinition" extends="baseMenuSelectListDefinition">
+        <put name="body" value="/pages/district/districtMenu.jsp" />
+     </definition>
+    <definition name="districtMenuBodyDefinition" path="/pages/menu/masterListsTab/masterListsPage.jsp" >
+       <put name="left" value="/pages/menu/masterListsTab/masterListsPageLeft.jsp" />
+       <put name="right" value="districtMenuDefinition" />
+    </definition>
+    <definition name="districtMenuPageDefinition" extends="masterListsPageDefinition">
+       <put name="body" value="districtMenuBodyDefinition" />
+	</definition> 
      
+<!-- PANEL DEFINITION -->     
     <definition name="panelMenuDefinition" extends="baseMenuSelectListDefinition">
        <put name="body" value="/pages/panel/panelMenu.jsp" />
     </definition>
-    
+
+<!-- PANEL ITEM DEFINITION -->        
     <definition name="panelItemMenuDefinition" extends="baseMenuSelectListDefinition">
        <put name="body" value="/pages/panelitem/panelItemMenu.jsp" />
     </definition>
@@ -689,6 +719,11 @@
      
     <definition name="organizationDefinition" extends="baseDefinition">
         <put name="body" value="/pages/organization/organization.jsp" /> 
+    </definition>
+    
+    <definition name="cityDefinition" extends="baseDefinition">
+        <put name="body" value="/pages/city/city.jsp" /> 
+    	<put name="footer" value="/pages/city/cityFormFooterButtons.jsp" />
     </definition>
     
     <definition name="panelDefinition" extends="baseDefinition">
@@ -1049,6 +1084,10 @@
          <put name="preSelectionHeader" value="/pages/common/commonHumanSampleInformation.jsp" />
          <put name="body" value="/pages/result/resultsEntryHistoryBySamplePopup.jsp" /> 
          <put name="footer" value="/pages/result/resultsEntryHistoryBySamplePopupFormFooterButtons.jsp" />
+	</definition>
+	
+	<definition name="districtDefinition" extends="baseDefinition">
+		<put name="body" value="/pages/district/district.jsp" />
 	</definition>
     
 </tiles-definitions>

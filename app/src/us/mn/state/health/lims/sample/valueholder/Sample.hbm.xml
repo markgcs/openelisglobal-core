@@ -66,8 +66,12 @@
         <property name="clinicalOrderId" 
                   type="us.mn.state.health.lims.hibernate.resources.usertype.LIMSStringNumberUserType" 
                   column="clinical_order_id" />
-        <property name="isConfirmation" column="is_confirmation" type="java.lang.Boolean" />
- <!--
+                    
+                  
+       <property name="onsetOfDate" type="java.sql.Timestamp">
+            <column name="illness_date" length="6" />
+        </property>  	  
+<!--
         <set name="sampleOrganizations" inverse="true">
             <key>
                 <column name="SAMP_ID" precision="10" scale="0" />

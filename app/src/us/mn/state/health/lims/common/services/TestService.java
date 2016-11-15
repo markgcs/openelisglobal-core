@@ -20,16 +20,11 @@ import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.LocaleChangeListener;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.localization.valueholder.Localization;
-import us.mn.state.health.lims.panel.daoimpl.PanelDAOImpl;
-import us.mn.state.health.lims.panel.valueholder.Panel;
-import us.mn.state.health.lims.panelitem.daoimpl.PanelItemDAOImpl;
-import us.mn.state.health.lims.panelitem.valueholder.PanelItem;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.test.beanItems.TestResultItem.ResultDisplayType;
 import us.mn.state.health.lims.test.dao.TestDAO;
 import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
 import us.mn.state.health.lims.test.valueholder.Test;
-import us.mn.state.health.lims.test.valueholder.TestSection;
 import us.mn.state.health.lims.testresult.dao.TestResultDAO;
 import us.mn.state.health.lims.testresult.daoimpl.TestResultDAOImpl;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
@@ -38,6 +33,7 @@ import us.mn.state.health.lims.typeofsample.daoimpl.TypeOfSampleDAOImpl;
 import us.mn.state.health.lims.typeofsample.daoimpl.TypeOfSampleTestDAOImpl;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSample;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSampleTest;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,10 +58,6 @@ public class TestService implements LocaleChangeListener{
 
     private static Map<Entity, Map<String, String>> entityToMap;
 
-    public static List<Test> getTestsInTestSectionById(String testSectionId) {
-        return new TestDAOImpl().getTestsByTestSectionId(testSectionId);
-    }
-
     public enum Entity{
         TEST_NAME,
         TEST_AUGMENTED_NAME,
@@ -87,10 +79,10 @@ public class TestService implements LocaleChangeListener{
     @Override
     public void localeChanged( String locale ){
         LANGUAGE_LOCALE = locale;
-        refreshTestNames();
+        testNamesChanged();
     }
 
-    public static void refreshTestNames(){
+    public static void testNamesChanged( ){
         entityToMap.put( Entity.TEST_NAME, createTestIdToNameMap() );
         entityToMap.put(Entity.TEST_AUGMENTED_NAME, createTestIdToAugmentedNameMap());
         entityToMap.put(Entity.TEST_REPORTING_NAME, createTestIdToReportingNameMap());
@@ -112,9 +104,6 @@ public class TestService implements LocaleChangeListener{
         return (test != null && test.getMethod() != null) ? test.getMethod().getMethodName() : null;
     }
 
-    public boolean isActive(){
-        return test == null ? false : test.isActive();
-    }
     @SuppressWarnings("unchecked")
     public List<TestResult> getPossibleTestResults( ) {
         return TEST_RESULT_DAO.getAllActiveTestResultsPerTest( test );
@@ -151,7 +140,7 @@ public class TestService implements LocaleChangeListener{
     }
 
     public String getResultType(){
-        String testResultType = TypeOfTestResultService.ResultType.NUMERIC.getCharacterValue();
+        String testResultType = TypeOfTestResult.ResultType.NUMERIC.getDBValue();
         List<TestResult> testResults = getPossibleTestResults();
 
         if (testResults != null && !testResults.isEmpty()) {
@@ -166,7 +155,7 @@ public class TestService implements LocaleChangeListener{
             return null;
         }
 
-        TypeOfSampleTest typeOfSampleTest = TYPE_OF_SAMPLE_TEST_DAO.getTypeOfSampleTestForTest(test.getId());
+        TypeOfSampleTest typeOfSampleTest = TYPE_OF_SAMPLE_TEST_DAO.getTypeOfSampleTestForTest( test.getId() );
 
         if( typeOfSampleTest == null){
             return null;
@@ -175,30 +164,6 @@ public class TestService implements LocaleChangeListener{
        String typeOfSampleId = typeOfSampleTest.getTypeOfSampleId();
 
         return TYPE_OF_SAMPLE_DAO.getTypeOfSampleById( typeOfSampleId );
-    }
-
-    public List<Panel> getPanels(){
-        List<Panel> panelList = new ArrayList<Panel>();
-        if( test != null){
-            List<PanelItem> panelItemList = new PanelItemDAOImpl().getPanelItemByTestId(test.getId());
-            for( PanelItem panelItem : panelItemList){
-                panelList.add(panelItem.getPanel());
-            }
-        }
-
-        return panelList;
-    }
-    
-    public List<Panel> getAllPanels(){
-        return new PanelDAOImpl().getAllPanels();
-    }    
-    
-    public TestSection getTestSection(){
-        return test == null ? null : test.getTestSection();
-    }
-
-    public String getTestSectionName(){
-        return TestSectionService.getUserLocalizedTesSectionName(getTestSection());
     }
 
     public static List<Test> getAllActiveTests(){
@@ -275,6 +240,8 @@ public class TestService implements LocaleChangeListener{
 
         if( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.FRENCH.getRepresentation() )){
             return localization.getFrench();
+        } else if ( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.VIETNAMESE.getRepresentation() )) {
+            return localization.getVietnamese();
         }else{
             return localization.getEnglish();
         }
@@ -285,7 +252,10 @@ public class TestService implements LocaleChangeListener{
         List<Test> tests = new TestDAOImpl().getAllTests(false);
 
         for (Test test : tests) {
-            testIdToNameMap.put(test.getId(), buildAugmentedTestName( test ).replace( "\n", " " ));
+        	//Dung add
+        	String testName=buildAugmentedTestName( test ).replace( "\n", " " );
+        	testName.replace("(unknown)", " ");
+            testIdToNameMap.put(test.getId(), testName);
         }
 
         return testIdToNameMap;
@@ -308,6 +278,8 @@ public class TestService implements LocaleChangeListener{
 
         if( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.FRENCH.getRepresentation() )){
             return localization.getFrench();
+        } else if ( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.VIETNAMESE.getRepresentation() )) {
+            return localization.getVietnamese();
         }else{
             return localization.getEnglish();
         }
@@ -315,7 +287,7 @@ public class TestService implements LocaleChangeListener{
     private static String buildAugmentedTestName( Test test ){
         Localization localization = test.getLocalizedTestName();
 
-        String sampleName = "";
+        /*String sampleName = "";
 
         if( ConfigurationProperties.getInstance().isPropertyValueEqual( ConfigurationProperties.Property.TEST_NAME_AUGMENTED, "true" )){
             TypeOfSample typeOfSample = new TestService( test ).getTypeOfSample();
@@ -323,12 +295,31 @@ public class TestService implements LocaleChangeListener{
                 sampleName = "(" + typeOfSample.getLocalizedName() + ")";
             }
         }
-
         if( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.FRENCH.getRepresentation() )){
             return localization.getFrench() + sampleName;
+        } else if ( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.VIETNAMESE.getRepresentation() )) {
+            return localization.getVietnamese() + sampleName;
         }else{
             return localization.getEnglish()  + sampleName;
+        }*/
+        
+        if( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.FRENCH.getRepresentation() )){
+            return localization.getFrench() ;
+        } else if ( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.VIETNAMESE.getRepresentation() )) {
+            return localization.getVietnamese();
+        }else{
+            return localization.getEnglish();
         }
     }
 
+    public static List<Test> getTestsForSampleType(String sampleTypeId){
+        ArrayList<Test> tests = new ArrayList<Test>();
+
+        List<TypeOfSampleTest> typeOfSampleTests = TYPE_OF_SAMPLE_TEST_DAO.getTypeOfSampleTestsForSampleType( sampleTypeId);
+        for( TypeOfSampleTest typeOfSampleTest : typeOfSampleTests){
+            tests.add( new TestService(typeOfSampleTest.getTestId()).getTest());
+        }
+
+        return tests;
+    }
 }

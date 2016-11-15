@@ -6,14 +6,64 @@
 // http://docs.jquery.com/Using_jQuery_with_Other_Libraries
 jQuery.noConflict();
 
-var searchText = ((typeof getAuditSearchText !== 'undefined') ? getAuditSearchText() : "Filtrer les entrées") + ":";
-var filteredFrom = (typeof getAuditFilteredFrom !== 'undefined') ? getAuditFilteredFrom() : "filtrée à partir de";
-var noPrefix = ((typeof getAuditNoPrefix !== 'undefined') ? getAuditNoPrefix() : "Aucun") + " ";
-var entriesDisplayed = ((typeof getAuditEntriesDisplayed !== 'undefined') ? getAuditEntriesDisplayed() : "entrées appariement") + " ";
-var noMatchingRecordFound = ((typeof getAuditNoRecords !== 'undefined') ? getAuditNoRecords() : "Aucun enregistrement correspondant n'a été trouvé");
+function localizeByKey (key, locale) {
+    if (key == 'label.audittrail.filter') {
+    	if (locale.toLowerCase().indexOf('fr') != -1) {
+    		return "Filtrer les entrées: ";
+    	} else if (locale.toLowerCase().indexOf('vn') != -1) {
+    		return "Theo: ";
+    	} else {
+    		return "Filter by: ";
+    	}
+    }
+    if (key == 'label.audittrail.filter.limit') {
+    	if (locale.toLowerCase().indexOf('fr') != -1) {
+    		return "(filtrée à partir de _MAX_)";
+    	} else if (locale.toLowerCase().indexOf('vn') != -1) {
+    		return "(\u0111\u00E3 l\u1ECDc \u0111\u1EBFn _MAX_)";
+    	} else {
+    		return "(filtered up to _MAX_)";
+    	}
+    }
+    if (key == 'label.audittrail.none') {
+    	if (locale.toLowerCase().indexOf('fr') != -1) {
+    		return "Aucun";
+    	} else if (locale.toLowerCase().indexOf('vn') != -1) {
+    		return "Kh\u00F4ng C\u00F3";
+    	} else {
+    		return "None";
+    	}
+    }
+    if (key == 'label.audittrail.none.found') {
+    	if (locale.toLowerCase().indexOf('fr') != -1) {
+    		return "Aucun enregistrement correspondant n'a été trouvé";
+    	} else if (locale.toLowerCase().indexOf('vn') != -1) {
+    		return "Kh\u00F4ng t\u00ECm th\u1EA5y k\u1EBFt qu\u1EA3 ph\u00F9 h\u1EE3p";
+    	} else {
+    		return "No corresponding matches found";
+    	}
+    }
+    if (key == 'label.audittrail.total') {
+    	if (locale.toLowerCase().indexOf('fr') != -1) {
+    		return "_TOTAL_ entrées appariement";
+    	} else if (locale.toLowerCase().indexOf('vn') != -1) {
+    		return "_TOTAL_ K\u1EBFt Qu\u1EA3";
+    	} else {
+    		return "_TOTAL_ matches shown";
+    	}
+    }
+}
 
 // jQuery dataTable functions begin
 jQuery(document).ready(function ($) {
+	// Read parameters from any <script> tags that have them
+	var scriptParams = [];
+	$("script[params]").each(function() {
+		var params = $(this).attr("params").split(',');
+		for (var i = 0; i < params.length; i++) {
+			scriptParams[params[i].split('=')[0]] = params[i].split('=')[1];
+		}
+	});
 	// Extends Datatables to allow filtering via filterByType dropdown.
     var classFilter = "";
     $.fn.dataTableExt.afnFiltering.push(
@@ -74,11 +124,11 @@ jQuery(document).ready(function ($) {
         "bPaginate": false, // Turns off pagination
         // Localization settings. Currently hard-coded to French
         "oLanguage": {
-            "sSearch": searchText,
-            "sInfoFiltered": "(" + filteredFrom + " _MAX_)",
-            "sInfoEmpty": noPrefix,
-            "sInfo": "_TOTAL_ " + entriesDisplayed,
-            "sZeroRecords": noMatchingRecordFound
+            "sSearch": localizeByKey('label.audittrail.filter', scriptParams['locale']),
+            "sInfoFiltered": localizeByKey('label.audittrail.filter.limit', scriptParams['locale']),
+            "sInfoEmpty": localizeByKey('label.audittrail.none', scriptParams['locale']),
+            "sInfo": localizeByKey('label.audittrail.total', scriptParams['locale']),
+            "sZeroRecords": localizeByKey('label.audittrail.none.found', scriptParams['locale'])
         },
         // Hides 1st column used for sorting
         "aoColumnDefs": [

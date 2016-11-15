@@ -19,9 +19,11 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.jfree.util.Log;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.NoteService;
 import us.mn.state.health.lims.common.services.QAService;
@@ -56,6 +58,7 @@ import us.mn.state.health.lims.sampleqaevent.valueholder.SampleQaEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class RetroCIFollowupRequiredByLocation extends RetroCIReport implements IReportParameterSetter, IReportCreator {
@@ -306,4 +309,26 @@ public class RetroCIFollowupRequiredByLocation extends RetroCIReport implements 
 	public JRDataSource getReportDataSource() throws IllegalStateException {
 		return errorFound ? new JRBeanCollectionDataSource(errorMsgs) : new JRBeanCollectionDataSource(reportItems);
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		errorFound = false;
+
+		lowDateStr = hashmap.get("lowerDateRange");
+		highDateStr = hashmap.get("upperDateRange");
+		dateRange = new DateRange(lowDateStr, highDateStr);
+		
+		createReportParameters();
+		errorFound = !validateSubmitParameters();
+		if (errorFound) {
+			return;
+		}
+	
+		createReportItems();
+		if (this.reportItems.size() == 0) {
+			add1LineErrorMessage("report.error.message.noPrintableItems");
+		}
+	}
+	
 }

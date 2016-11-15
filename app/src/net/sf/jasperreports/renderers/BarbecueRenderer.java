@@ -81,8 +81,8 @@ public class BarbecueRenderer extends JRAbstractSvgRenderer
 			double w = Double.parseDouble(width);
 			//String res = SystemConfiguration.getInstance().getBarcodeResolution();
 			//int r = Integer.parseInt(res);
-			barcode.setBarHeight(h);
-			barcode.setBarWidth(w);
+			//barcode.setBarHeight(h);
+			//barcode.setBarWidth(w);
 			//barcode.setResolution(r);
 		
 			
@@ -122,7 +122,7 @@ public class BarbecueRenderer extends JRAbstractSvgRenderer
 		            //RenderingHints.VALUE_ANTIALIAS_ON);
 		    	
 		 
-			barcode.draw(grx, (int)rectangle.getX(), (int)rectangle.getY());
+			//barcode.draw(grx, (int)rectangle.getX(), (int)rectangle.getY());
 		}
 	}
 

@@ -283,7 +283,7 @@ public class SearchAction extends BaseAction {
 			analyses = analysisDAO.getMaxRevisionAnalysesBySampleIncludeCanceled(sampleItem);
 			
 		}	
-		sampleOrganization.setSample(sample);
+		sampleOrganization.setSampleId(sample.getId());
 		sampleOrganizationDAO.getDataBySample(sampleOrganization);
 		
 		if (null != sampleOrganization.getOrganization()){	

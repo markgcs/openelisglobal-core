@@ -31,6 +31,10 @@ public abstract class AjaxServlet extends HttpServlet {
 	public abstract void sendData(String field, String message,
 			HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException;
+	
+	public abstract void sendData(String message,
+            HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException;
 
 	public abstract void doGet(HttpServletRequest request,
 			HttpServletResponse response) throws IOException, ServletException;

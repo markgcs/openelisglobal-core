@@ -16,6 +16,9 @@
 package us.mn.state.health.lims.common.provider.validation;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -27,6 +30,7 @@ import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.organization.dao.OrganizationDAO;
 import us.mn.state.health.lims.organization.daoimpl.OrganizationDAOImpl;
 import us.mn.state.health.lims.organization.valueholder.Organization;
+import us.mn.state.health.lims.dictionary.valueholder.Dictionary;
 
 //bugzilla 2069 renamed from OrganizaitonIdValidationProvider
 public class OrganizationLocalAbbreviationValidationProvider extends BaseValidationProvider {
@@ -41,10 +45,16 @@ public class OrganizationLocalAbbreviationValidationProvider extends BaseValidat
 
 	public void processRequest(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
-
+	    // need to use 'URLDecoder.decode' since calling 'request.getParameter' directly does not handle the encoding properly
+        String decodedRequest = URLDecoder.decode(request.getQueryString(), "UTF-8");
+        Map<String, String> paramMap = new LinkedHashMap<String, String>();
+        for (String paramPair : decodedRequest.split("&")) {
+           String[] pairs = paramPair.split("=", 2);
+           paramMap.put(pairs[0], pairs[1]);
+        }
 		// get id from request
-		String targetId = (String) request.getParameter("id");
-		String formField = (String) request.getParameter("field");
+		String targetId = (String) paramMap.get("id");
+		String formField = (String) paramMap.get("field");
 		//bugzilla 2531
 		String form = (String) request.getParameter("form");
 		String result = validate(targetId,form);
@@ -64,25 +74,29 @@ public class OrganizationLocalAbbreviationValidationProvider extends BaseValidat
 		if ((!StringUtil.isNullorNill(targetId))) {
 			Organization organization = new Organization();
 			//bugzilla 2069
-			organization.setOrganizationLocalAbbreviation(targetId.trim());
-									
-			organization = organizationDAO.getOrganizationByLocalAbbreviation(organization, true);
+			if (StringUtil.isInteger(targetId) && !targetId.startsWith("-")) {
+			    organization.setOrganizationLocalAbbreviation(targetId.trim());
+	            organization = organizationDAO.getOrganizationByLocalAbbreviation(organization, true);
+            } else if (!StringUtil.isNullorNill(targetId.trim())){
+                organization.setOrganizationName(targetId.trim());
+                organization = organizationDAO.getOrganizationByName(organization, true);
+            }
 			            
 			if (organization != null && !StringUtil.isNullorNill(organization.getId())) {
 				s.append(VALID);
-				// This is particular to organizationLocalAbbreviation validation for HSE1 and HSE2:
-				// the message appended to VALID is the organizationName that
-				// can then be displayed when User enters valid Organization Id
-				// (see humanSampleOne.jsp, humanSampleTwo.jsp)
-				String orgName = organization.getOrganizationName();
-				s.append(orgName);
+
+				if (StringUtil.isInteger(targetId) && !targetId.startsWith("-")) {
+				    s.append(organization.getOrganizationName());
+				} else {
+				    s.append(organization.getOrganizationLocalAbbreviation());
+				}
 				
 				//bugzilla 2531
 				if ( form != null ) {
 					if ( form.equalsIgnoreCase("newbornSampleFullForm") ) {
-						String cityName = organization.getCity();
+						Dictionary cityName = organization.getCity();
 						s.append(", ");
-						s.append(cityName);
+						s.append(cityName.getDictEntry());
 					}
 				}	
 			} else {

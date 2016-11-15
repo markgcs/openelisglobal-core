@@ -39,6 +39,7 @@ import us.mn.state.health.lims.panelitem.daoimpl.PanelItemDAOImpl;
 import us.mn.state.health.lims.panelitem.valueholder.PanelItem;
 import us.mn.state.health.lims.test.dao.TestDAO;
 import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
+import us.mn.state.health.lims.test.valueholder.Test;
 
 /**
  * @author diane benz
@@ -100,7 +101,7 @@ public class PanelItemAction extends BaseAction {
 			}
 			// end of logic to enable next or previous button
 		} else { // this is a new panelItem
-
+		    panelItem.setTest(new Test());
 			isNew = true; // this is to set correct page title
 		}
 
@@ -138,6 +139,7 @@ public class PanelItemAction extends BaseAction {
 		PropertyUtils.setProperty(form, "parentPanelName", parentPanelName);
 		PropertyUtils.setProperty(form, "methods", methods);
 		PropertyUtils.setProperty(form, "tests", tests);
+		PropertyUtils.setProperty(form, "testName", panelItem.getTest().getTestName());
 
 		return mapping.findForward(forward);
 	}

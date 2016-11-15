@@ -233,4 +233,15 @@ public class IndicatorSectionPerformanceReport extends RetroCIReport implements 
 		return observationList.get(0).getSampleId();
 	}
 
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+
+		try{
+			createReportItems();
+		}catch(LIMSInvalidConfigurationException e){
+			e.printStackTrace();
+		}
+	}
+
 }

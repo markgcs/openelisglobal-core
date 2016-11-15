@@ -83,11 +83,8 @@ public class SystemUserSectionAction extends BaseAction {
 			}
 			// end of logic to enable next or previous button
 
-
 		} else {
-
 			isNew = true; // this is to set correct page title
-
 		}
 
 		if (systemUserSection.getId() != null && !systemUserSection.getId().equals("0")) {
@@ -103,7 +100,7 @@ public class SystemUserSectionAction extends BaseAction {
 		//Get testsections by user system id
 		//bugzilla 2160
 		UserTestSectionDAO userTestSectionDAO = new UserTestSectionDAOImpl();
-		List testSections = userTestSectionDAO.getAllUserTestSections(request);
+		List testSections = userTestSectionDAO.getAllUserTestSectionsForAdmin(request);
 		
 		if ( systemUserSection.getSystemUser() != null )			
 			PropertyUtils.setProperty(form, "systemUserId", systemUserSection.getSystemUser().getId());
@@ -116,6 +113,16 @@ public class SystemUserSectionAction extends BaseAction {
 		
 		PropertyUtils.setProperty(form, "systemusers", systemUsers);		
 		PropertyUtils.setProperty(form, "testsections", testSections);
+
+		//PropertyUtils.setProperty(form, "hasAdmin", (boolean) dynaForm.get("hasAdmin") ? true : false);
+		// add to check admin user, if user is admin, then setProperty for it as admin
+		boolean hasAdmin= false;
+		if (systemUserSection.getIsAdmin() != null) {
+			if (systemUserSection.getIsAdmin().equals("Y")) {
+				hasAdmin = true;
+			}
+        }
+		PropertyUtils.setProperty(form, "hasAdmin", hasAdmin);
 		
         //bugzilla 2154
 		LogEvent.logDebug("SystemUserSectionAction","performAction()","I am in SystemUserSectionAction this is forward " + forward);		

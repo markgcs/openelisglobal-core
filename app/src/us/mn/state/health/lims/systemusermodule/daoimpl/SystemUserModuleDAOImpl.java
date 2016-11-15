@@ -29,9 +29,9 @@ import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
-import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.systemusermodule.dao.PermissionAgentModuleDAO;
 import us.mn.state.health.lims.systemusermodule.valueholder.PermissionModule;
@@ -49,25 +49,25 @@ public class SystemUserModuleDAOImpl extends BaseDAOImpl implements PermissionAg
 			for (int i = 0; i < systemUserModules.size(); i++) {
 				SystemUserModule data = (SystemUserModule)systemUserModules.get(i);
 			
-				SystemUserModule oldData = (SystemUserModule)readSystemUserModule(data.getId());
+				SystemUserModule oldData = (SystemUserModule) readSystemUserModule(data.getId());
 				SystemUserModule newData = new SystemUserModule();
 
 				String sysUserId = data.getSysUserId();
 				String event = IActionConstants.AUDIT_TRAIL_DELETE;
 				String tableName = "SYSTEM_USER_MODULE";
-				auditDAO.saveHistory(newData,oldData,sysUserId,event,tableName);
+				auditDAO.saveHistory(newData, oldData, sysUserId, event, tableName);
 			}
 		}  catch (Exception e) {
 			//bugzilla 2154
 			LogEvent.logError("SystemUserModuleDAOImpl","AuditTrail deleteData()",e.toString());
 			throw new LIMSRuntimeException("Error in SystemUserModule AuditTrail deleteData()", e);
-		}  
+		}
 		
 		try {					
 			for (int i = 0; i < systemUserModules.size(); i++) {
 				SystemUserModule data = (SystemUserModule) systemUserModules.get(i);
 				//bugzilla 2206
-				data = (SystemUserModule)readSystemUserModule(data.getId());
+				data = (SystemUserModule) readSystemUserModule(data.getId());
 				HibernateUtil.getSession().delete(data);
 				HibernateUtil.getSession().flush();
 				HibernateUtil.getSession().clear();
@@ -82,10 +82,9 @@ public class SystemUserModuleDAOImpl extends BaseDAOImpl implements PermissionAg
 	public boolean insertData(PermissionModule systemUserModule) throws LIMSRuntimeException {	
 		
 		try {
-			if (duplicateSystemUserModuleExists((SystemUserModule)systemUserModule)) {
+			/*if (duplicateSystemUserModuleExists((SystemUserModule)systemUserModule)) {
 				throw new LIMSDuplicateRecordException("Duplicate record exists for " + systemUserModule.getPermissionAgentId());
-			}
-			
+			}*/
 			String id = (String)HibernateUtil.getSession().save(systemUserModule);
 			systemUserModule.setId(id);
 			
@@ -93,7 +92,7 @@ public class SystemUserModuleDAOImpl extends BaseDAOImpl implements PermissionAg
 			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
 			String sysUserId = systemUserModule.getSysUserId();
 			String tableName = "SYSTEM_USER_MODULE";
-			auditDAO.saveNewHistory(systemUserModule,sysUserId,tableName);			
+			auditDAO.saveNewHistory(systemUserModule, sysUserId, tableName);			
 			
 			HibernateUtil.getSession().flush();	
 			HibernateUtil.getSession().clear();
@@ -197,7 +196,26 @@ public class SystemUserModuleDAOImpl extends BaseDAOImpl implements PermissionAg
 		} 	
 	
 		return list;
-		
+	}
+	
+	public SystemUserModule getAllPermissionModulesBySystemUserandModuleId(String systemUserId, String systemModuleId) throws LIMSRuntimeException {		
+		SystemUserModule sysUserMod = null;
+		try {
+			String sql = "from SystemUserModule s where s.systemUser.id = :sysUserId and s.systemModule.id = :moduleId";
+			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+			query.setParameter("sysUserId", Integer.parseInt(systemUserId));
+			query.setParameter("moduleId", Integer.parseInt(systemModuleId));
+			sysUserMod = (SystemUserModule) query.uniqueResult();
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+					
+		} catch(Exception e) {
+			//bugzilla 2154
+			LogEvent.logError("SystemUserModuleDAOImpl","getAllSystemUserModulesBySystemUserId()",e.toString());
+			throw new LIMSRuntimeException("Error in SystemUserModule getAllSystemUserModulesBySystemUserId()", e);
+		} 	
+
+		return sysUserMod;
 	}
 	
 	public List getPageOfPermissionModules(int startingRecNo) throws LIMSRuntimeException {		
@@ -232,7 +250,7 @@ public class SystemUserModuleDAOImpl extends BaseDAOImpl implements PermissionAg
 		} catch (Exception e) {
 			//bugzilla 2154
 			LogEvent.logError("SystemUserModuleDAOImpl","readSystemUserModule()",e.toString());
-			throw new LIMSRuntimeException("Error in Gender readSystemUserModule(idString)", e);
+			throw new LIMSRuntimeException("Error in SystemUserModuleDAOImpl readSystemUserModule(idString)", e);
 		}			
 		
 		return sysUserModule;

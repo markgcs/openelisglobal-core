@@ -23,9 +23,13 @@ import us.mn.state.health.lims.common.util.IdValuePair;
 
 
 public class PagingBean implements Serializable{
-	static final long serialVersionUID = 1L;
-	private String totalPages;
+    
+    private static final long serialVersionUID = 1L;
+    private String totalPages;
 	private String currentPage;
+	private String currentPageTotal;
+	private String totalItems;
+	
 	private List<IdValuePair> searchTermToPage;
 
 	public String getCurrentPage() {
@@ -33,6 +37,18 @@ public class PagingBean implements Serializable{
 	}
 	public void setCurrentPage(String currentPage) {
 		this.currentPage = currentPage;
+	}
+	public String getCurrentPageTotal() {
+		return currentPageTotal;
+	}
+	public void setCurrentPageTotal(String currentPageTotal) {
+		this.currentPageTotal = currentPageTotal;
+	}
+	public String getTotalItems() {
+		return totalItems;
+	}
+	public void setTotalItems(String totalItems) {
+		this.totalItems = totalItems;
 	}
 	public void setTotalPages(String totalPages) {
 		this.totalPages = totalPages;

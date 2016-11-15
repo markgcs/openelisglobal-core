@@ -85,6 +85,7 @@ public class TestSectionDAOImpl extends BaseDAOImpl implements TestSectionDAO {
 	public boolean insertData(TestSection testSection) throws LIMSRuntimeException {
 		
 		try {
+			// bugzilla 1482 throw Exception if record already exists
 			if (duplicateTestSectionExists(testSection)) {
 				throw new LIMSDuplicateRecordException(
 						"Duplicate record exists for "
@@ -93,8 +94,12 @@ public class TestSectionDAOImpl extends BaseDAOImpl implements TestSectionDAO {
 			
 			String id = (String)HibernateUtil.getSession().save(testSection);
 			testSection.setId(id);
-
-            new AuditTrailDAOImpl().saveNewHistory(testSection,testSection.getSysUserId(),"TEST_SECTION");
+			
+			//bugzilla 1824 inserts will be logged in history table
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = testSection.getSysUserId();
+			String tableName = "TEST_SECTION";
+			auditDAO.saveNewHistory(testSection,sysUserId,tableName);
 			
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
@@ -184,42 +189,79 @@ public class TestSectionDAOImpl extends BaseDAOImpl implements TestSectionDAO {
 		return list;
 	}
 
-	/**
-	 * Get all the test sections assigned to this specific user
-	 * @param sysUserId the user system id
-	 * @return list of tests
-	 */
-	public List getAllTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException {
-		List list = new Vector();
-		
-		String sectionIdList = "";
-		String sql = "";
-		
-		try {
-			SystemUserSectionDAO systemUserSectionDao = new SystemUserSectionDAOImpl();
-			List userTestSectionList= systemUserSectionDao.getAllSystemUserSectionsBySystemUserId(sysUserId);
-			for ( int i=0; i<userTestSectionList.size(); i++ ) {
-				SystemUserSection sus = (SystemUserSection)userTestSectionList.get(i);	
-				sectionIdList += sus.getTestSection().getId() + ",";			
-			}				
-			if ( !(sectionIdList.equals("")) && (sectionIdList.length() > 0) ) {
-				sectionIdList = sectionIdList.substring(0,sectionIdList.length()-1);
-				sql = "from TestSection where id in ("+sectionIdList+")";
-			} else {
-				return list;
-			}				
-		
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			list = query.list();
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
-		} catch (Exception e) {
-			//bugzilla 2154
-			LogEvent.logError("TestSectionDAOImpl","getAllTestSectionsBySysUserId()",e.toString());
-			throw new LIMSRuntimeException("Error in TestSection getAllTestSectionsBySysUserId()", e);
-		}
-		return list;
-	}
+    /**
+     * Get all the test sections assigned to this specific user
+     * @param sysUserId the user system id
+     * @return list of tests
+     */
+    public List getAllTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException {
+        List list = new Vector();
+        
+        String sectionIdList = "";
+        String sql = "";
+        
+        try {
+            SystemUserSectionDAO systemUserSectionDao = new SystemUserSectionDAOImpl();
+            List userTestSectionList= systemUserSectionDao.getAllSystemUserSectionsBySystemUserId(sysUserId);
+            for ( int i=0; i<userTestSectionList.size(); i++ ) {
+                SystemUserSection sus = (SystemUserSection)userTestSectionList.get(i);  
+                sectionIdList += sus.getTestSection().getId() + ",";            
+            }               
+            if ( !(sectionIdList.equals("")) && (sectionIdList.length() > 0) ) {
+                sectionIdList = sectionIdList.substring(0,sectionIdList.length()-1);
+                sql = "from TestSection where id in ("+sectionIdList+")";
+            } else {
+                return list;
+            }               
+        
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch (Exception e) {
+            //bugzilla 2154
+            LogEvent.logError("TestSectionDAOImpl","getAllTestSectionsBySysUserId()",e.toString());
+            throw new LIMSRuntimeException("Error in TestSection getAllTestSectionsBySysUserId()", e);
+        }
+        return list;
+    }
+
+    /**
+     * Get all the admin test sections assigned to this specific user
+     * @param sysUserId the user system id
+     * @return list of tests
+     */
+    public List getAllAdminTestSectionsBySysUserId(int sysUserId) throws LIMSRuntimeException {
+        List list = new Vector();
+        
+        String sectionIdList = "";
+        String sql = "";
+        
+        try {
+            SystemUserSectionDAO systemUserSectionDao = new SystemUserSectionDAOImpl();
+            List userTestSectionList= systemUserSectionDao.getAllSystemAdminUserSectionsBySystemUserId(sysUserId);
+            for ( int i=0; i<userTestSectionList.size(); i++ ) {
+                SystemUserSection sus = (SystemUserSection)userTestSectionList.get(i);  
+                sectionIdList += sus.getTestSection().getId() + ",";            
+            }               
+            if ( !(sectionIdList.equals("")) && (sectionIdList.length() > 0) ) {
+                sectionIdList = sectionIdList.substring(0,sectionIdList.length()-1);
+                sql = "from TestSection where id in ("+sectionIdList+")";
+            } else {
+                return list;
+            }               
+        
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch (Exception e) {
+            //bugzilla 2154
+            LogEvent.logError("TestSectionDAOImpl","getAllAdminTestSectionsBySysUserId()",e.toString());
+            throw new LIMSRuntimeException("Error in TestSection getAllAdminTestSectionsBySysUserId()", e);
+        }
+        return list;
+    }
 	
 	public List getPageOfTestSections(int startingRecNo) throws LIMSRuntimeException {
 		List list = new Vector();
@@ -424,23 +466,32 @@ public class TestSectionDAOImpl extends BaseDAOImpl implements TestSectionDAO {
 	private boolean duplicateTestSectionExists(TestSection testSection) throws LIMSRuntimeException {
 		try {
 
+			// not case sensitive hemolysis and Hemolysis are considered
+			// duplicates
+			String sql = "from TestSection t where trim(lower(t.organization.organizationName)) = :param and trim(lower(t.testSectionName)) = :param2 and t.id != :param3";
+			org.hibernate.Query query = HibernateUtil.getSession().createQuery(
+					sql);
+			query.setParameter("param", testSection.getOrganization().getOrganizationName().toLowerCase().trim());
+			query.setParameter("param2", testSection.getTestSectionName().toLowerCase().trim());
 
-			String sql = "from TestSection t where trim(lower(t.testSectionName)) = :name and t.id != :id";
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-
-			query.setParameter("name", testSection.getTestSectionName().toLowerCase().trim());
-
+	
+			// initialize with 0 (for new records where no id has been generated
+			// yet
 			String testSectionId = "0";
 			if (!StringUtil.isNullorNill(testSection.getId())) {
 				testSectionId = testSection.getId();
 			}
-			query.setInteger("id", Integer.parseInt(testSectionId));
+			query.setInteger("param3", Integer.parseInt(testSectionId));
 
 			List list = query.list();
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 
-            return !list.isEmpty();
+			if (list.size() > 0) {
+				return true;
+			} else {
+				return false;
+			}
 
 		} catch (Exception e) {
 			LogEvent.logError("TestSectionDAOImpl","duplicateTestSectionExists()",e.toString());
@@ -464,21 +515,7 @@ public class TestSectionDAOImpl extends BaseDAOImpl implements TestSectionDAO {
 		return null;
 	}
 
-    public List<TestSection> getAllInActiveTestSections() {
-        String sql = "from TestSection t where t.isActive = 'N' order by t.sortOrderInt";
-
-        try {
-            Query query = HibernateUtil.getSession().createQuery(sql);
-            List<TestSection> sections = query.list();
-            closeSession();
-            return sections;
-        } catch (HibernateException e) {
-            handleException(e, "getAllInActiveTestSections");
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
+	@SuppressWarnings("unchecked")
 	@Override
 	public TestSection getTestSectionByName(String testSection) throws LIMSRuntimeException {
 		try {

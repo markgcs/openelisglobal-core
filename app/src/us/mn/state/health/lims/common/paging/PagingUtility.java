@@ -26,6 +26,7 @@ import us.mn.state.health.lims.common.util.IdValuePair;
 
 public class PagingUtility<E> {
 	private int totalPages = 0;
+	private int totalItems = 0;
 	
 	/**
 	 * @param session the Session for the current HttpRequest
@@ -34,12 +35,15 @@ public class PagingUtility<E> {
 	 */
 	public void setDatabaseResults(HttpSession session, E items, IPageDivider<E> divider ) {
 
+		List<E> eList = new ArrayList<E>();
+		eList = (ArrayList) items;
 		List<E> pagedResults = new ArrayList<E>();
 		divider.createPages(items, pagedResults);
 		session.setAttribute(IActionConstants.RESULTS_SESSION_CACHE, pagedResults);
 		List<IdValuePair> searchPageMapping = divider.createSearchToPageMapping(pagedResults);
 		session.setAttribute(IActionConstants.RESULTS_PAGE_MAPPING_SESSION_CACHE, searchPageMapping);
 		totalPages = pagedResults.size();
+		totalItems = eList.size();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -98,23 +102,30 @@ public class PagingUtility<E> {
 
 	/**
 	 * @param currentPage The new current page
+	 * @param currentPageTotal The current total from beginning to the last item of the current page
 	 * @return The bean with the new current page and the total pages
 	 */
-	public PagingBean getPagingBean(int currentPage) {
+	public PagingBean getPagingBean(int currentPage, int currentPageTotal) {
 		PagingBean paging = new PagingBean();
 		paging.setCurrentPage(String.valueOf(currentPage));
+		paging.setCurrentPageTotal(String.valueOf(currentPageTotal));
+		paging.setTotalItems(String.valueOf(totalItems));
 		paging.setTotalPages(String.valueOf(totalPages));
 		return paging;
 	}
 
 	/**
 	 * @param currentPage The new current page
+	 * @param currentPageTotal The current total from beginning to the last item of the current page
+	 * @param itemListSize The total number of items (from first page to last page)
 	 * @param the session which will cause the mapping from search terms to pages to be loaded
 	 * @return The bean with the new current page and the total pages
 	 */
-	public PagingBean getPagingBeanWithSearchMapping(int currentPage, HttpSession session) {
+	public PagingBean getPagingBeanWithSearchMapping(int currentPage, int currentPageTotal, int itemListSize, HttpSession session) {
 		PagingBean paging = new PagingBean();
 		paging.setCurrentPage(String.valueOf(currentPage));
+		paging.setCurrentPageTotal(String.valueOf(currentPageTotal));
+		paging.setTotalItems(String.valueOf(itemListSize));
 		paging.setTotalPages(String.valueOf(totalPages));
 		paging.setSearchTermToPage(getPageMapping(session));
 		

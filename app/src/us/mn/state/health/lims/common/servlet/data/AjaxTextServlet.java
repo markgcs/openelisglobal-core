@@ -44,6 +44,20 @@ public class AjaxTextServlet extends AjaxServlet {
 
 		}
 	}
+	
+	public void sendData(String message,
+            HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
+	    
+        if (!StringUtil.isNullorNill(message)) {
+            response.setContentType("text/plain");
+            response.setHeader("Cache-Control", "no-cache");
+            response.getWriter().write(message);
+            
+        } else {
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        }
+    }
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException {

@@ -184,7 +184,7 @@ public class AuditTrailReportBySampleProcessAction extends BaseAction {
 					if (!StringUtil.isNullorNill(sample.getId())) {
 						sampleHuman.setSampleId(sample.getId());
 						sampleHumanDAO.getDataBySample(sampleHuman);
-						sampleOrganization.setSample(sample);
+						sampleOrganization.setSampleId(sample.getId());
 						sampleOrganizationDAO
 						.getDataBySample(sampleOrganization);
 						sampleItem.setSample(sample);

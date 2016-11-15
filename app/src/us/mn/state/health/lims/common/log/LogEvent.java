@@ -18,6 +18,10 @@ package us.mn.state.health.lims.common.log;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.log4j.Category;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 /**
  *  @author		Hung Nguyen
@@ -81,7 +85,7 @@ public class LogEvent {
 	 * @param warnMessage the fatal message
 	 */
 	public static void logFatal(String className, String methodName, String fatalMessage) {
-		getLog().fatal("Class: " + className + ", Method: " + methodName + ", Fatal:" + fatalMessage);
+	    getLog().fatal("Class: " + className + ", Method: " + methodName + ", Fatal:" + fatalMessage);
 	}
 
 	public static Log getLog(Class className) {
@@ -92,4 +96,27 @@ public class LogEvent {
     private static Category getLog() {
         return Category.getInstance(LogEvent.class);
     }
+    
+    public static Logger getLogger(String className, String loggerCategory){
+        Logger logger = null;
+        try {
+            Class<?> act = Class.forName(className);
+            logger = Logger.getLogger(act);
+            //Define log pattern layout
+            PatternLayout layout = new PatternLayout("%d{dd MMM yyyy HH:mm:ss} -- %p -- %m%n");
+            //Define file appender with layout and output log file name
+            FileAppender fileAppender = new FileAppender(layout, loggerCategory + ".log");
+            //This is the root logger provided by log4j
+            Logger rootLogger = Logger.getRootLogger();
+            rootLogger.setLevel(Level.DEBUG);
+            //Add the appender to root logger
+            rootLogger.addAppender(fileAppender);
+            
+        } catch (Exception e) {
+            System.out.println("Failed to add appender.");
+        }
+        
+        return logger;
+        
+     }
 }

@@ -17,19 +17,23 @@
  */
 package us.mn.state.health.lims.typeofsample.daoimpl;
 
+import java.util.List;
+import java.util.Vector;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.log.LogEvent;
+import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
+import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.typeofsample.dao.TypeOfSampleTestDAO;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSampleTest;
-
-import java.util.List;
 
 public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSampleTestDAO {
 
@@ -38,16 +42,14 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 		try {
 			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
 			for (String id : typeOfSamplesTestIDs) {
-				TypeOfSampleTest data = readTypeOfSample(id);
-				
+				TypeOfSampleTest data = (TypeOfSampleTest) readTypeOfSample(id);				
 				auditDAO.saveHistory(new TypeOfSampleTest(), data, currentUserId, IActionConstants.AUDIT_TRAIL_DELETE, "SAMPLETYPE_TEST");
 				HibernateUtil.getSession().delete(data);
 				HibernateUtil.getSession().flush();
 				HibernateUtil.getSession().clear();
 			}
-
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "deleteData()", e.toString());
 			throw new LIMSRuntimeException("Error in TypeOfSampleTest deleteData()", e);
 		}
@@ -83,7 +85,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 				typeOfSample.setId(null);
 			}
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "getData()", e.toString());
 			throw new LIMSRuntimeException("Error in TypeOfSampleTest getData()", e);
 		}
@@ -103,7 +105,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "getAllTypeOfSamples()", e.toString());
 			throw new LIMSRuntimeException("Error in TypeOfSampleTest getAllTypeOfSamples()", e);
 		}
@@ -112,7 +114,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 	}
 
 	public List getPageOfTypeOfSampleTests(int startingRecNo) throws LIMSRuntimeException {
-		List list;
+		List list = new Vector();
 		try {
 			// calculate maxRow to be one more than the page size
 			int endingRecNo = startingRecNo + DEFAULT_PAGE_SIZE + 1;
@@ -133,13 +135,13 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 	}
 
 	public TypeOfSampleTest readTypeOfSample(String idString) {
-		TypeOfSampleTest tos;
+		TypeOfSampleTest tos = null;
 		try {
 			tos = (TypeOfSampleTest) HibernateUtil.getSession().get(TypeOfSampleTest.class, idString);
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "readTypeOfSample()", e.toString());
 			throw new LIMSRuntimeException("Error in TypeOfSampleTest readTypeOfSample()", e);
 		}
@@ -163,14 +165,14 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 	}
 
 	public List getNextRecord(String id, String table, Class clazz) throws LIMSRuntimeException {
-		int currentId = Integer.valueOf(id);
+		int currentId = (Integer.valueOf(id)).intValue();
 		String tablePrefix = getTablePrefix(table);
 
-		List list;
-		
-		int rrn;
+		List list = new Vector();
+		// bugzilla 1908
+		int rrn = 0;
 		try {
-			
+			// bugzilla 1908 cannot use named query for postgres because of
 			// oracle ROWNUM
 			// instead get the list in this sortorder and determine the index of
 			// record with id = currentId
@@ -186,7 +188,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 					.setMaxResults(2).list();
 
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "getNextRecord()", e.toString());
 			throw new LIMSRuntimeException("Error in getNextRecord() for " + table, e);
 		}
@@ -195,14 +197,19 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 	}
 
 	public List getPreviousRecord(String id, String table, Class clazz) throws LIMSRuntimeException {
-		int currentId = Integer.valueOf(id);
+		int currentId = (Integer.valueOf(id)).intValue();
 		String tablePrefix = getTablePrefix(table);
 
-		List list;
-		
-		int rrn;
+		List list = new Vector();
+		// bugzilla 1908
+		int rrn = 0;
 		try {
+			// bugzilla 1908 cannot use named query for postgres because of
+			// oracle ROWNUM
+			// instead get the list in this sortorder and determine the index of
+			// record with id = currentId
 			String sql = "select tos.id from TypeOfSampleTest tos " + " order by tos.domain desc, tos.description desc";
+
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
 			list = query.list();
 			HibernateUtil.getSession().flush();
@@ -213,7 +220,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 					.setMaxResults(2).list();
 
 		} catch (Exception e) {
-			
+			// bugzilla 2154
 			LogEvent.logError("TypeOfSampleDAOImpl", "getPreviousRecord()", e.toString());
 			throw new LIMSRuntimeException("Error in getPreviousRecord() for " + table, e);
 		}
@@ -223,6 +230,7 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 
 	@SuppressWarnings("unchecked")
 	public List<TypeOfSampleTest> getTypeOfSampleTestsForSampleType(String sampleTypeId) throws LIMSRuntimeException {
+
 		String sql = "from TypeOfSampleTest tt where tt.typeOfSampleId = :sampleId";
 
 		try {
@@ -237,6 +245,59 @@ public class TypeOfSampleTestDAOImpl extends BaseDAOImpl implements TypeOfSample
 
 		return null;
 	}
+	   /** 
+	 *Added by Dung
+	 *
+	 * @param sampleTypeId
+	 * @param testIds
+	 * @return
+	 * @throws LIMSRuntimeException
+	 */
+	@SuppressWarnings("unchecked")
+	    public List<TypeOfSampleTest> getTypeOfSampleTestsForSampleType(String sampleTypeId,List<Integer> testIds) throws LIMSRuntimeException {
+
+	        String sql = "from TypeOfSampleTest tt where tt.typeOfSampleId = :sampleId AND tt.testId IN(:testIds)";
+
+	        try {
+	            Query query = HibernateUtil.getSession().createQuery(sql);
+	            query.setInteger("sampleId", Integer.parseInt(sampleTypeId));
+	            if (testIds.size() > 0) {
+	                query.setParameterList("testIds", testIds);
+                } else {
+                    query.setParameter("testIds", 0);
+                }
+	            List<TypeOfSampleTest> list = query.list();
+	            closeSession();
+	            return list;
+	        } catch (Exception e) {
+	            handleException(e, "getTypeOfSampleTestsForSampleType");
+	        }
+
+	        return null;
+	    }
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+    public List<TypeOfSampleTest> getTypeOfSampleTestsForSampleTypeAndTestId(String sampleTypeId,List liTest) throws LIMSRuntimeException {
+	    String sql ="";
+	    if(liTest.size()>0){
+	        sql = "from TypeOfSampleTest tt where tt.typeOfSampleId = :sampleId AND cast(tt.testId as character varying) NOT IN(:liTest)";
+        }else
+	     sql = "from TypeOfSampleTest tt where tt.typeOfSampleId = :sampleId";
+
+        try {
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setInteger("sampleId", Integer.parseInt(sampleTypeId));
+            if(liTest.size()>0){
+                query.setParameterList("liTest",liTest);
+            }
+            List<TypeOfSampleTest> list = query.list();
+            closeSession();
+            return list;
+        } catch (Exception e) {
+            handleException(e, "getTypeOfSampleTestsForSampleType");
+        }
+
+        return null;
+    }
 
 	@SuppressWarnings("unchecked")
 	public TypeOfSampleTest getTypeOfSampleTestForTest(String testId) throws LIMSRuntimeException {

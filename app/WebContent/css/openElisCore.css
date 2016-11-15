@@ -27,7 +27,7 @@ label, input, button, select, textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    outline: none;
+/*     outline: ; */
 }
 a img {
   border: 0;
@@ -70,7 +70,7 @@ ol {
   background-color: #C8DADA;
 }
 textarea{
-  width:100%;
+  width:94%;
 }
 table {
   font-size: 13px;
@@ -93,21 +93,6 @@ caption {
   font-size: 23px;
   color: #336699;
 }
-
-.catalog-label{
-  font-size: 13px;
-  font-style: italic;
-  color: #000000;
-}
-
-.tab{
-  margin-left: 40px;
-}
-
-.half-tab{
-  margin-left: 20px;
-}
-
 /***** End overrides of default browser styles *****/
 
 
@@ -478,8 +463,8 @@ div.dataTables_filter {
   width: 65px;
 }
 .results-readonly.invalidHighlight {
-  padding: 2px 4px 2px 4px;
-  border: none;
+  padding: 1px;
+  border-width: 1px;
 }
 
 .confirmation{
@@ -1031,7 +1016,6 @@ tr.rowTemplate {display: none}
 
 .sortable { list-style-type: none; margin: 0; padding: 0; width: 100%; border: 2px solid silver;}
 .sortable li { margin: 0 3px 3px 3px; padding: 0.4em; padding-left: 1.5em; font-size: 1.0em; height: 16px; }
-#dictionaryNameSortUI li { height: auto; text-align: left;}
 .sortable li span { position: absolute; margin-left: -1.3em; }
 .ui-state-default_oe, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default
 { border: 1px solid #d3d3d3/*{borderColorDefault}*/;
@@ -1087,5 +1071,70 @@ input[type=radio] + label {
   color: #00bb00;
 }
 
-
+/* Dung add */
+#label-modal{
+	top: 50% !important;
+	margin-left: -507.25px !important;
+}
+/* #orderDisplay > table tr td{
+	width: 18px !important;
+}; */
+#streetID{
+	width: 296px !important;
+}
+#firstNameID{
+	width: 809px !important;
+}
+#age_label{
+    display: block;
+    float: left;
+    padding-top: 9px;
+    padding-left: 5px;
+}
+#age_text{
+	display: block;
+    float: right;
+    padding-right: 17px;
+}
+.centerTable{
+	text-align: center!important;
+}
+.sideleft{
+	width: 350px;
+    float: left;
+}
+.sideleft >span{
+	padding-left: 10px;
+    display: block;
+    float: left;
+    width: 120px;
+    margin: 5px;
+}
+.w600{
+	width: 600px;
+}
+/* Trung 2016-07-19
+*	To fix OEG-351 [OEG] White box in Inventory's header panel.
+*/
+#inputInventory{
+	width: 100%;
+}
+#searchResultTable tr td, #sUserSection tr td{
+	text-align: center;
+}
 /* End experimental CSS for use on updated OE forms */
+
+#modalPatientInfo {
+	top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+    max-height: 100% !important;
+    margin-left: 0 !important;
+    max-width: 100% !important;
+    overflow: visible;
+    height: 100% !important;
+}
+ #modalPatientInfo .modal-body {
+    flex: 1;
+}

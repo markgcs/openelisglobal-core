@@ -16,10 +16,18 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 
 public class PatientEIDVersion1Report extends PatientEIDReport implements IReportCreator {
 	@Override
 	protected String reportFileName(){
 		return "RetroCI_Patient_EID";
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

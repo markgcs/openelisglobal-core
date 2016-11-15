@@ -31,6 +31,9 @@ import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
+import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
+import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
+import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
 import us.mn.state.health.lims.systemusersection.dao.SystemUserSectionDAO;
 import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 
@@ -195,29 +198,86 @@ public class SystemUserSectionDAOImpl extends BaseDAOImpl implements SystemUserS
 		
 		return list;
 	}
-	
-	public List getPageOfSystemUserSections(int startingRecNo) throws LIMSRuntimeException {		
-		List list = new Vector();
-		try {			
-			// calculate maxRow to be one more than the page size
-			int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
-			
-			String sql = "from SystemUserSection s ";
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setFirstResult(startingRecNo-1);
-			query.setMaxResults(endingRecNo-1); 
-			
-			list = query.list();
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
-		} catch (Exception e) {
-			//bugzilla 2154
-			LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSystemUserSections()",e.toString());
-			throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSystemUserSections()", e);
-		} 
-		
-		return list;
-	}
+    
+    public List getPageOfSystemUserSectionsForAdmin(int startingRecNo) throws LIMSRuntimeException {        
+        List list = new Vector();
+        try {           
+            // calculate maxRow to be one more than the page size
+            int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
+            
+            String sql = "from SystemUserSection s ";
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setFirstResult(startingRecNo-1);
+            query.setMaxResults(endingRecNo-1); 
+            
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch (Exception e) {
+            //bugzilla 2154
+            LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSystemUserSectionsForAdmin()",e.toString());
+            throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSystemUserSectionsForAdmin()", e);
+        } 
+        
+        return list;
+    }
+    
+    public List getPageOfSystemUserSectionsForSectionAdmin(int startingRecNo, int sectionAdminId) throws LIMSRuntimeException {        
+        List<SystemUser> list = new Vector();
+        List<SystemUserSection> listSysUserSec = new Vector();
+        //get all SystemUserSection belong to many sections of the same Section Admin
+        List<SystemUser> finalList = new Vector();
+        try {           
+            // calculate maxRow to be one more than the page size
+            int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
+            
+            // Get Test Section ID first
+            String sqlTestSection = "from SystemUserSection s where s.systemUser.id = :param and s.isAdmin='Y'";
+            org.hibernate.Query queryGetTestSection = HibernateUtil.getSession().createQuery(sqlTestSection);
+            queryGetTestSection.setParameter("param", sectionAdminId);
+            
+            listSysUserSec = queryGetTestSection.list();
+            if (listSysUserSec.size() == 0) {
+                return list;
+            } else {
+                // listSysUserSec can have more than one value, it means one user can be admin of many test sections
+                // The following code is used to get all users belong to many test sections by test section id
+                for (int i=0; i< listSysUserSec.size(); i++) {
+                    SystemUserSection testSectionAdmin = listSysUserSec.get(i);
+                    String sql = "from SystemUserSection s where s.testSection = :testSectionId";
+                    org.hibernate.Query queryGetSysUser = HibernateUtil.getSession().createQuery(sql);
+                    queryGetSysUser.setInteger("testSectionId", Integer.parseInt(testSectionAdmin.getTestSection().getId()));
+                    queryGetSysUser.setFirstResult(startingRecNo-1);
+                    queryGetSysUser.setMaxResults(endingRecNo-1); 
+                    
+                    list = queryGetSysUser.list();
+                    //after get all users belong to a test section, we add them into a list that store all users of all test sections
+                    finalList.addAll(list);
+                }
+            }
+                     
+            /*SystemUserSection testSectionAdmin = listSysUserSec.get(0);
+            String sql = "from SystemUserSection s where s.testSection = :testSectionId";
+            org.hibernate.Query queryGetSysUser = HibernateUtil.getSession().createQuery(sql);
+            queryGetSysUser.setInteger("testSectionId", Integer.parseInt(testSectionAdmin.getTestSection().getId()));
+            queryGetSysUser.setFirstResult(startingRecNo-1);
+            queryGetSysUser.setMaxResults(endingRecNo-1); 
+            
+            list = queryGetSysUser.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();           
+            return list;*/
+            
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            return finalList;
+            
+        } catch (Exception e) {
+            LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSystemUserSectionsForSectionAdmin()",e.toString());
+            throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSystemUserSectionsForSectionAdmin()", e);
+        } 
+        
+    }
 
 	public SystemUserSection readSystemUserSection(String idString) {		
 		SystemUserSection sysUserSection = null;
@@ -313,14 +373,14 @@ public class SystemUserSectionDAOImpl extends BaseDAOImpl implements SystemUserS
 
 			String sql = "from SystemUserSection s where s.systemUser.id = :param and s.testSection.id = :param2 and s.id != :param3";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setParameter("param", systemUserSection.getSystemUser().getId());
-			query.setParameter("param2", systemUserSection.getTestSection().getId());
+			query.setParameter("param", Integer.parseInt(systemUserSection.getSystemUser().getId()));
+			query.setParameter("param2", Integer.parseInt(systemUserSection.getTestSection().getId()));
 			
 			String systemUserSectionId = "0";
 			if (!StringUtil.isNullorNill(systemUserSection.getId())) {
 				systemUserSectionId = systemUserSection.getId();
 			}
-			query.setParameter("param3", systemUserSectionId);
+			query.setParameter("param3", Integer.parseInt(systemUserSectionId));
 
 			list = query.list();
 			HibernateUtil.getSession().flush();
@@ -337,6 +397,119 @@ public class SystemUserSectionDAOImpl extends BaseDAOImpl implements SystemUserS
 			LogEvent.logError("SystemUserSectionDAOImpl","duplicateSystemUserSectionExists()",e.toString());
 			throw new LIMSRuntimeException("Error in duplicateSystemUserSectionExists()", e);
 		}
+	}
+	
+	/**
+	 * Get all admin test sections for user
+	 * {@inheritDoc}
+	 */
+	public List getAllSystemAdminUserSectionsBySystemUserId(int systemUserId) throws LIMSRuntimeException {     
+        List list = new Vector();
+        try {
+            String sql = "from SystemUserSection s where s.systemUser.id = :param and s.isAdmin = 'Y'";
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setParameter("param", systemUserId);
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+        } catch(Exception e) {
+            //bugzilla 2154
+            LogEvent.logError("SystemUserSectionDAOImpl","getAllSystemAdminUserSectionsBySystemUserId()",e.toString());
+            throw new LIMSRuntimeException("Error in SystemUserSection getAllSystemAdminUserSectionsBySystemUserId()", e);
+        } 
+        
+        return list;
+    }
+		
+	public List getPageOfSearchSystemUserSectionsForAdmin(String searchString) throws LIMSRuntimeException {
+	    List<SystemUser> listSystemUser = new Vector();
+	    List list = new Vector();
+	    SystemUserDAO systemUserDAO = new SystemUserDAOImpl();
+	    listSystemUser = systemUserDAO.getPageOfSearchSystemUsers(searchString);
+	    for (SystemUser sysUser : listSystemUser) {
+	        try {
+	            List<SystemUserSection> listSysUserSection = new Vector();
+	            String sql = "from SystemUserSection s where s.systemUser = :sysUserId";
+	            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+	            query.setInteger("sysUserId", Integer.parseInt(sysUser.getId()));
+	            
+	            listSysUserSection = query.list();
+	            HibernateUtil.getSession().flush();
+	            HibernateUtil.getSession().clear();
+	            for (SystemUserSection sysUserSec : listSysUserSection) {
+	                list.add(sysUserSec);
+	            }
+                
+            } catch (Exception e) {
+                LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSearchSystemUserSectionsForAdmin()",e.toString());
+                throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSearchSystemUserSectionsForAdmin()", e);
+            }
+	        
+	    }
+	    return list;
+	}
+	
+	public List getPageOfSearchSystemUserSectionsForSectionAdmin(String searchString, int sectionAdminId) throws LIMSRuntimeException {
+	    List<SystemUser> listSystemUser = new Vector();
+        List<SystemUserSection> list = new Vector();
+        List<SystemUserSection> listSysUserSec = new Vector();
+        // Check is sectionAdmin
+        try {
+            String sqlTestSection = "from SystemUserSection s where s.systemUser.id = :param and s.isAdmin='Y'";
+            org.hibernate.Query queryGetTestSection = HibernateUtil.getSession().createQuery(sqlTestSection);
+            queryGetTestSection.setParameter("param", sectionAdminId);
+            
+            listSysUserSec = queryGetTestSection.list();
+            if (listSysUserSec.size() == 0) {
+                return list;
+            }
+            
+        } catch (Exception e) {
+            LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSearchSystemUserSectionsForAdmin()",e.toString());
+            throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSearchSystemUserSectionsForAdmin()", e);
+        }
+        
+        SystemUserDAO systemUserDAO = new SystemUserDAOImpl();
+        listSystemUser = systemUserDAO.getPageOfSearchSystemUsers(searchString);
+        for (SystemUser sysUser : listSystemUser) {
+            try {
+                // an user can be admin of two or more test section
+                // the following code is used to get user belong to each test section, then add to the list that store all users belong to this admin user
+                for (int i= 0; i <listSysUserSec.size(); i++) {
+                    List<SystemUserSection> listSysUserSection = new Vector();
+                    SystemUserSection testSectionAdmin = listSysUserSec.get(i);
+                    String sql = "from SystemUserSection s where s.systemUser = :sysUserId and s.testSection = :testSectionId";
+                    org.hibernate.Query queryGetSysUser = HibernateUtil.getSession().createQuery(sql);
+                    queryGetSysUser.setInteger("testSectionId", Integer.parseInt(testSectionAdmin.getTestSection().getId()));
+                    queryGetSysUser.setInteger("sysUserId", Integer.parseInt(sysUser.getId()));
+                    
+                    listSysUserSection = queryGetSysUser.list();
+                    HibernateUtil.getSession().flush();
+                    HibernateUtil.getSession().clear();
+                    list.addAll(listSysUserSection);
+                }
+                
+               /* List<SystemUserSection> listSysUserSection = new Vector();
+                SystemUserSection testSectionAdmin = listSysUserSec.get(0);
+                String sql = "from SystemUserSection s where s.systemUser = :sysUserId and s.testSection = :testSectionId";
+                org.hibernate.Query queryGetSysUser = HibernateUtil.getSession().createQuery(sql);
+                queryGetSysUser.setInteger("testSectionId", Integer.parseInt(testSectionAdmin.getTestSection().getId()));
+                queryGetSysUser.setInteger("sysUserId", Integer.parseInt(sysUser.getId()));
+                
+                listSysUserSection = queryGetSysUser.list();
+                HibernateUtil.getSession().flush();
+                HibernateUtil.getSession().clear();
+                
+                for (SystemUserSection sysUserSec : listSysUserSection) {
+                    list.add(sysUserSec);
+                }*/
+                
+            } catch (Exception e) {
+                LogEvent.logError("SystemUserSectionDAOImpl","getPageOfSearchSystemUserSectionsForAdmin()",e.toString());
+                throw new LIMSRuntimeException("Error in SystemUserSection getPageOfSearchSystemUserSectionsForAdmin()", e);
+            }
+        }
+        return list;
 	}
 	
 }

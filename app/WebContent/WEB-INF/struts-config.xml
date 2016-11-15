@@ -754,7 +754,9 @@
     <form-property name="id" type="java.lang.String" initial=""/> 
     <form-property name="organizationLocalAbbreviation" type="java.lang.String" initial=""/>
     <form-property name="organizationName" type="java.lang.String" initial=""/> 
-    <form-property name="city" type="java.lang.String" initial=""/> 
+    <form-property name="selectedCityId" type="java.lang.String" initial=""/>
+    <form-property name="city" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/>
+    <form-property name="cities" type="java.util.Collection"/>
     <form-property name="zipCode" type="java.lang.String" initial=""/> 
     <form-property name="mlsSentinelLabFlag" type="java.lang.String" initial=""/> 
     <form-property name="isActive" type="java.lang.String" initial=""/> 
@@ -782,16 +784,50 @@
   
   <form-bean name="organizationMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="menuList" type="java.util.List"/> 
-    <form-property name="selectedIDs" type="java.lang.String[]"/> 
+    <form-property name="selectedIDs" type="java.lang.String[]"/>
+    <form-property name="city" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/>
     <!-- bugzilla 2372 -->
     <form-property name="searchString" type="java.lang.String" initial=""/>
   </form-bean>
   
-  <form-bean name="panelForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
+  <!-- DISTRICT FORM -->
+  <form-bean name="districtMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
+    <form-property name="menuList" type="java.util.List" /> 
+    <form-property name="selectedIDs" type="java.lang.String[]" /> 
+    <form-property name="searchString" type="java.lang.String" initial=""/>
+    <form-property name="city" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/>
+    <form-property name="districtEntry" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/>
+    
+  </form-bean>
+   <form-bean name="districtForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="id" type="java.lang.String" initial=""/> 
+    <form-property name="selectedCityId" type="java.lang.String" initial=""/> 
+    <form-property name="city" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/>
+    <form-property name="districtName" type="java.lang.String"/> 
+    <!-- <form-property name="districtEntry" type="us.mn.state.health.lims.dictionary.valueholder.Dictionary"/> -->
+    <form-property name="lastupdated" type="java.sql.Timestamp" initial="" />
+    <form-property name="cities" type="java.util.Collection"/>
+    
+  </form-bean>
+  <!-- CITY FORM -->
+  <form-bean name="cityMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
+    <form-property name="menuList" type="java.util.List" /> 
+    <form-property name="selectedIDs" type="java.lang.String[]" /> 
+    <form-property name="searchString" type="java.lang.String" initial=""/>
+  </form-bean>
+  <form-bean name="cityForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
+    <form-property name="cityName" type="java.lang.String" initial="" /> 
+    <form-property name="isActive" type="java.lang.String" initial="" /> 
+    <form-property name="lastupdated" type="java.sql.Timestamp" />
+  </form-bean>
+
+  <form-bean name="panelForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
+	<form-property name="id" type="java.lang.String" initial=""/> 
     <form-property name="panelName" type="java.lang.String" initial=""/> 
     <form-property name="description" type="java.lang.String" initial=""/> 
-	<form-property name="lastupdated" type="java.sql.Timestamp" initial=""/>	
+	<form-property name="sortOrder" type="java.lang.String" initial="" />	
+	<form-property name="isActive" type="java.lang.String" initial="" /> 
+	<form-property name="lastupdated" type="java.sql.Timestamp" initial="" />	
   </form-bean>
   <form-bean name="panelMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="menuList" type="java.util.List"/> 
@@ -811,13 +847,13 @@
     <form-property name="parentPanels" type="java.util.Collection"/>
     <form-property name="parentPanelName" type="java.lang.String" initial=""/>
     <form-property name="panel" type="us.mn.state.health.lims.panel.valueholder.Panel"/>
+    <form-property name="test" type="us.mn.state.health.lims.test.valueholder.Test"/>
 	<form-property name="lastupdated" type="java.sql.Timestamp" initial=""/>		
   </form-bean>
   <form-bean name="panelItemMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="menuList" type="java.util.List"/> 
     <form-property name="selectedIDs" type="java.lang.String[]"/> 
   </form-bean>
-  
   
   <form-bean name="patientForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="id" type="java.lang.String" initial=""/> 
@@ -1053,24 +1089,6 @@
   </form-bean>
   
   	<!-- QUICK ENTRY -->
-	<form-bean name="quickEntryForm" 
-			   type="us.mn.state.health.lims.common.action.BaseActionForm" >
-		<form-property name="currentDate"			 type="java.lang.String" initial=""/> 
-	    <form-property name="accessionNumber"		 type="java.lang.String" initial=""/> 
- 	    <form-property name="accessionNumber2"		 type="java.lang.String" initial=""/>
-	    <form-property name="receivedDateForDisplay" type="java.lang.String" initial=""/>
-	    <form-property name="typeOfSampleId"		 type="java.lang.String" initial=""/> 
-	    <form-property name="typeOfSampleDesc"		 type="java.lang.String" initial=""/> 
-	    <form-property name="sourceOfSampleId"		 type="java.lang.String" initial=""/> 
-	    <form-property name="sourceOfSampleDesc"	 type="java.lang.String" initial=""/> 
-  	    <form-property name="sourceOther"		     type="java.lang.String" initial=""/> 
-		<form-property name="selectedTestIds"		 type="java.lang.String" />
-	    <form-property name="lastupdated"			 type="java.sql.Timestamp" initial="" />
-		<!-- AIS - bugzilla 1397 -->
-		<form-property name="selectedTestNames"		 type="java.lang.String"  />
-		<!-- AIS - bugzilla 1463 -->		
-		<form-property name="curryear"		 		 type="java.lang.String" initial=""  />
-	</form-bean>
 	<form-bean name="quickEntryAddTestPopupForm" 
 			   type="us.mn.state.health.lims.common.action.BaseActionForm">
 		<form-property name="SelectList" type="java.util.Collection"/>
@@ -1297,18 +1315,6 @@
     <form-property name="selectedIDs" type="java.lang.String[]"/> 
   </form-bean>
 
-
-  <!-- SAMPLE LABEL PRINT -->
-  <form-bean name="sampleLabelPrintForm" 
-			   type="us.mn.state.health.lims.common.action.BaseActionForm" >
-	    <form-property name="numberOfSamples"		 type="java.lang.String" initial=""/> 
-	    <form-property name="lastupdated"			 type="java.sql.Timestamp" initial="" />
-	    <form-property name="accessionNumbersPrinted" type="java.lang.String" initial="" />
-   	    <form-property name="accessionNumberPrinted" type="java.lang.String" initial="" />
-	    <form-property name="accessionNumbersGenerated" type="java.lang.String" initial="" />
-   	    <form-property name="accessionNumberGenerated" type="java.lang.String" initial="" />
-	</form-bean>
-  
    <form-bean name="scriptletForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="id" type="java.lang.String" initial=""/> 
     <form-property name="scriptletName" type="java.lang.String" initial=""/> 
@@ -1960,7 +1966,10 @@
     <form-property name="hasComplete" type="java.lang.String" initial=""/>
     <form-property name="hasRelease" type="java.lang.String" initial=""/>
     <form-property name="hasCancel" type="java.lang.String" initial=""/>
+    <form-property name="hasAdmin" type="java.lang.Boolean" initial="false"/>
     <form-property name="lastupdated" type="java.sql.Timestamp" initial=""/>
+    <!--add to get value of isAdmin checkbox  -->
+    <form-property name="checkOrUncheck" type="java.lang.String"/>
   </form-bean>
   <form-bean name="systemUserSectionMenuForm" type="us.mn.state.health.lims.common.action.BaseActionForm">
     <form-property name="menuList" type="java.util.List"/>
@@ -2838,6 +2847,88 @@
           <forward name="success" path="organizationMenuPageDefinition"/> 
           <forward name="fail" path="organizationMenuPageDefinition"/>
        </action>    
+             
+<!-- CITY ACTION -->       
+  		<action path="/CityMenu" name="cityMenuForm" type="us.mn.state.health.lims.city.action.CityMenuAction" >
+          <forward name="success" path="masterListsPageDefinition"/> 
+          <forward name="fail" path="/MasterListsPage.do" redirect="true" /> 
+       </action>
+       <action path="/CancelCityMenu" name="cityMenuForm" type="us.mn.state.health.lims.city.action.CityMenuCancelAction" validate="false">
+          <forward name="success" path="masterListsPageDefinition" /> 
+          <forward name="fail" path="masterListsPageDefinition"/>
+          <forward name="close" path="masterListsPageDefinition"/> 
+       </action>
+       <action path="/City" name="cityForm" type="us.mn.state.health.lims.city.action.CityAction" validate="false">
+          <forward name="success" path="cityDefinition"/> 
+          <forward name="fail" path="masterListsPageDefinition" redirect="true" /> 
+       </action>           
+       <action path="/CancelCity" name="cityMenuForm" type="us.mn.state.health.lims.city.action.CityCancelAction" validate="false">
+          <forward name="success" path="/CityMenu.do" /> 
+          <forward name="close" path="/CityMenu.do" />  
+          <forward name="fail" path="/City.do"/>
+       </action>
+       <action path="/NextPreviousCity" name="cityForm" type="us.mn.state.health.lims.city.action.CityNextPreviousAction" validate="false">
+          <forward name="success" path="/City.do" redirect="true" /> 
+          <forward name="fail" path="cityDefinition" /> 
+       </action>       
+       <action path="/UpdateCity" name="cityForm" type="us.mn.state.health.lims.city.action.CityUpdateAction" validate="false">
+          <forward name="success" path="/CityMenu.do" redirect="true" /> 
+          <forward name="insertSuccess" path="/City.do" redirect="true" /> 
+          <forward name="fail" path="cityDefinition" /> 
+       </action>
+       <action path="/DeleteCity" name="cityMenuForm" type="us.mn.state.health.lims.city.action.CityDeleteAction">
+          <forward name="success" path="/CityMenu.do" /> 
+          <forward name="fail" path="/CityMenu.do" /> 
+       </action>
+        <action path="/UpdateNextPreviousCity" name="cityForm" type="us.mn.state.health.lims.city.action.CityUpdateAction" validate="false">
+          <forward name="success" path="/NextPreviousCity.do" /> 
+          <forward name="fail" path="cityDefinition" /> 
+       </action>
+       <action path="/SearchCityMenu" name="cityMenuForm" type="us.mn.state.health.lims.city.action.CityMenuAction" validate="false">
+          <forward name="success" path="cityMenuPageDefinition"/> 
+          <forward name="fail" path="cityMenuPageDefinition"/>
+       </action>   
+       
+<!--DISTRICT ACTION -->
+	  <action path="/District" name="districtForm" type="us.mn.state.health.lims.district.action.DistrictAction" validate="false">
+          <forward name="success" path="districtDefinition" /> 
+          <forward name="fail" path="masterListsPageDefinition" /> 
+       </action>
+       <action path="/CancelDistrictMenu" name="districtMenuForm" type="us.mn.state.health.lims.district.action.DistrictMenuCancelAction" validate="false">
+          <forward name="success" path="masterListsPageDefinition" /> 
+          <forward name="fail" path="masterListsPageDefinition"/>
+          <forward name="close" path="masterListsPageDefinition"/> 
+       </action>
+       <action path="/DistrictMenu" name="districtMenuForm" type="us.mn.state.health.lims.district.action.DistrictMenuAction" >
+          <forward name="success" path="masterListsPageDefinition"/> 
+          <forward name="fail" path="/MasterListsPage.do" redirect="true" /> 
+       </action>
+         <action path="/DeleteDistrict" name="districtMenuForm" type="us.mn.state.health.lims.district.action.DistrictDeleteAction">
+          <forward name="success" path="/DistrictMenu.do" /> 
+          <forward name="fail" path="/DistrictMenu.do" /> 
+       </action>
+       <action path="/CancelDistrict" name="districtMenuForm" type="us.mn.state.health.lims.district.action.DistrictCancelAction" validate="false">
+          <forward name="success" path="/DistrictMenu.do" /> 
+          <forward name="close" path="/DistrictMenu.do" />  
+          <forward name="fail" path="/District.do"/>
+       </action>
+        <action path="/NextPreviousDistrict" name="districtForm" type="us.mn.state.health.lims.district.action.DistrictNextPreviousAction" validate="false">
+          <forward name="success" path="/District.do" redirect="true" /> 
+          <forward name="fail" path="districtDefinition" /> 
+       </action>
+       <action path="/UpdateDistrict" name="districtForm" type="us.mn.state.health.lims.district.action.DistrictUpdateAction" validate="false">
+          <forward name="success" path="/DistrictMenu.do" redirect="true" /> 
+          <forward name="insertSuccess" path="/District.do" redirect="true" /> 
+          <forward name="fail" path="districtDefinition" /> 
+       </action>
+        <action path="/UpdateNextPreviousDistrict" name="districtForm" type="us.mn.state.health.lims.district.action.DistrictUpdateAction" validate="false">
+          <forward name="success" path="/NextPreviousDistrict.do" /> 
+          <forward name="fail" path="districtDefinition" /> 
+       </action>
+       <action path="/SearchDistrictMenu" name="districtMenuForm" type="us.mn.state.health.lims.district.action.DistrictMenuAction" validate="false">
+          <forward name="success" path="districtMenuPageDefinition"/> 
+          <forward name="fail" path="districtMenuPageDefinition"/>
+       </action>
        
 <!--PANEL-->       
        <action path="/Panel" name="panelForm" type="us.mn.state.health.lims.panel.action.PanelAction" validate="false">
@@ -3325,31 +3416,6 @@
           <forward name="fail" path="qaEventsEntryLineListingDefinition"/>
        </action>
         
-<!-- QUICK ENTRY -->
-		<action path="/QuickEntry" 
-				name="quickEntryForm" 
-				type="us.mn.state.health.lims.sample.action.QuickEntryAction" 
-				validate="false">
-			<forward name="success" path="quickEntryDefinition"/> 
-			<forward name="fail" path="requestFormEntryPageDefinition"/> 
-		</action>
-		<action path="/UpdateQuickEntry" 
-        		name="quickEntryForm" 
-        		type="us.mn.state.health.lims.sample.action.QuickEntryUpdateAction" 
-        		validate="false">
-				<!-- AIS : bugzilla 1464 <forward name="success" path="/RequestFormEntryPage.do" redirect="true" /> --> 
-			<forward name="success" path="/QuickEntry.do" redirect="true"/> 
-			<forward name="fail" path="quickEntryDefinition"/> 
-		</action>
-        <action path="/CancelQuickEntry" 
-        		name="quickEntryForm" 
-        		type="us.mn.state.health.lims.sample.action.QuickEntryCancelAction" 
-        		validate="false">
-			<forward name="success" path="/RequestFormEntryPage.do"/> 
-			<forward name="close" path="/RequestFormEntryPage.do"/>  
-			<forward name="fail" path="/QuickEntry.do"/>
-		</action>
-		
 <!-- bugzilla 2528 -->
        <action path="/PopulateNewbornTestQuickEntry" name="quickEntryForm" type="us.mn.state.health.lims.sample.action.QuickEntryPopulateNewbornTestAction" validate="false">
 			<forward name="success" path="quickEntryDefinition"/> 
@@ -3678,23 +3744,6 @@
           <forward name="success" path="masterListsPageDefinition"/> 
           <forward name="fail" path="masterListsPageDefinition"/>
           <forward name="close" path="masterListsPageDefinition"/> 
-       </action>
-       
-<!--SAMPLE LABEL PRINT-->       
-       <action path="/SampleLabelPrint" name="sampleLabelPrintForm" type="us.mn.state.health.lims.sample.action.SampleLabelPrintAction" validate="false">
-          <forward name="success" path="sampleLabelPrintDefinition"/> 
-          <forward name="fail" path="requestFormEntryPageDefinition"/> 
-       </action>
-
-        <action path="/ProcessSampleLabelPrint" name="sampleLabelPrintForm" type="us.mn.state.health.lims.sample.action.SampleLabelPrintProcessAction" validate="false">
-          <forward name="success" path="sampleLabelPrintDefinition" /> 
-          <forward name="fail" path="sampleLabelPrintDefinition"/> 
-       </action>
-
-        <action path="/CancelSampleLabelPrint" name="sampleLabelPrintForm" type="us.mn.state.health.lims.sample.action.SampleLabelPrintCancelAction" validate="false">
-          <forward name="success" path="/RequestFormEntryPage.do"/> 
-          <forward name="close" path="/RequestFormEntryPage.do"/>  
-          <forward name="fail" path="/SampleLabelPrint.do"/>
        </action>
        
 <!--AIS : SAMPLE TRACKING --> 
@@ -4781,6 +4830,10 @@
           <forward name="success" path="masterListsPageDefinition"/> 
           <forward name="fail" path="/MasterListsPage.do" redirect="true"/> 
        </action>   
+       <action path="/SearchSystemUserSectionMenu" name="systemUserSectionMenuForm" type="us.mn.state.health.lims.systemusersection.action.SystemUserSectionMenuAction">
+          <forward name="success" path="masterListsPageDefinition"/> 
+          <forward name="fail" path="/MasterListsPage.do" redirect="true"/> 
+       </action>   
         <action path="/DeleteSystemUserSection" name="systemUserSectionMenuForm" type="us.mn.state.health.lims.systemusersection.action.SystemUserSectionDeleteAction">
           <forward name="success" path="/SystemUserSectionMenu.do"/> 
           <forward name="fail" path="/SystemUserSectionMenu.do"/> 
@@ -4878,6 +4931,8 @@
           	<forward name="fail" path="newbornSampleFullDefinition"/>
           	<forward name="successQaEventsEntry" path="/ViewQaEventsEntry.do" redirect="true"/> 
        </action>
+       <!-- Dung Add -->
+      
      </action-mappings>
      
 <!-- ============================================= Controller Configuration -->

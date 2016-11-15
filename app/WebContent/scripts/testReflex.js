@@ -20,7 +20,7 @@ function showUserReflexChoices( index, resultId, sibIndex )
 	getReflexUserChoice( resultId, analysisId, testId, accessionNumber, index, processTestReflexSuccess);
 }
 
-function processTestReflexSuccess(xhr)
+function processTestReflexSuccess(xhr)//Dũng
 {
 	//alert( xhr.responseText );
 	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0);

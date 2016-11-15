@@ -34,16 +34,28 @@ public class TestSectionWorkplanReport implements IWorkplanReport {
 	private static final String FILE_NAME_WITH_RESULTS = "WorkplanResultsByTestSection";
 	private final HashMap<String, Object> parameterMap = new HashMap<String, Object>();
 	private String testSection = "";
+	private String testSectionId = "";
+	private String testId = "";
+	private String panelId = "";
+	private String startDate = "";
+	private String receivedDate = "";
+	private String completedDate = "";
 	private String messageKey = "banner.menu.workplan.";
 	protected String reportPath = "";
 	
-	public TestSectionWorkplanReport(String testSection) {
+	public TestSectionWorkplanReport(String testSection, String testSectionId, String testId, String panelId, String receivedDate, String startedDate, String completedDate) {
 		messageKey = messageKey + testSection;
 		this.testSection = StringUtil.getContextualMessageForKey(messageKey);
 		
 		if(this.testSection == null){
 			this.testSection = testSection;
 		}
+		this.testSectionId = testSectionId;
+		this.testId = testId;
+		this.panelId = panelId;
+		this.startDate = startedDate;
+		this.completedDate = completedDate;
+		this.receivedDate = receivedDate;
 		
 	}
 	
@@ -60,17 +72,24 @@ public class TestSectionWorkplanReport implements IWorkplanReport {
 		parameterMap.put("nameOfTest", getNameOfTest());
 		parameterMap.put("nameOfPatient", getNameOfPatient());
 		parameterMap.put("labName", ConfigurationProperties.getInstance().getPropertyValue(Property.SiteName));
-                parameterMap.put("accessionPrefix", AccessionNumberUtil.getAccessionNumberValidator().getPrefix() );
-                parameterMap.put("prefixLength", PREFIX_LENGTH );
-                parameterMap.put("SUBREPORT_DIR", reportPath);
-                parameterMap.put("receptionDate", StringUtil.getMessageForKey("report.receptionDate"));
-                parameterMap.put("workPlan", StringUtil.getMessageForKey("report.workPlan"));
-                parameterMap.put("appointmentDate", StringUtil.getMessageForKey("report.appointmentDate"));
-                parameterMap.put("testName", StringUtil.getMessageForKey("report.testName"));
-                parameterMap.put("date", StringUtil.getMessageForKey("report.date"));
-                parameterMap.put("from", StringUtil.getMessageForKey("report.from"));
-                parameterMap.put("appointment", StringUtil.getMessageForKey("report.appointment"));
-                parameterMap.put("about", StringUtil.getMessageForKey("report.about"));
+        parameterMap.put("accessionPrefix", AccessionNumberUtil.getAccessionNumberValidator().getPrefix() );
+        parameterMap.put("prefixLength", PREFIX_LENGTH );
+        parameterMap.put("SUBREPORT_DIR", reportPath);
+        parameterMap.put("receptionDate", StringUtil.getMessageForKey("report.receptionDate"));
+        parameterMap.put("workPlan", StringUtil.getMessageForKey("report.workPlan"));
+        parameterMap.put("appointmentDate", StringUtil.getMessageForKey("report.appointmentDate"));
+        parameterMap.put("testName", StringUtil.getMessageForKey("report.testName"));
+        parameterMap.put("date", StringUtil.getMessageForKey("report.date"));
+        parameterMap.put("from", StringUtil.getMessageForKey("report.from"));
+        parameterMap.put("appointment", StringUtil.getMessageForKey("report.appointment"));
+        parameterMap.put("about", StringUtil.getMessageForKey("report.about"));
+        
+        parameterMap.put("test_sect_id", this.testSectionId);
+        parameterMap.put("test_id", this.testId);
+        parameterMap.put("panel_id", this.panelId);
+        parameterMap.put("started_date", this.startDate);
+        parameterMap.put("completed_date", this.completedDate);
+        parameterMap.put("received_date", this.receivedDate);
 
 		return parameterMap;	
 	

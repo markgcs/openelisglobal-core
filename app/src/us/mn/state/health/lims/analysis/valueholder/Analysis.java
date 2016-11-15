@@ -19,6 +19,7 @@
 package us.mn.state.health.lims.analysis.valueholder;
 
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.common.valueholder.BaseObject;
@@ -27,6 +28,7 @@ import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
 import us.mn.state.health.lims.panel.valueholder.Panel;
 import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.test.valueholder.TestSection;
 
@@ -79,8 +81,17 @@ public class Analysis extends BaseObject {
     private String sampleTypeName;
 	private List<Analysis> children;
     private boolean correctedSincePatientReport;
+    private SystemUserSection statusUserSession;
 
-	public Analysis() {
+	public SystemUserSection getStatusUserSession() {
+        return statusUserSession;
+    }
+
+    public void setStatusUserSession(SystemUserSection statusUserSession) {
+        this.statusUserSession = statusUserSession;
+    }
+
+    public Analysis() {
 		super();
 		sampleItem = new ValueHolder();
 		testSection = new ValueHolder();
@@ -88,6 +99,7 @@ public class Analysis extends BaseObject {
 		parentAnalysis = new ValueHolder();
 		parentResult = new ValueHolder();
 		panel = new ValueHolder();
+		statusUserSession =new SystemUserSection();
 	}
 
 	public void setId(String id) {
@@ -479,4 +491,11 @@ public class Analysis extends BaseObject {
     public void setCorrectedSincePatientReport( boolean correctedSincePatientReport ){
         this.correctedSincePatientReport = correctedSincePatientReport;
     }
+
+    public void setTestSection(ValueHolderInterface testSection) {
+        this.testSection = testSection;
+    }
+
+   
+    
 }

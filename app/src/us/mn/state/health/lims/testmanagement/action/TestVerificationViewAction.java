@@ -256,7 +256,7 @@ public class TestVerificationViewAction extends BaseAction {
 
 			sampleHuman.setSampleId(sample.getId());
 			sampleHumanDAO.getDataBySample(sampleHuman);
-			sampleOrganization.setSample(sample);
+			sampleOrganization.setSampleId(sample.getId());
 			sampleOrganizationDAO.getDataBySample(sampleOrganization);
 
 			if (sampleHuman.getPatientId() != null) {

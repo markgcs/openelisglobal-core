@@ -16,6 +16,7 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
 import java.util.List;
 
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -54,4 +55,10 @@ public class PatientARVFollowupVersion2Report extends PatientARVReport implement
 	    reportParameters.put("showSerology", Boolean.FALSE);
 	    reportParameters.put("showPCR", Boolean.FALSE);
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

@@ -29,32 +29,6 @@ function getTestNames( testId, success, failure){
         });
 }
 
-/**
- * A generic way to get localized names for a given entity rather than a new call for each type.  Expand and document as needed
- * @param entitiyId
- * @param entityName may only be one of "panel"  The names can also be found in EntityNamesProvider
- * @param success
- * @param failure
- */
-function getEntityNames( entitiyId,entityName ,success, failure){
-    var permitted = ['panel','sampleType','testSection','unitOfMeasure'];
-
-    if( permitted.indexOf(entityName) == -1){
-        alert( "\"" + entityName + "\" has not been implemented for getEntityNames");
-        return;
-    }
-    if( !failure ){	failure = defaultFailure;}
-
-    new Ajax.Request('ajaxQueryXML',
-        {
-            method : 'get',
-            parameters : "provider=EntityNamesProvider&entityId=" + entitiyId + "&entityName=" + entityName ,
-            //indicator: 'throbbing',
-            onSuccess : success,
-            onFailure : failure
-        });
-}
-
 function getDistrictsForRegion( regionId, selectedValue, success, failure){
 	if( !failure ){	failure = defaultFailure;}
 	
@@ -125,6 +99,19 @@ function validateAccessionNumberOnServer(ignoreYear, ignoreUsage, fieldId, acces
 				onFailure : failure
 			});
 }
+//Dung add new function check from accession number to accession number.
+function validateAccNumFromAccNumToOnServer(ignoreYear, ignoreUsage, fieldId, accessionNumber,accessionNumberTo, success, failure) {
+    if( !failure ){	failure = defaultFailure;}
+	new Ajax.Request(
+			'ajaxXML', // url
+			{// options
+				method : 'get', // http method
+				parameters : 'provider=SampleEntryAccessionNumberValidationProvider&ignoreYear=' + ignoreYear + '&ignoreUsage=' + ignoreUsage + '&field='	+ fieldId + '&accessionNumber=' + accessionNumber + '&accessionNumberTo=' +accessionNumberTo,
+				indicator : 'throbbing',
+				onSuccess : success,
+				onFailure : failure
+			});
+}
 
 function generateNextScanNumber(success, failure){
     if( !failure ){	failure = defaultFailure;}
@@ -181,7 +168,22 @@ function validateSubjectNumberOnServer( subjectNumber, type, elementId, success,
         });
 
 }
-function patientSearch(lastName, firstName, STNumber, subjectNumber, nationalId, labNumber, guid, suppressExternalSearch, success, failure){
+
+function validateResultLimit(fieldId, resultId, resultValue, accessionNumber, success, failure) {
+    if( !failure ){	failure = defaultFailure;}
+
+    new Ajax.Request('ajaxXML',
+        {
+            method : 'get',
+            parameters : "provider=ResultLimitValidationProvider&fieldId=" + fieldId + "&resultId=" + resultId + "&resultValue=" + resultValue + "&accessionNumber=" + accessionNumber,
+            //indicator: 'throbbing',
+            onSuccess : success,
+            onFailure : failure
+        });
+
+}
+
+function patientSearch(lastName, firstName, STNumber, subjectNumber, nationalId, externalId, labNumber, guid, suppressExternalSearch, success, failure){
 	if( !failure){failure = defaultFailure;	}
 	
 	new Ajax.Request (
@@ -193,6 +195,7 @@ function patientSearch(lastName, firstName, STNumber, subjectNumber, nationalId,
                			  "&STNumber=" + STNumber +
                			  "&subjectNumber=" + subjectNumber +
                			  "&nationalID=" + nationalId +
+               			  "&externalID=" + externalId +
                			  "&labNumber=" + labNumber +
                			  "&guid=" + guid +
                			  "&suppressExternalSearch=" + suppressExternalSearch,
@@ -235,33 +238,4 @@ function getProvidersForOrg( orgKey, success, failure){
         }
     );
 }
-
-function getAllTestsForSampleType( sampleTypeId, success, failure){
-    if( !failure){failure = defaultFailure;	}
-    new Ajax.Request(
-        'ajaxQueryXML',  //url
-        {//options
-            method: 'get', //http method
-            parameters: "provider=AllTestsForSampleTypeProvider&sampleTypeId=" + sampleTypeId,
-            //indicator: 'throbbing'
-            onSuccess: success,
-            onFailure: failure
-        }
-    );
-}
-
-function getPendingAnalysisForTest( testId, success, failure){
-    if( !failure){failure = defaultFailure;	}
-    new Ajax.Request(
-        'ajaxQueryXML',  //url
-        {//options
-            method: 'get', //http method
-            parameters: "provider=getPendingAnalysisForTestProvider&testId=" + testId,
-            //indicator: 'throbbing'
-            onSuccess: success,
-            onFailure: failure
-        }
-    );
-}
-
 

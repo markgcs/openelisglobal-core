@@ -83,6 +83,8 @@ public interface OrganizationDAO extends BaseDAO {
 	public Organization getOrganizationById(String organizationId) throws LIMSRuntimeException;
     public void insertOrUpdateData( Organization organization ) throws LIMSRuntimeException;
 	public List<Organization> getOrganizationsByParentId( String parentId) throws LIMSRuntimeException;
-
+	public List<Organization> getListOrganizationName() throws LIMSRuntimeException;
+	// add: function to get organization by local abbreviation or submitter number
+	public Organization getOrganizationBySubmitterNumber(String submitterNumber) throws LIMSRuntimeException;
 
 }

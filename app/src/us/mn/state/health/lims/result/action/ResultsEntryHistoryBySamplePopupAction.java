@@ -155,7 +155,7 @@ public class ResultsEntryHistoryBySamplePopupAction extends BaseAction {
     					if (!StringUtil.isNullorNill(sample.getId())) {
     						sampleHuman.setSampleId(sample.getId());
     						sampleHumanDAO.getDataBySample(sampleHuman);
-    						sampleOrganization.setSample(sample);
+    						sampleOrganization.setSampleId(sample.getId());
     						sampleOrganizationDAO
     								.getDataBySample(sampleOrganization);
     						// bugzilla 1773 need to store sample not sampleId for

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Vector;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.lang.NumberUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
 
@@ -29,7 +30,6 @@ import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
-import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSFrozenRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.log.LogEvent;
@@ -39,6 +39,8 @@ import us.mn.state.health.lims.common.valueholder.BaseObject;
 import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
 import us.mn.state.health.lims.dictionary.valueholder.Dictionary;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
+//import to check duplicate record
+import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 
 /**
  * @author diane benz
@@ -90,10 +92,9 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
         try {
             // bugzilla 1386 throw Exception if record already exists
             if (duplicateDictionaryExists(dictionary)) {
-                throw new LIMSDuplicateRecordException("Duplicate record or abrevation exists for "
+                throw new LIMSDuplicateRecordException("Duplicate record or abbreviation exists for "
                                 + dictionary.getDictEntry());
             }
-
             String id = (String) HibernateUtil.getSession().save(dictionary);
             dictionary.setId(id);
 
@@ -113,7 +114,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
         return true;
     }
-
+    
     // modified for bugzilla 2061-2063
     public void updateData(Dictionary dictionary, boolean isDictionaryFrozenCheckRequired) throws LIMSRuntimeException {
 
@@ -208,14 +209,17 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
         return list;
     }
 
-    public List getPageOfDictionarys(int startingRecNo) throws LIMSRuntimeException {
+    public List getPageOfDictionarys(int startingRecNo, boolean isCity) throws LIMSRuntimeException {
         List list = new Vector();
-
         try {
             int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
 
-            // bugzilla 1399
-            String sql = "from Dictionary d order by d.dictionaryCategory.categoryName, d.dictEntry";
+            String sql = "";
+            if (isCity) {
+            	sql = "from Dictionary d where d.dictionaryCategory.id = '" + IActionConstants.CITY_CATEGORY_ID + "' order by d.dictEntry asc";
+            } else {
+            	sql = "from Dictionary d order by d.dictionaryCategory.categoryName, d.dictEntry";
+            }
             Query query = HibernateUtil.getSession().createQuery(sql);
             query.setFirstResult(startingRecNo - 1);
             query.setMaxResults(endingRecNo - 1);
@@ -223,6 +227,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             list = query.list();
             HibernateUtil.getSession().flush();
             HibernateUtil.getSession().clear();
+            
         } catch (Exception e) {
             // bugzilla 2154
             LogEvent.logError("DictionaryDAOImpl", "getPageOfDictionarys()", e.toString());
@@ -231,25 +236,23 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
         return list;
     }
-
+    
     // bugzilla 1413
-    public List getPagesOfSearchedDictionarys(int startingRecNo, String searchString) throws LIMSRuntimeException {
+    public List getPagesOfSearchedDictionarys(int startingRecNo, String searchString, boolean isCity, boolean isDistrict) throws LIMSRuntimeException {
         List list = new Vector();
-        String wildCard = "*";
         String newSearchStr;
-        String sql;
+        String sql = "";
 
         try {
             int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
-            int wCdPosition = searchString.indexOf(wildCard);
+            newSearchStr = "%" + searchString.toLowerCase().trim() + "%";
 
-            if (wCdPosition == -1) // no wild card looking for exact match
-            {
-                newSearchStr = searchString.toLowerCase().trim();
-                sql = "from Dictionary d where trim(lower (d.dictEntry)) = :param  order by d.dictionaryCategory.categoryName, d.dictEntry";
+            if (isCity) {
+            	sql = "from Dictionary d where trim(lower (d.dictEntry)) like :param and d.dictionaryCategory.id = '" + IActionConstants.CITY_CATEGORY_ID + "' order by d.dictEntry, d.dictionaryCategory.categoryName asc";
+            } else if (isDistrict) {
+                sql = "from Dictionary d where trim(lower (d.dictEntry)) like :param and d.dictionaryCategory.id = '" + IActionConstants.DISTRICT_CATEGORY_ID + "' order by d.dictEntry, d.dictionaryCategory.categoryName asc";
             } else {
-                newSearchStr = searchString.replace(wildCard, "%").toLowerCase().trim();
-                sql = "from Dictionary d where trim(lower (d.dictEntry)) like :param  order by d.dictionaryCategory.categoryName, d.dictEntry";
+            	sql = "from Dictionary d where trim(lower (d.dictEntry)) like :param  order by d.dictionaryCategory.categoryName, d.dictEntry";
             }
             Query query = HibernateUtil.getSession().createQuery(sql);
             query.setParameter("param", newSearchStr);
@@ -259,6 +262,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             list = query.list();
             HibernateUtil.getSession().flush();
             HibernateUtil.getSession().clear();
+            
         } catch (Exception e) {
             e.printStackTrace();
             throw new LIMSRuntimeException("Error in Dictionary getPageOfSearchedDictionarys()", e);
@@ -266,9 +270,8 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
         return list;
     }
-
     // end bugzilla 1413
-
+    
     public Dictionary readDictionary(String idString) {
         Dictionary dictionary = null;
         try {
@@ -297,7 +300,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
     // this is for autocomplete
     // modified for 2062
-    public List<Dictionary> getDictionaryEntrysByCategoryAbbreviation(String filter, String categoryFilter)
+    public List<Dictionary> getDictionaryEntrysByCategory(String filter, String categoryFilter)
                     throws LIMSRuntimeException {
         try {
             String sql = "";
@@ -358,20 +361,20 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
     // bugzilla 2063 - this is when we know the category (local_abbrev) and we
     // need list of entries
-    public List<Dictionary> getDictionaryEntrysByCategoryAbbreviation(String categoryFilter) throws LIMSRuntimeException {
-        return getDictionaryEntrysByCategoryAbbreviation("localAbbreviation", categoryFilter, true);
+    public List<Dictionary> getDictionaryEntrysByCategory(String categoryFilter) throws LIMSRuntimeException {
+        return getDictionaryEntrysByCategory("localAbbreviation", categoryFilter, true);
     }
     
-    public List<Dictionary> getDictionaryEntrysByCategoryNameLocalizedSort(String categoryName) throws LIMSRuntimeException {
-        List<Dictionary> entries = getDictionaryEntrysByCategoryAbbreviation("categoryName", categoryName, false);
+    public List<Dictionary> getDictionaryEntrysByCategoryName(String categoryName) throws LIMSRuntimeException {
+        List<Dictionary> entries = getDictionaryEntrysByCategory("categoryName", categoryName, false);
         BaseObject.sortByLocalizedName(entries);
         return entries;
     }
 
     /**
-     * @see DictionaryDAO#getDictionaryEntrysByCategoryAbbreviation(String, String, boolean)
+     * @see DictionaryDAO#getDictionaryEntrysByCategory(String, String, boolean)
      */
-    public List<Dictionary> getDictionaryEntrysByCategoryAbbreviation(String fieldName, String fieldValue, boolean orderByDictEntry)
+    public List<Dictionary> getDictionaryEntrysByCategory(String fieldName, String fieldValue, boolean orderByDictEntry)
                     throws LIMSRuntimeException {
         try {
             String sql = "from Dictionary d where d.isActive= " + enquote(YES);
@@ -397,8 +400,8 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
         } catch (Exception e) {
             // bugzilla 2154
-            LogEvent.logError("DictionaryDAOImpl", "getDictionaryEntrysByCategoryAbbreviation()", e.toString());
-            throw new LIMSRuntimeException("Error in Dictionary getDictionaryEntrysByCategoryAbbreviation(String categoryFilter)",
+            LogEvent.logError("DictionaryDAOImpl", "getDictionaryEntrysByCategory()", e.toString());
+            throw new LIMSRuntimeException("Error in Dictionary getDictionaryEntrysByCategory(String categoryFilter)",
                             e);
         }
     }
@@ -489,9 +492,11 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             String sql = null;
             if (dictionary.getDictionaryCategory() != null) {
                 sql = "from Dictionary t where "
-                                + "((trim(lower(t.dictEntry)) = :param and trim(lower(t.dictionaryCategory.categoryName)) = :param2 and t.id != :dictId) "
-                                + "or "
-                                + "(trim(lower(t.localAbbreviation)) = :param4 and trim(lower(t.dictionaryCategory.categoryName)) = :param2 and t.id != :dictId)) ";
+                                + "((trim(lower(t.dictEntry)) = :param and trim(lower(t.dictionaryCategory.categoryName)) = :param2 and t.id != :dictId)) ";
+                //Commented by Dung 2016.07.18
+                //localAbbreviation will wrong when put here
+/*                                + "or "
+                                + "(trim(lower(t.localAbbreviation)) = :param4 and trim(lower(t.dictionaryCategory.categoryName)) = :param2 and t.id != :dictId)) ";*/
 
             } else {
                 sql = "from Dictionary t where "
@@ -502,7 +507,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             }
             Query query = HibernateUtil.getSession().createQuery(sql);
             query.setParameter("param", dictionary.getDictEntry().toLowerCase().trim());
-            query.setParameter("param4", dictionary.getLocalAbbreviation().toLowerCase().trim());
+            /*query.setParameter("param4", dictionary.getLocalAbbreviation().toLowerCase().trim());*/
             if (dictionary.getDictionaryCategory() != null) {
                 query.setParameter("param2", dictionary.getDictionaryCategory().getCategoryName().toLowerCase().trim());
             }
@@ -554,8 +559,8 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
         } catch (Exception e) {
             // bugzilla 2154
-            LogEvent.logError("DictionaryDAOImpl", "getDictionaryByDictEntry()", e.toString());
-            throw new LIMSRuntimeException("Error in Test getDictionaryByDictEntry()", e);
+            LogEvent.logError("DictionaryDAOImpl", "getDictionaryByLocalAbbrev()", e.toString());
+            throw new LIMSRuntimeException("Error in Dictionary getDictionaryByLocalAbbrev()", e);
         }
     }
 
@@ -642,26 +647,34 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             throw new LIMSRuntimeException("Error in dictionaryIsInUse()", e);
         }
     }
+    
+    public Integer getTotalCityCount() throws LIMSRuntimeException {
+		return getTotalCount("Dictionary d where d.dictionaryCategory.id = '" + IActionConstants.CITY_CATEGORY_ID + "'", Dictionary.class);
+	}
 
-
-    public Integer getTotalSearchedDictionaryCount(String searchString) throws LIMSRuntimeException {
-
+    public Integer getTotalSearchedDictionaryCount(String searchString, String categoryDictionary) throws LIMSRuntimeException {
         String wildCard = "*";
         String newSearchStr;
         String sql;
         Integer count = null;
 
         try {
+            //int wCdPosition = searchString.indexOf(wildCard);
 
-            int wCdPosition = searchString.indexOf(wildCard);
-
-            if (wCdPosition == -1) // no wild card looking for exact match
+            /*if (wCdPosition == -1) // no wild card looking for exact match
             {
                 newSearchStr = searchString.toLowerCase().trim();
                 sql = "select count (*) from Dictionary d where trim(lower (d.dictEntry)) = :param ";
             } else {
                 newSearchStr = searchString.replace(wildCard, "%").toLowerCase().trim();
                 sql = "select count (*) from Dictionary d where trim(lower (d.dictEntry)) like :param ";
+            }*/
+            newSearchStr = "%" + searchString + "%";
+            if (StringUtil.isNullorNill(categoryDictionary)) {
+                sql = "select count (*) from Dictionary d where trim(lower (d.dictEntry)) like :param ";
+            } else {
+                sql = "select count (*) from Dictionary d where trim(lower (d.dictEntry)) like :param and d.dictionaryCategory.id = " +
+                        categoryDictionary;
             }
             Query query = HibernateUtil.getSession().createQuery(sql);
             query.setParameter("param", newSearchStr);
@@ -671,9 +684,7 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
             HibernateUtil.getSession().clear();
 
             if (results != null && results.get(0) != null) {
-                if (results.get(0) != null) {
-                    count = (Integer) results.get(0);
-                }
+                count = (Integer) results.get(0);
             }
 
         } catch (Exception e) {
@@ -682,13 +693,12 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
         }
 
         return count;
-
     }
 
 
 	@SuppressWarnings("unchecked")
 	public List<Dictionary> getDictionaryEntriesByCategoryId(String categoryId) throws LIMSRuntimeException {
-		String sql = "From Dictionary d where d.dictionaryCategory.id = :categoryId";
+		String sql = "From Dictionary d where d.dictionaryCategory.id = :categoryId ORDER BY d.dictEntry";
 
 		try{
 			Query query = HibernateUtil.getSession().createQuery(sql);
@@ -727,7 +737,14 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 			query.setParameter("dictionaryEntry", dictionaryName);
 			query.setParameter("description", categoryDescription);
 
-			Dictionary dictionary = (Dictionary)query.uniqueResult();
+			Dictionary dictionary = new Dictionary();
+            
+            List<Dictionary>  queryResults = query.list();
+            
+            if (queryResults.size() >= 1) {
+                dictionary = (Dictionary) queryResults.get(0);
+            }
+            
 
 			closeSession();
 
@@ -739,12 +756,19 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 	}
 
 	public Dictionary getDictionaryByDictEntry(String dictEntry) throws LIMSRuntimeException{
-		String sql = "from Dictionary d where d.dictEntry = :dictionaryEntry";
-		
+		String sql = "from Dictionary d where upper(d.dictEntry) = upper(:dictionaryEntry)";
+
 		try{
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setString("dictionaryEntry", dictEntry);
-			Dictionary dictionary = (Dictionary)query.uniqueResult();
+			Dictionary dictionary = new Dictionary();
+			
+			List<Dictionary>  queryResults = query.list();
+			
+			if (queryResults.size() >= 1) {
+			    dictionary = (Dictionary) queryResults.get(0);
+			}
+			
 			closeSession();
 			return dictionary;
 		}catch(HibernateException e){
@@ -756,19 +780,50 @@ public class DictionaryDAOImpl extends BaseDAOImpl implements DictionaryDAO {
 
 	@Override
 	public Dictionary getDataForId(String dictionaryId) throws LIMSRuntimeException {
+	    
+	    boolean isNumber = NumberUtils.isNumber(dictionaryId);
+        
+        if(!isNumber) return null;
+        
 		String sql = "from Dictionary d where d.id = :id";
 		try {
-			Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setInteger("id", Integer.parseInt(dictionaryId));
-			Dictionary dictionary = (Dictionary)query.uniqueResult();
-			closeSession();
-			return dictionary;
-			
+		    if (!StringUtil.isNullorNill(dictionaryId)) {
+		        Query query = HibernateUtil.getSession().createQuery(sql);
+    			query.setInteger("id", Integer.parseInt(dictionaryId));
+    			Dictionary dictionary = new Dictionary();
+    			
+    			List<Dictionary>  queryResults = query.list();
+                
+                if (queryResults.size() >= 1) {
+                    dictionary = (Dictionary) queryResults.get(0);
+                }
+                
+    			closeSession();
+    			return dictionary;
+		    }
 		} catch (HibernateException e) {
 			handleException(e, "getDataForId");
 		}
 		return null;
 	}
-
-
+	/*
+	 * Function get dictionary with dictEntry. Used to search feature
+	 * Input: String dictEntry
+	 * Output: list<Dictionary>
+	 */
+	public List<Dictionary> getDictionaryLikeDictEntry(String dictEntry) throws LIMSRuntimeException {
+	    List<Dictionary> list = new Vector<Dictionary>();
+	    String searchString = "%" + dictEntry.toUpperCase().trim() + "%";
+	    String sql = "from Dictionary d where upper(d.dictEntry) like :dictionaryEntry";
+        try{
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setString("dictionaryEntry", searchString);
+            list = query.list();
+            closeSession();
+        }catch(HibernateException e){
+            handleException(e, "getDictionaryLikeDictEntry");
+        }
+        
+	    return list;
+	}
 }

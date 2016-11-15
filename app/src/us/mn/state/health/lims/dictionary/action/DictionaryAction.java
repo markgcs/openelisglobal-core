@@ -110,7 +110,6 @@ public class DictionaryAction extends BaseAction {
 		// populate form from valueholder
 		PropertyUtils.copyProperties(form, dictionary);
 		
-		
 		DictionaryCategoryDAO dictCategorygDAO = new DictionaryCategoryDAOImpl();
 		List dictCats = dictCategorygDAO.getAllDictionaryCategorys();
 		

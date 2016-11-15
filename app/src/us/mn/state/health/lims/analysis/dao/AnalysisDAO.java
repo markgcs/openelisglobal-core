@@ -17,6 +17,12 @@
 */
 package us.mn.state.health.lims.analysis.dao;
 
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.Set;
+
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.dao.BaseDAO;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
@@ -24,11 +30,6 @@ import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
 import us.mn.state.health.lims.test.valueholder.Test;
-
-import java.sql.Date;
-import java.sql.Timestamp;
-import java.util.List;
-import java.util.Set;
 
 /**
  * @author diane benz
@@ -39,135 +40,173 @@ import java.util.Set;
  */
 public interface AnalysisDAO extends BaseDAO {
 
-     boolean insertData(Analysis analysis, boolean duplicateCheck) throws LIMSRuntimeException;
+    public boolean insertData(Analysis analysis, boolean duplicateCheck) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 void deleteData(List analysiss) throws LIMSRuntimeException;
+	public void deleteData(List analysiss) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalyses() throws LIMSRuntimeException;
+	public List getAllAnalyses() throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getPageOfAnalyses(int startingRecNo)throws LIMSRuntimeException;
+	public List getPageOfAnalyses(int startingRecNo)throws LIMSRuntimeException;
 
-	 void getData(Analysis analysis) throws LIMSRuntimeException;
+	public void getData(Analysis analysis) throws LIMSRuntimeException;
 
-	 void updateData(Analysis analysis) throws LIMSRuntimeException;
-
-	@SuppressWarnings("rawtypes")
-	 List getAnalyses(String filter) throws LIMSRuntimeException;
-
-	@SuppressWarnings("rawtypes")
-	 List getNextAnalysisRecord(String id) throws LIMSRuntimeException;
+    public void updateData(Analysis analysis) throws LIMSRuntimeException;
+    
+    public void updateAnalysisStatus(Analysis analysis) throws LIMSRuntimeException;
+    
+	public void updateDataAIM(List<BigDecimal> analysis, String strSysUserId) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getPreviousAnalysisRecord(String id) throws LIMSRuntimeException;
+	public List getAnalyses(String filter) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysesPerTest(Test test) throws LIMSRuntimeException;
+	public List getNextAnalysisRecord(String id) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysisByTestAndStatus(String testId, List<Integer> statusIdList) throws LIMSRuntimeException;
+	public List getPreviousAnalysisRecord(String id) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysisByTestsAndStatus(List<String> testIdList, List<Integer> statusIdList) throws LIMSRuntimeException;
+	public List getAllAnalysesPerTest(Test test) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysisByTestAndExcludedStatus(String testId, List<Integer> statusIdList) throws LIMSRuntimeException;
+	public List getAllAnalysisByTestAndStatus(String testId, List<Integer> statusIdList) throws LIMSRuntimeException;
+
+    @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestAndStatusAndDate(String testId, List<Integer> statusIdList, String receivedDate, String startedDate, String completedDate) throws LIMSRuntimeException;
+    
+    @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestAndStatusAndDateAndAcessionNumber(String accessionNumberFrom, String accessionNumberTo, String testId, String statusIdList, String receivedDate, String startedDate, String completedDate) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession) throws LIMSRuntimeException;
+	public List getAllAnalysisByTestsAndStatus(List<String> testIdList, List<Integer> statusIdList) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllAnalysisByTestSectionAndExcludedStatus(String testSectionId, List<Integer> statusIdList) throws LIMSRuntimeException;
+	public List getAllAnalysisByTestAndExcludedStatus(String testId, List<Integer> statusIdList) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysesBySampleItem(SampleItem sampleItem) throws LIMSRuntimeException;
-
-	 List<Analysis> getAnalysesBySampleItemsExcludingByStatusIds(SampleItem sampleItem, Set<Integer> statusIds) throws LIMSRuntimeException;
-
-	 List<Analysis> getAnalysesBySampleStatusId(String statusId) throws LIMSRuntimeException;
-
-	 List<Analysis> getAnalysesBySampleStatusIdExcludingByStatusId(String statusId, Set<Integer> statusIds) throws LIMSRuntimeException;
+    @SuppressWarnings("rawtypes")
+    public List<Analysis> getAllAnalysisByAccessionNumbersAndExcludedStatus(String accessionNumberFrom, String accessionNumberTo, List<Integer> statusIdList) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAnalysesReadyToBeReported() throws LIMSRuntimeException;
+    public List getAllAnalysisByTestSectionAndStatus(String testSectionId, String testId, List<Integer> statusIdList, String receivedDate, boolean sortedByDateAndAccession)
+            throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllChildAnalysesByResult(Result result) throws LIMSRuntimeException;
+	public List getAllAnalysisByTestSectionAndExcludedStatus(String testSectionId, List<Integer> statusIdList) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleItem(SampleItem sampleItem) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleItemsExcludingByStatusIds(SampleItem sampleItem, Set<Integer> statusIds) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleStatusId(String statusId) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleStatusIdExcludingByStatusId(String statusId, Set<Integer> statusIds) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionAnalysesReadyToBeReported() throws LIMSRuntimeException;
+	public List getAnalysesReadyToBeReported() throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionAnalysesReadyForReportPreviewBySample(List accessionNumbers) throws LIMSRuntimeException;
+	public List getAllChildAnalysesByResult(Result result) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAnalysesAlreadyReportedBySample(Sample sample) throws LIMSRuntimeException;
+	public List getMaxRevisionAnalysesReadyToBeReported() throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
+	public List getMaxRevisionAnalysesReadyForReportPreviewBySample(List accessionNumbers) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionAnalysesBySampleIncludeCanceled(SampleItem sampleItem) throws LIMSRuntimeException;
+	public List getAnalysesAlreadyReportedBySample(Sample sample) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getRevisionHistoryOfAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
+	public List getMaxRevisionAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getRevisionHistoryOfAnalysesBySampleAndTest(SampleItem sampleItem, Test test, boolean includeLatestRevision) throws LIMSRuntimeException;
+	public List getMaxRevisionAnalysesBySampleIncludeCanceled(SampleItem sampleItem) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getAllMaxRevisionAnalysesPerTest(Test test) throws LIMSRuntimeException;
+	public List getRevisionHistoryOfAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionPendingAnalysesReadyToBeReportedBySample(Sample sample) throws LIMSRuntimeException;
+	public List getRevisionHistoryOfAnalysesBySampleAndTest(SampleItem sampleItem, Test test, boolean includeLatestRevision) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionPendingAnalysesReadyForReportPreviewBySample(Sample sample) throws LIMSRuntimeException;
-
-	 Analysis getPreviousAnalysisForAmendedAnalysis(Analysis analysis) throws LIMSRuntimeException;
-
-	 void getMaxRevisionAnalysisBySampleAndTest(Analysis analysis) throws LIMSRuntimeException;
+	public List getAllMaxRevisionAnalysesPerTest(Test test) throws LIMSRuntimeException;
 
 	@SuppressWarnings("rawtypes")
-	 List getMaxRevisionParentTestAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
+	public List getMaxRevisionPendingAnalysesReadyToBeReportedBySample(Sample sample) throws LIMSRuntimeException;
 
-	 List<Analysis>  getAnalysesForStatusId(String statusId)throws LIMSRuntimeException;
+	@SuppressWarnings("rawtypes")
+	public List getMaxRevisionPendingAnalysesReadyForReportPreviewBySample(Sample sample) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysisStartedOnExcludedByStatusId(Date collectionDate, Set<Integer> statusIds) throws LIMSRuntimeException;
-	 List<Analysis> getAnalysisStartedOn(Date collectionDate) throws LIMSRuntimeException;
+	public Analysis getPreviousAnalysisForAmendedAnalysis(Analysis analysis) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysisCollectedOnExcludedByStatusId(Date collectionDate, Set<Integer> statusIds) throws LIMSRuntimeException;
-	 List<Analysis> getAnalysisCollectedOn(Date collectionDate) throws LIMSRuntimeException;
+	public void getMaxRevisionAnalysisBySampleAndTest(Analysis analysis) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysesBySampleId(String id) throws LIMSRuntimeException;
-	 List<Analysis> getAnalysesBySampleIdExcludedByStatusId(String id, Set<Integer> statusIds) throws LIMSRuntimeException;
+	@SuppressWarnings("rawtypes")
+	public List getMaxRevisionParentTestAnalysesBySample(SampleItem sampleItem) throws LIMSRuntimeException;
 
-     List<Analysis> getAnalysisBySampleAndTestIds(String sampleKey, List<Integer> testIds);
-
-	 List<Analysis> getAnalysisByTestSectionAndCompletedDateRange(String sectionID, Date lowDate, Date highDate) throws LIMSRuntimeException;
-
-	 List<Analysis> getAnalysisStartedOrCompletedInDateRange(Date lowDate, Date highDate) throws LIMSRuntimeException;
-
-	 List<Analysis> getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> analysisStatusList, List<Integer> sampleStatusList) throws LIMSRuntimeException;
-
-	 List<Analysis> getAnalysisStartedOnRangeByStatusId(Date lowDate, Date highDate, String statusID) throws LIMSRuntimeException;
+    public List<Analysis>  getAnalysesForResultStatusId(String resultStatus)throws LIMSRuntimeException;
+    
+	public List<Analysis>  getAnalysesForStatusId(String statusId)throws LIMSRuntimeException;
 	
-	 List<Analysis> getAnalysisCompleteInRange(Timestamp lowDate, Timestamp highDate) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisStartedOnExcludedByStatusId(Date startedDate, Set<Integer> statusIds) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisStartedOn(Date collectionDate) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysisEnteredAfterDate(Timestamp latestCollectionDate) throws LIMSRuntimeException;
+    public List<Analysis> getAnalysisResultOnExcludedByStatusId(Date resultDate, Set<Integer> statusIds) throws LIMSRuntimeException;
+	
+	public List<Analysis> getAnalysisCollectedOnExcludedByStatusId(Date collectionDate, Set<Integer> statusIds) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisCollectedOn(Date collectionDate) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysisByAccessionAndTestId(String accessionNumber, String testId) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysesBySampleId(String id) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysesBySampleIdExcludedByStatusId(String id, Set<Integer> statusIds) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysesBySampleIdAndStatusId(String id, Set<Integer> analysisStatusIds) throws LIMSRuntimeException;
+    public List<Analysis> getAnalysisBySampleAndTestIds(String sampleKey, List<Integer> testIds);
 
-	 List<Analysis> getAnalysisByTestNamesAndCompletedDateRange(List<String> testNames, Date lowDate, Date highDate) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisByTestSectionAndCompletedDateRange(String sectionID, Date lowDate, Date highDate) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysesBySampleItemIdAndStatusId(String sampleItemId, String statusId) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisStartedOrCompletedInDateRange(Date lowDate, Date highDate) throws LIMSRuntimeException;
 
-	 List<Analysis> getAnalysisByTestDescriptionAndCompletedDateRange(List<String> descriptions, Date sqlDayOne, Date sqlDayTwo) throws LIMSRuntimeException;
+	public List<Analysis> getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> analysisStatusList, List<Integer> sampleStatusList) throws LIMSRuntimeException;
+	
+    public List<Analysis> getAllAnalysisByTestSectionAndStatusAndDate(String testSectionId, List<Integer> analysisStatusList, List<Integer> sampleStatusList, String receivedDate) throws LIMSRuntimeException;
 
-	 Analysis getAnalysisById(String analysisId) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisStartedOnRangeByStatusId(Date lowDate, Date highDate, String statusID) throws LIMSRuntimeException;
+	
+	public List<Analysis> getAnalysisCompleteInRange(Timestamp lowDate, Timestamp highDate) throws LIMSRuntimeException;
 
-     void updateData( Analysis analysis, boolean skipAuditTrail ) throws LIMSRuntimeException;
+	public List<Analysis> getAnalysisEnteredAfterDate(Timestamp latestCollectionDate) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysisByAccessionAndTestId(String accessionNumber, String testId) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleIdAndStatusId(String id, Set<Integer> analysisStatusIds) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysisByTestNamesAndCompletedDateRange(List<String> testNames, Date lowDate, Date highDate) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysesBySampleItemIdAndStatusId(String sampleItemId, String statusId) throws LIMSRuntimeException;
+
+	public List<Analysis> getAnalysisByTestDescriptionAndCompletedDateRange(List<String> descriptions, Date sqlDayOne, Date sqlDayTwo) throws LIMSRuntimeException;
+
+	public Analysis getAnalysisById(String analysisId) throws LIMSRuntimeException;
+
+    public Analysis getAnalysisByIdAIM(String analysisId) throws LIMSRuntimeException;
+
+    public void updateData( Analysis analysis, boolean skipAuditTrail ) throws LIMSRuntimeException;
+    
+    @SuppressWarnings("rawtypes")
+	public List getAllAnalysisByAccessionNumberAndStatus(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession) throws LIMSRuntimeException;
+    
+    public String insertDataWS(Analysis analysis, boolean duplicateCheck) throws LIMSRuntimeException;
+    
+    @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestSectionAndStatus(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession)
+            throws LIMSRuntimeException;
+    
+    @SuppressWarnings("rawtypes")
+    public List getAllAnalysisByTestSectionAndStatusAndDate(String testSectionId, List<Integer> statusIdList, boolean sortedByDateAndAccession, String receivedDate, String startedDate, String completedDate)
+            throws LIMSRuntimeException;
+    
+    @SuppressWarnings("rawtypes")
+    public List getTestIdBySampleItemId(String sampleItemId) throws LIMSRuntimeException; 
 }

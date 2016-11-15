@@ -15,22 +15,30 @@
  */
 package us.mn.state.health.lims.common.provider.query;
 
-import org.apache.commons.validator.GenericValidator;
-import org.json.simple.JSONObject;
-import us.mn.state.health.lims.common.services.TestService;
-import us.mn.state.health.lims.common.servlet.validation.AjaxServlet;
-import us.mn.state.health.lims.localization.valueholder.Localization;
-import us.mn.state.health.lims.test.valueholder.Test;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.StringWriter;
+
+import org.apache.commons.validator.GenericValidator;
+import org.json.simple.JSONObject;
+
+import us.mn.state.health.lims.common.services.TestService;
+import us.mn.state.health.lims.common.servlet.validation.AjaxServlet;
+import us.mn.state.health.lims.localization.valueholder.Localization;
+import us.mn.state.health.lims.resultlimits.dao.ResultLimitDAO;
+import us.mn.state.health.lims.resultlimits.daoimpl.ResultLimitDAOImpl;
+import us.mn.state.health.lims.resultlimits.valueholder.ResultLimit;
+import us.mn.state.health.lims.test.valueholder.Test;
 
 public class TestNamesProvider extends BaseQueryProvider {
 
 	protected AjaxServlet ajaxServlet = null;
+
+    private ResultLimitDAO resultLimitDAO = new ResultLimitDAOImpl();
 
     @Override
 	public void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -70,21 +78,47 @@ public class TestNamesProvider extends BaseQueryProvider {
         if( GenericValidator.isBlankOrNull( testId ) ){
             throw new IllegalStateException( "TestNamesProvider testId was blank.  It must have a value" );
         }
-
         Test test = new TestService( testId ).getTest();
+        
         if( test != null){
+            List<ResultLimit> resultLimits = resultLimitDAO.getAllResultLimitsForTest(test);
+            if (!resultLimits.isEmpty()) {
+
+                jsonResult.put("resultLimitSize", resultLimits.size());
+                JSONObject resultLimitItemObject = new JSONObject();
+                for (int x = 0; x < resultLimits.size() ; x++) {
+                    JSONObject normalRangeObject = new JSONObject();
+                    normalRangeObject.put("minAge", resultLimits.get(x).getMinAge());
+                    normalRangeObject.put("maxAge", resultLimits.get(x).getMaxAge());
+                    normalRangeObject.put("gender", resultLimits.get(x).getGender());
+                    normalRangeObject.put("lowNormal", resultLimits.get(x).getLowNormal());
+                    normalRangeObject.put("highNormal", resultLimits.get(x).getHighNormal());
+                    normalRangeObject.put("lowValid", resultLimits.get(x).getLowValid());
+                    normalRangeObject.put("highValid", resultLimits.get(x).getHighValid());
+                    normalRangeObject.put("id", resultLimits.get(x).getId());
+
+                    resultLimitItemObject.put("resultLimitItem_" + x, normalRangeObject);
+                }
+                jsonResult.put("resultLimit", resultLimitItemObject);
+            }
+
             Localization nameLocalization = test.getLocalizedTestName();
             Localization reportNameLocalization = test.getLocalizedReportingName();
 
             JSONObject nameObject = new JSONObject();
             nameObject.put("english", nameLocalization.getEnglish());
             nameObject.put("french", nameLocalization.getFrench());
+            nameObject.put("vietnamese", nameLocalization.getVietnamese());
             jsonResult.put("name", nameObject);
 
             JSONObject reportingNameObject = new JSONObject();
             reportingNameObject.put("english", reportNameLocalization.getEnglish());
             reportingNameObject.put("french", reportNameLocalization.getFrench());
+            reportingNameObject.put("vietnamese", reportNameLocalization.getVietnamese());
             jsonResult.put("reportingName", reportingNameObject);
+            if (test.getUnitOfMeasure() != null) {
+                jsonResult.put("unitOfMeasure", test.getUnitOfMeasure().getName());
+            }
 
             return VALID;
         }

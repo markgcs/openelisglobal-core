@@ -17,6 +17,8 @@
 */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.jfree.util.Log;
 
@@ -71,7 +73,7 @@ public class HaitiExportReport extends CSVSampleExportReport implements IReportP
 
         createReportItems();
     }
-
+    
     /**
      * check everything
      */
@@ -96,4 +98,23 @@ public class HaitiExportReport extends CSVSampleExportReport implements IReportP
             add1LineErrorMessage("report.error.message.general.error");
         }
     }
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+        errorFound = false;
+
+        lowDateStr = hashmap.get("lowerDateRange");
+        highDateStr = hashmap.get("upperDateRange");
+        dateRange = new DateRange(lowDateStr, highDateStr);
+
+        createReportParameters();
+        errorFound = !validateSubmitParameters();
+		if (errorFound) {
+			return;
+		}
+
+        createReportItems();
+	}
+
 }

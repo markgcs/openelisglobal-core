@@ -16,15 +16,32 @@
  */
 package us.mn.state.health.lims.result.action;
 
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.validator.GenericValidator;
 import org.apache.struts.Globals;
-import org.apache.struts.action.*;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionForward;
+import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessages;
+import org.apache.struts.action.ActionRedirect;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.Transaction;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
@@ -34,9 +51,14 @@ import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.formfields.FormFields.Field;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.services.DisplayListService.ListType;
+import us.mn.state.health.lims.common.services.NoteService;
 import us.mn.state.health.lims.common.services.NoteService.NoteType;
+import us.mn.state.health.lims.common.services.ResultSaveService;
+import us.mn.state.health.lims.common.services.SampleService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.services.StatusService.OrderStatus;
 import us.mn.state.health.lims.common.services.beanAdapters.ResultSaveBeanAdapter;
@@ -63,7 +85,11 @@ import us.mn.state.health.lims.referral.daoimpl.ReferralTypeDAOImpl;
 import us.mn.state.health.lims.referral.valueholder.Referral;
 import us.mn.state.health.lims.referral.valueholder.ReferralResult;
 import us.mn.state.health.lims.referral.valueholder.ReferralType;
-import us.mn.state.health.lims.result.action.util.*;
+import us.mn.state.health.lims.result.action.util.ResultSet;
+import us.mn.state.health.lims.result.action.util.ResultUtil;
+import us.mn.state.health.lims.result.action.util.ResultsLoadUtility;
+import us.mn.state.health.lims.result.action.util.ResultsPaging;
+import us.mn.state.health.lims.result.action.util.ResultsUpdateDataSet;
 import us.mn.state.health.lims.result.dao.ResultDAO;
 import us.mn.state.health.lims.result.dao.ResultInventoryDAO;
 import us.mn.state.health.lims.result.dao.ResultSignatureDAO;
@@ -82,11 +108,7 @@ import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.testreflex.action.util.TestReflexBean;
 import us.mn.state.health.lims.testreflex.action.util.TestReflexUtil;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.sql.Timestamp;
-import java.util.*;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult.ResultType;
 
 public class ResultsLogbookUpdateAction extends BaseAction {
 
@@ -132,7 +154,6 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 		actionDataSet.filterModifiedItems( tests );
 
 		ActionMessages errors =  actionDataSet.validateModifiedItems();
-
 		if(errors.size() > 0){
 			saveErrors(request, errors);
 			request.setAttribute(Globals.ERROR_KEY, errors);
@@ -152,17 +173,18 @@ public class ResultsLogbookUpdateAction extends BaseAction {
             }
 
 			for(ResultSet resultSet : actionDataSet.getNewResults()){
-
-				resultDAO.insertData(resultSet.result);
-
-				if(resultSet.signature != null){
-					resultSet.signature.setResultId(resultSet.result.getId());
-					resultSigDAO.insertData(resultSet.signature);
-				}
-
-				if(resultSet.testKit != null && resultSet.testKit.getInventoryLocationId() != null){
-					resultSet.testKit.setResultId(resultSet.result.getId());
-					resultInventoryDAO.insertData(resultSet.testKit);
+				if (!GenericValidator.isBlankOrNull(resultSet.result.getValue()) && !resultSet.result.getValue().equals("0")) {
+					resultDAO.insertData(resultSet.result);
+	
+					if(resultSet.signature != null){
+						resultSet.signature.setResultId(resultSet.result.getId());
+						resultSigDAO.insertData(resultSet.signature);
+					}
+	
+					if(resultSet.testKit != null && resultSet.testKit.getInventoryLocationId() != null){
+						resultSet.testKit.setResultId(resultSet.result.getId());
+						resultInventoryDAO.insertData(resultSet.testKit);
+					}
 				}
 			}
 
@@ -195,7 +217,33 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 			}
 
 			for(Analysis analysis : actionDataSet.getModifiedAnalysis()){
-				analysisDAO.updateData(analysis);
+				//Check if analysis is not yet validate
+			    //Added by Dung 2016-07-27 authentication with user section
+			    //Analysis ana=new Analysis();
+			    //ana= analysisDAO.getAnalysisById(analysis.getId());
+			    
+			    analysisDAO.updateData(analysis);
+			    // Commented by Mark 2016-08-24 04:58PM - because condition to enable/disable row->fields already added (redundancy)
+                /*for (SystemUserSection systemUserSection : getUserSection()) {
+                    if(ana.getTestSection().getId().equals(systemUserSection.getTestSection().getId())){
+                        if (systemUserSection.getHasAssign().equals("N")) {
+                            ActionError accessionError = new ActionError("errors.user.section.save", "");
+                            ActionErrors err = new ActionErrors();
+                            err.add(ActionErrors.GLOBAL_MESSAGE,accessionError);
+                            ActionMessages error = err;
+                            saveErrors(request, error);
+                            request.setAttribute(Globals.ERROR_KEY, error);
+                            return mapping.findForward(FWD_VALIDATION_ERROR);
+                        }
+                    }
+                }*/
+			    //end added
+				
+			    /*if (!(StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.Finalized))) {
+					String status = StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance);
+					analysis.setStatusId(status);
+					analysisDAO.updateData(analysis);
+				}*/
 			}
 
             ResultSaveService.removeDeletedResultsInTransaction( actionDataSet.getDeletableResults(),currentUserId);
@@ -244,7 +292,6 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 			return getForwardWithParameters(mapping.findForward(forward), params);
 		}
 	}
-
     private void saveReferralsWithRequiredObjects( Referral referral ){
         if( referral.getId() != null){
             referralDAO.updateData( referral );
@@ -256,8 +303,6 @@ public class ResultsLogbookUpdateAction extends BaseAction {
             referralResultDAO.insertData( referralResult );
         }
 	}
-
-
 
 	protected void setTestReflexes(ResultsUpdateDataSet actionDataSet){
 		TestReflexUtil testReflexUtil = new TestReflexUtil();
@@ -323,7 +368,7 @@ public class ResultsLogbookUpdateAction extends BaseAction {
         for(TestResultItem testResultItem : actionDataSet.getAnalysisOnlyChangeResults()){
             AnalysisService analysisService = new AnalysisService( testResultItem.getAnalysisId() );
             analysisService.getAnalysis().setSysUserId( currentUserId );
-            analysisService.getAnalysis().setCompletedDate( DateUtil.convertStringDateToSqlDate( testResultItem.getTestDate() ) );
+            analysisService.getAnalysis().setCompletedDate( DateUtil.convertStringDateToSqlDate( testResultItem.getCompletedDate() ) );
             analysisService.getAnalysis().setAnalysisType( testResultItem.getAnalysisMethod() );
             actionDataSet.getModifiedAnalysis().add( analysisService.getAnalysis() );
         }
@@ -333,14 +378,14 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 
 		for(TestResultItem testResultItem : actionDataSet.getModifiedItems()){
 			AnalysisService analysisService = new AnalysisService( testResultItem.getAnalysisId() );
-            analysisService.getAnalysis().setStatusId( getStatusForTestResult( testResultItem ) );
+            //analysisService.getAnalysis().setStatusId( getStatusForTestResult( testResultItem ) );
             analysisService.getAnalysis().setSysUserId( currentUserId );
             handleReferrals(testResultItem, analysisService.getAnalysis(), actionDataSet);
             actionDataSet.getModifiedAnalysis().add( analysisService.getAnalysis() );
-
+            
             NoteService noteService = new NoteService( analysisService.getAnalysis() );
             actionDataSet.addToNoteList( noteService.createSavableNote( NoteType.INTERNAL, testResultItem.getNote(), RESULT_SUBJECT, currentUserId ) );
-
+            
             if (testResultItem.isShadowRejected()) {
                 String rejectedReasonId = testResultItem.getRejectReasonId();
                 for (IdValuePair rejectReason : DisplayListService.getList(ListType.REJECTION_REASONS)) {
@@ -367,9 +412,11 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 			for(Result result : results){
 				addResult(result, testResultItem, analysisService.getAnalysis(), results.size() > 1, actionDataSet);
 
-				if(analysisShouldBeUpdated(testResultItem, result)){
-					updateAnalysis( testResultItem, testResultItem.getTestDate(), analysisService.getAnalysis() );
-				}
+				updateAnalysis( testResultItem, testResultItem.getStartedDate(), testResultItem.getCompletedDate(), analysisService.getAnalysis(), results);
+				
+				/*if(analysisShouldBeUpdated(testResultItem, result)){
+					updateAnalysis( testResultItem, testResultItem.getStartedDate(), testResultItem.getCompletedDate(), analysisService.getAnalysis() );
+				}*/
 			}
 		}
 	}
@@ -488,18 +535,22 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 			return StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted);
 		}else{
 			ResultLimit resultLimit = resultLimitDAO.getResultLimitById(testResult.getResultLimitId());
-			if(resultLimit != null && resultLimit.isAlwaysValidate()){
+			if (resultLimit != null && resultLimit.isAlwaysValidate() || StatusService.getInstance().matches(testResult.getAnalysisStatusId(), AnalysisStatus.TechnicalAcceptance)) {
 				return StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance);
 			}
-
-			return StatusService.getInstance().getStatusID(AnalysisStatus.Finalized);
+			//Retains the previous analysis status value
+			if (StatusService.getInstance().matches(testResult.getAnalysisStatusId(), AnalysisStatus.Finalized)) {
+				return StatusService.getInstance().getStatusID(AnalysisStatus.Finalized);
+			} else {
+				return StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted);
+			}
 		}
 	}
 
 	private boolean noResults(String value, String multiSelectValue, String type){
 
 		return (GenericValidator.isBlankOrNull(value) && GenericValidator.isBlankOrNull(multiSelectValue)) ||
-				( TypeOfTestResultService.ResultType.DICTIONARY.matches(type) && "0".equals(value));
+				( ResultType.DICTIONARY.matches(type) && "0".equals(value));
 	}
 
 	private ResultInventory createTestKitLinkIfNeeded(TestResultItem testResult, String testKitName){
@@ -522,32 +573,44 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 			testKit.setId(testKitId);
 			resultInventoryDAO.getData(testKit);
 		}
-
 		testKit.setInventoryLocationId(testResult.getTestKitInventoryId());
 		testKit.setDescription(testKitName);
 		testKit.setSysUserId(currentUserId);
+		
 		return testKit;
 	}
 
-	private void updateAnalysis( TestResultItem testResultItem, String testDate, Analysis analysis ){
+	private void updateAnalysis( TestResultItem testResultItem, String testDate, String completedDate, Analysis analysis, List<Result> results ){
 		analysis.setAnalysisType(testResultItem.getAnalysisMethod());
 		analysis.setStartedDateForDisplay(testDate);
+		boolean isDeleteResult = false;
+		for (Result result : results) {
+			isDeleteResult = ((result.getResultType().equals("D") && result.getValue().equals("0")) || (result.getResultType().equals("A") && result.getValue().equals("")));
+		}
 
 		// This needs to be refactored -- part of the logic is in
 		// getStatusForTestResult. RetroCI over rides to whatever was set before
 		if(statusRuleSet.equals(IActionConstants.STATUS_RULES_RETROCI)){
 			if( !StatusService.getInstance().getStatusID(AnalysisStatus.Canceled).equals(analysis.getStatusId() )){
-				analysis.setCompletedDate(DateUtil.convertStringDateToSqlDate(testDate));
-				analysis.setStatusId(StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance));
+				analysis.setCompletedDate(DateUtil.convertStringDateToSqlDate(completedDate));
+				//Check if analysis is not yet validated
+				if (!GenericValidator.isBlankOrNull(testResultItem.getResultValue()) && !testResultItem.getResultValue().equals("0") && !(StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.Finalized))) {
+					analysis.setStatusId(StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance));
+				}
 			}
-		}else if(StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.Finalized) ||
-				StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.TechnicalAcceptance ) ||
-				(analysis.isReferredOut() && !GenericValidator.isBlankOrNull(testResultItem.getShadowResultValue()))){
-			analysis.setCompletedDate(DateUtil.convertStringDateToSqlDate(testDate));
+		} else if (StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.NotStarted) ||
+					StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.Finalized) ||
+					  StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.TechnicalAcceptance) ||
+						(analysis.isReferredOut() && !GenericValidator.isBlankOrNull(testResultItem.getShadowResultValue()))) {
+			analysis.setCompletedDate(DateUtil.convertStringDateToSqlDate(completedDate));
+			//Check if analysis is not yet validated
+			if (!GenericValidator.isBlankOrNull(testResultItem.getResultValue()) && !testResultItem.getResultValue().equals("0") && !(StatusService.getInstance().matches(analysis.getStatusId(), AnalysisStatus.Finalized))) {
+				analysis.setStatusId(StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance));
+			} else if (isDeleteResult) {
+				analysis.setStatusId(StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted));
+			}
 		}
-
 	}
-
 
 	private ResultSignature createTechnicianSignatureFromResultItem(TestResultItem testResult){
 		ResultSignature sig = null;
@@ -562,12 +625,11 @@ public class ResultsLogbookUpdateAction extends BaseAction {
 				sig.setId(testResult.getTechnicianSignatureId());
 				resultSigDAO.getData(sig);
 			}
-
 			sig.setIsSupervisor(false);
 			sig.setNonUserName(testResult.getTechnician());
-
 			sig.setSysUserId(currentUserId);
 		}
+		
 		return sig;
 	}
 

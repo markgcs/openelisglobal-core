@@ -18,8 +18,10 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.QAService;
 import us.mn.state.health.lims.common.services.QAService.QAObservationType;
@@ -278,6 +280,26 @@ public class RetroCINonConformityNotification extends RetroCIReport implements I
 	@Override
 	protected String reportFileName() {
 		return "NonConformityNotification";
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		sampleQaEventIds = new ArrayList<String>();
+		checkIdsForPriorPrintRecord = new HashSet<String>();
+		errorFound = false;
+		requestedAccessionNumber = hashmap.get("accessionDirect");
+		String serviceId = hashmap.get("serviceId");
+
+		createReportParameters();
+		errorFound = !validateSubmitParameters(serviceId);
+		if (errorFound) {
+			return;
+		}
+		createReportItems(serviceId);
+		if (this.reportItems.size() == 0) {
+			add1LineErrorMessage("report.error.message.noPrintableItems");
+		}
 	}
 
 }

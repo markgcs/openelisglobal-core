@@ -41,12 +41,16 @@ import us.mn.state.health.lims.login.daoimpl.LoginDAOImpl;
 import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
 import us.mn.state.health.lims.login.valueholder.Login;
 import us.mn.state.health.lims.login.valueholder.UserSessionData;
+import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
 import us.mn.state.health.lims.systemusermodule.dao.PermissionAgentModuleDAO;
+import us.mn.state.health.lims.systemusermodule.dao.SystemUserModuleDAO;
 import us.mn.state.health.lims.systemusermodule.daoimpl.RoleModuleDAOImpl;
+import us.mn.state.health.lims.systemusermodule.daoimpl.SystemUserModuleDAOImpl;
 import us.mn.state.health.lims.systemusermodule.valueholder.RoleModule;
+import us.mn.state.health.lims.systemusermodule.valueholder.SystemUserModule;
 import us.mn.state.health.lims.userrole.dao.UserRoleDAO;
 import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 
@@ -241,7 +245,7 @@ public class LoginValidateAction extends LoginBaseAction {
 	private HashSet<String> getPermittedForms(int systemUserId) {
 		HashSet<String> permittedPages = new HashSet<String>();
 		
-		UserRoleDAO userRoleDAO = new UserRoleDAOImpl();
+		/*UserRoleDAO userRoleDAO = new UserRoleDAOImpl();
 		
 		List<String> roleIds = userRoleDAO.getRoleIdsForUser( Integer.toString(systemUserId));
 		
@@ -253,6 +257,14 @@ public class LoginValidateAction extends LoginBaseAction {
 			for( RoleModule roleModule : roleModules){
 				permittedPages.add( roleModule.getSystemModule().getSystemModuleName());
 			}
+		}*/
+		
+		PermissionAgentModuleDAO sysUserModuleDAO = new SystemUserModuleDAOImpl();
+		List list = sysUserModuleDAO.getAllPermissionModulesByAgentId(systemUserId);
+		for(int i=0; i < list.size(); i++){
+			SystemUserModule systemUserModule = (SystemUserModule) list.get(i);
+			String userAssignedModule = systemUserModule.getSystemModule().getSystemModuleName();
+			permittedPages.add(userAssignedModule);
 		}
 		
 		return permittedPages;

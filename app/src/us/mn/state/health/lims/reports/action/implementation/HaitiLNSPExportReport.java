@@ -16,12 +16,24 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.sql.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.action.BaseActionForm;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.NoteService;
+import us.mn.state.health.lims.common.services.PatientService;
+import us.mn.state.health.lims.common.services.ResultService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
+import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.organization.dao.OrganizationDAO;
@@ -44,11 +56,6 @@ import us.mn.state.health.lims.samplehuman.daoimpl.SampleHumanDAOImpl;
 import us.mn.state.health.lims.sampleitem.dao.SampleItemDAO;
 import us.mn.state.health.lims.sampleitem.daoimpl.SampleItemDAOImpl;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
-
-import java.sql.Date;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
 
 public class HaitiLNSPExportReport extends CSVExportReport{
 
@@ -89,7 +96,7 @@ public class HaitiLNSPExportReport extends CSVExportReport{
 
 		createReportItems();
 	}
-
+	
 	private void createReportItems(){
 		testExportList = new ArrayList<TestSegmentedExportBean>();
 		List<Sample> orderList = sampleDAO.getSamplesReceivedInDateRange(lowDateStr, highDateStr);
@@ -139,7 +146,7 @@ public class HaitiLNSPExportReport extends CSVExportReport{
 		ts.setCollectionDate(DateUtil.convertTimestampToStringDate( sampleItem.getCollectionDate() ));		
 		ts.setCollectionTime(DateUtil.convertTimestampToStringConfiguredHourTime( sampleItem.getCollectionDate() ));
 		ts.setAge(createReadableAge(patientService.getDOB()));
-		ts.setDOB(patientService.getEnteredDOB());
+		ts.setDOB(patientService.getDOB());
 		ts.setFirstName(patientService.getFirstName());
 		ts.setLastName(patientService.getLastName());
 		ts.setGender(patientService.getGender());
@@ -219,12 +226,13 @@ public class HaitiLNSPExportReport extends CSVExportReport{
 		return dateRange.validateHighLowDate("report.error.message.date.received.missing");
 	}
 
-	private String createReadableAge(Timestamp dob){
-		if(dob == null){
+	private String createReadableAge(String dob){
+		if(GenericValidator.isBlankOrNull(dob)){
 			return "";
 		}
-
-		Date dobDate = DateUtil.convertTimestampToSqlDate(dob);
+		dob = dob.replaceAll("XX", "01");
+		dob = dob.replaceAll("xx", "01");
+		Date dobDate = DateUtil.convertStringDateToSqlDate(dob);
 		int months = DateUtil.getAgeInMonths(dobDate, DateUtil.getNowAsSqlDate());
 		if(months > 35){
 			return (months / 12) + " Ans";
@@ -248,6 +256,24 @@ public class HaitiLNSPExportReport extends CSVExportReport{
 
 		data.setResult(reportResult.replace(",", ";"));
 
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+
+		errorFound = false;
+		lowDateStr = hashmap.get("lowerDateRange");
+		highDateStr = hashmap.get("upperDateRange");
+		dateRange = new DateRange(lowDateStr, highDateStr);
+
+		createReportParameters();
+		errorFound = !validateSubmitParameters();
+		if(errorFound){
+			return;
+		}
+
+		createReportItems();
 	}
 
 }

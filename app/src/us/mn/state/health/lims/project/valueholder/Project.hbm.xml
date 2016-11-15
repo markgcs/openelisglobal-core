@@ -41,7 +41,7 @@
             <column name="PROGRAM_CODE" length="10" />
         </property>
         <!--bugzilla 2438-->
-        <property name="localAbbreviation" type="java.lang.String">
+        <property name="localAbbreviation" type="us.mn.state.health.lims.hibernate.resources.usertype.LIMSStringNumberUserType">
              <column name="LOCAL_ABBREV" length="10" unique="true" />
         </property>
         

@@ -16,6 +16,7 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
 import java.util.List;
 
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -53,4 +54,10 @@ public class PatientARVInitialVersion1Report extends PatientARVReport implements
 	protected String getProjectId() {
 		return ANTIRETROVIRAL_STUDY_ID;
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

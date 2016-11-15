@@ -20,6 +20,7 @@ package us.mn.state.health.lims.test.daoimpl;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -45,6 +46,7 @@ import us.mn.state.health.lims.testanalyte.daoimpl.TestAnalyteDAOImpl;
 import us.mn.state.health.lims.testanalyte.valueholder.TestAnalyte;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.util.*;
 
 /**
@@ -193,7 +195,7 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 	public List<Test> getAllActiveTests(boolean onlyTestsFullySetup) throws LIMSRuntimeException{
 		List<Test> list = new Vector<Test>();
 		try{
-			String sql = "from Test WHERE is_Active = 'Y' Order by description";
+			String sql = "from Test t WHERE is_Active = 'Y' Order by t.testSection.id, name";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
 			list = query.list();
 			list = filterOnlyFullSetup(onlyTestsFullySetup, list);
@@ -260,7 +262,7 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 
 			if(!(sectionIdList.equals("")) && (sectionIdList.length() > 0)){
 				sectionIdList = sectionIdList.substring(0, sectionIdList.length() - 1);
-				sql = "from Test t where t.testSection.id  in (" + sectionIdList + ") Order by description";
+				sql = "from Test t where t.testSection.id  in (" + sectionIdList + ") and is_Active = 'Y' Order by t.testSection.id, name";
 			}else{
 				return list;
 			}
@@ -279,7 +281,28 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 		}
 		return list;
 	}
-
+	
+        /**
+         * Added by Dung
+         * get all test by section Id
+         * Parameter section Id
+         */
+        @SuppressWarnings("unchecked")
+        public List<Test> getTestBySectionId(int sectionId) throws LIMSRuntimeException{
+            List<Test> list=new ArrayList<Test>();
+            try {
+                String sql= "from Test t where t.testSection.id = :sectionId";
+                org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+                query.setInteger("sectionId", sectionId);
+                list = query.list();
+                HibernateUtil.getSession().flush();
+                HibernateUtil.getSession().clear();
+            } catch (Exception e) {
+                LogEvent.logError("TestDAOImpl", "getTestByUserSection()", e.toString());
+                throw new LIMSRuntimeException("Error in Test getAllTestsBySysUserId()", e);
+            }
+            return list;
+        }
 	public List getPageOfTests(int startingRecNo) throws LIMSRuntimeException{
 		List list;
 		try{
@@ -503,7 +526,7 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 
     public Test getTestByName(String testName) throws LIMSRuntimeException{
         try{
-            String sql = "from Test t where t.testName = :testName";
+            String sql = "from Test t where t.testName = :testName and t.isActive='Y'";
             org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
             query.setParameter("testName", testName);
 
@@ -655,22 +678,24 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 			throw new LIMSRuntimeException("Error in Method getTestsByTestSection(String filter)", e);
 		}
 	}
-
-    public List<Test> getTestsByTestSectionId(String id) throws LIMSRuntimeException{
-        try{
-            String sql = "from Test t where t.testSection.id = :id";
+	
+	public List<String> getTestIdsByTestSection(String testSectionId) throws LIMSRuntimeException {
+        List<String> list = new Vector();
+        try {
+            String sql = "select t.id from Test t where t.testSection.id = :param order by t.testName";
             Query query = HibernateUtil.getSession().createQuery(sql);
-            query.setInteger("id", Integer.parseInt(id));
+            query.setParameter("param", Integer.valueOf(testSectionId));
 
-            List list = query.list();
-            closeSession();
-            return list;
-
-        }catch(Exception e){
-            handleException(e,"getTestsByTestSectionId");
+            list = query.list();
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        } catch (Exception e) {
+            LogEvent.logError("TestDAOImpl", "getTestIdsByTestSection()", e.toString());
+            throw new LIMSRuntimeException("Error in Test getTestIdsByTestSection()", e);
         }
 
-        return null;
+        return list;
     }
 
 	// this is for selectdropdown
@@ -742,12 +767,10 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 			HibernateUtil.getSession().clear();
 
 			if(results != null && results.get(0) != null){
-				if(results.get(0) != null){
-					count = (Integer)results.get(0);
-				}
+				count = (Integer)results.get(0);
 			}
 
-		}catch(Exception e){
+		} catch(Exception e) {
 			e.printStackTrace();
 			throw new LIMSRuntimeException("Error in TestDaoImpl getTotalSearchedTestCount()", e);
 		}
@@ -801,12 +824,10 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 			HibernateUtil.getSession().clear();
 
 			if(results != null && results.get(0) != null){
-				if(results.get(0) != null){
-					count = (Integer)results.get(0);
-				}
+				count = (Integer)results.get(0);
 			}
 
-		}catch(Exception e){
+		} catch(Exception e) {
 			e.printStackTrace();
 			throw new LIMSRuntimeException("Error in TestDaoImpl getTotalSearchedTestCountBySysUserId()", e);
 		}
@@ -916,8 +937,9 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 			if(test.getIsActive().equalsIgnoreCase("Y")){
 				// not case sensitive hemolysis and Hemolysis are considered
 				// duplicates
-				String sql = "from Test t where (trim(lower(t.description)) = :description and t.isActive='Y' and t.id != :testId)";
+				String sql = "from Test t where (t.localizedTestName.id = :testNameId and t.isActive='Y' and t.id != :testId) or (trim(lower(t.description)) = :description and t.isActive='Y' and t.id != :testId)";
 				org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+				query.setInteger("testNameId", Integer.parseInt( test.getLocalizedTestName().getId()));
 
 				// initialize with 0 (for new records where no id has been
 				// generated yet
@@ -1067,20 +1089,4 @@ public class TestDAOImpl extends BaseDAOImpl implements TestDAO{
 		return null;
 	}
 
-    @Override
-    public Test getTestByGUID( String guid){
-        String sql = "From Test t where t.guid = :guid";
-        try{
-            Query query = HibernateUtil.getSession().createQuery(sql);
-            query.setString("guid", guid);
-
-            Test test = (Test)query.uniqueResult();
-            closeSession();
-            return test;
-        }catch(HibernateException e){
-            handleException(e, "getTestByGUID");
-        }
-
-        return null;
-    }
 }

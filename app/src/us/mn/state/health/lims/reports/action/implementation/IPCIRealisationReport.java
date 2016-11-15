@@ -28,7 +28,9 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
@@ -243,6 +245,40 @@ public class  IPCIRealisationReport  extends Report {
 		public int notStartedCount = 0;
 		public int inProgressCount = 0;
 		public int finishedCount = 0;
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		errorFound = false;	
+		
+		lowerDateRange = hashmap.get("lowerDateRange");		   
+		upperDateRange = hashmap.get("upperDateRange");
+
+		if (GenericValidator.isBlankOrNull(lowerDateRange)) {
+			errorFound = true;
+			ErrorMessages msgs = new ErrorMessages();
+			msgs.setMsgLine1(StringUtil.getMessageForKey("report.error.message.noPrintableItems"));
+			errorMsgs.add(msgs);
+		}
+		if (GenericValidator.isBlankOrNull(upperDateRange)) {
+			upperDateRange = lowerDateRange;
+		}
+
+		try {
+			lowDate = DateUtil.convertStringDateToSqlDate(lowerDateRange);
+			highDate = DateUtil.convertStringDateToSqlDate(upperDateRange);
+		} catch (LIMSRuntimeException re) {
+			errorFound = true;
+			ErrorMessages msgs = new ErrorMessages();
+			msgs.setMsgLine1(StringUtil.getMessageForKey("report.error.message.date.format"));
+			errorMsgs.add(msgs);
+		}
+		createReportParameters();
+		initializeReportItems();
+		setTestMapForAllTests();
+		setAnalysisForDateRange();
+		setTestAggregates();
 	}
 
 }

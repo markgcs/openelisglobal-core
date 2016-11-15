@@ -49,5 +49,8 @@ public interface ProgramDAO extends BaseDAO {
 	
 	//bugzilla 1411
 	public Integer getTotalProgramCount() throws LIMSRuntimeException; 	
+	
+    //get program by program code
+	public Program getProgramByProgramCode(String programCode) throws LIMSRuntimeException; 
 
 }

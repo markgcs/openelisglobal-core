@@ -20,6 +20,7 @@ package us.mn.state.health.lims.test.beanItems;
 import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.result.action.util.ResultItem;
 import us.mn.state.health.lims.result.valueholder.Result;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -54,8 +55,12 @@ public class TestResultItem implements ResultItem, Serializable{
 	public enum ResultDisplayType { TEXT, POS_NEG, POS_NEG_IND, HIV, SYPHILIS; }
 
 	private String sampleSource;
-	private String testDate;
+	private String completedDate;
+	private String startedDate;
 	private String receivedDate;
+	
+	private String emergency;
+	private String projectName;
 	/*N.B. test method is the type of test it is (HIV etc).
 	 *  analysisMethod is the way the analysis is done automatic or manual
 	 */
@@ -133,7 +138,14 @@ public class TestResultItem implements ResultItem, Serializable{
     private boolean rejected = false;
     private String rejectReasonId;
     private String considerRejectReason;
-	
+    private SystemUserSection statusUserSession;
+	/**  
+     * Explanation of processing
+     *
+     */
+    public TestResultItem() {
+        statusUserSession=new SystemUserSection();
+    }
     public String getConsiderRejectReason() {
         return considerRejectReason;
     }
@@ -345,11 +357,29 @@ public class TestResultItem implements ResultItem, Serializable{
 	public void setSampleSource(String sampleSource) {
 		this.sampleSource = sampleSource;
 	}
-	public String getTestDate() {
-		return testDate;
+	public String getCompletedDate() {
+		return completedDate;
 	}
-	public void setTestDate(String testDate) {
-		this.testDate = testDate;
+	public void setCompletedDate(String completedDate) {
+		this.completedDate = completedDate;
+	}
+	public String getStartedDate() {
+		return startedDate;
+	}
+	public void setStartedDate(String startedDate) {
+		this.startedDate = startedDate;
+	}
+	public String getEmergency() {
+		return emergency;
+	}
+	public void setEmergency(String emergency) {
+		this.emergency = emergency;
+	}
+	public String getProjectName() {
+		return projectName;
+	}
+	public void setProjectName(String projectName) {
+		this.projectName = projectName;
 	}
 	public String getTestMethod() {
 		return testMethod;
@@ -672,6 +702,12 @@ public class TestResultItem implements ResultItem, Serializable{
     }
     public void setNationalId(String nationalId) {
         this.nationalId = nationalId;
+    }
+    public SystemUserSection getStatusUserSession() {
+        return statusUserSession;
+    }
+    public void setStatusUserSession(SystemUserSection statusUserSession) {
+        this.statusUserSession = statusUserSession;
     }
 
 

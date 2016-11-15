@@ -26,6 +26,5 @@
             <column name="schedule_id" precision="10" scale="0" />
           </many-to-one>
            <property name="descriptionKey"  type="java.lang.String" column="description_key" />
-		<property name="nameKey" type="java.lang.String" column="name_key" />
  </class>
 </hibernate-mapping>

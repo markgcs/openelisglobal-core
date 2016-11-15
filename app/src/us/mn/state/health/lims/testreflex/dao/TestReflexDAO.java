@@ -131,7 +131,7 @@ public interface TestReflexDAO extends BaseDAO {
 	 * @param testId The testId for which we want the reflexes
 	 * @param flag The value of the flag field.  May be null
 	 */
-	public List<TestReflex>  getTestReflexsByTestAndFlag(String testId, String flag)  throws LIMSRuntimeException;
+	public List<TestReflex> getTestReflexsByTestAndFlag(String testId, String flag)  throws LIMSRuntimeException;
 
 	public List<TestReflex> getFlaggedTestReflexesByTestResult(TestResult testResult, String flag)  throws LIMSRuntimeException;
 }

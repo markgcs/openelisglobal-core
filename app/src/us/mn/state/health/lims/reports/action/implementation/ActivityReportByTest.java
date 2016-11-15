@@ -24,6 +24,7 @@ import us.mn.state.health.lims.reports.action.implementation.reportBeans.Activit
 import us.mn.state.health.lims.result.valueholder.Result;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -73,4 +74,10 @@ public class ActivityReportByTest extends ActivityReport implements IReportCreat
     protected String getActivityLabel(){
         return "Test: " + testName;
     }
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

@@ -24,7 +24,7 @@ import us.mn.state.health.lims.dataexchange.order.valueholder.ElectronicOrder;
 
 public interface ElectronicOrderDAO extends BaseDAO {
     
-    public List<ElectronicOrder> getElectronicOrdersByExternalId(String id) throws LIMSRuntimeException;
+    public List getElectronicOrdersByExternalId(String id) throws LIMSRuntimeException;
     
     public List<ElectronicOrder> getElectronicOrdersByPatientId(String id) throws LIMSRuntimeException;
 

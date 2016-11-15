@@ -15,6 +15,8 @@
 */
 package us.mn.state.health.lims.gender.valueholder;
 
+import java.sql.Timestamp;
+
 import us.mn.state.health.lims.common.valueholder.BaseObject;
 
 public class Gender extends BaseObject {
@@ -22,20 +24,32 @@ public class Gender extends BaseObject {
 
 	private String id;
 
-	private String description;
-
 	private String genderType;
+	
+	private String description;
+	
+	private Timestamp lastupdated;
+
+    private String nameKey;
 	
 	public Gender() {
 		super();
 	}
 
+	public String getId() {
+		return id;
+	}
+	
 	public void setId(String id) {
 		this.id = id;
 	}
+	
+	public String getGenderType() {
+		return genderType;
+	}
 
-	public String getId() {
-		return id;
+	public void setGenderType(String genderType) {
+		this.genderType = genderType;
 	}
 
 	public String getDescription() {
@@ -45,19 +59,29 @@ public class Gender extends BaseObject {
 	public void setDescription(String description) {
 		this.description = description;
 	}
-
-	public String getGenderType() {
-		return genderType;
-	}
-
-	public void setGenderType(String genderType) {
-		this.genderType = genderType;
+	
+	public String getNameKey() {
+		return nameKey;
 	}
 	
+	public void setNameKey(String nameKey) {
+		this.nameKey = nameKey;
+	}
+
+	
+	public Timestamp getLastupdated() {
+		return lastupdated;
+	}
+
+	public void setLastupdated(Timestamp lastupdated) {
+		this.lastupdated = lastupdated;
+	}
+
 	@Override
 	public String getDefaultLocalizedName() {
 		return this.description;
 	}
+	
 	
 	public String toString() {
 		return "Gender { Id = " + id + ", description=" + description  + " }";

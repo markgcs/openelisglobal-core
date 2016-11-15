@@ -36,7 +36,7 @@ public class AjaxXMLServlet extends AjaxServlet {
 
 		if (!StringUtil.isNullorNill(field)) {
 
-			response.setContentType("text/xml");
+			response.setContentType("text/xml; charset=UTF-8");
 			response.setHeader("Cache-Control", "no-cache");
 			response.getWriter().write("<fieldmessage>");
 			response.getWriter().write("<formfield>" + field + "</formfield>");
@@ -47,6 +47,22 @@ public class AjaxXMLServlet extends AjaxServlet {
 			response.setStatus(HttpServletResponse.SC_NO_CONTENT);
 		}
 	}
+	
+	public void sendData(String message,
+            HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ServletException {
+
+        if (!StringUtil.isNullorNill(message)) {
+            response.setContentType("text/xml; charset=UTF-8");
+            response.setHeader("Cache-Control", "no-cache");
+            response.getWriter().write("<fieldmessage>");
+            response.getWriter().write("<message>" + message + "</message>");
+            response.getWriter().write("</fieldmessage>");
+            
+        } else {
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        }
+    }
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws IOException, ServletException, LIMSRuntimeException {

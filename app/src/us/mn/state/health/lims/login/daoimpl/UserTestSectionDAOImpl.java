@@ -270,4 +270,34 @@ public class UserTestSectionDAOImpl extends BaseDAOImpl implements UserTestSecti
 		return newAnalyses;		
 		
 	}
+	
+	/**
+	 * Get all test section for admin
+	 * {@inheritDoc}
+	 */
+	public List getAllUserTestSectionsForAdmin(HttpServletRequest request) 
+	        throws LIMSRuntimeException {
+	        
+	        List list = new ArrayList();
+	        TestSectionDAO testSectDAO = new TestSectionDAOImpl();
+	        
+	        try {
+	            if ( SystemConfiguration.getInstance().getEnableUserTestSection().equals(NO) ) {
+	                list = testSectDAO.getAllTestSections();
+	            } else {
+	                UserSessionData usd = (UserSessionData)request.getSession().getAttribute(USER_SESSION_DATA);
+	                //bugzilla 2160
+	                UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
+	                if ( !userModuleDAO.isUserAdmin(request) )
+	                    list = testSectDAO.getAllAdminTestSectionsBySysUserId(usd.getSystemUserId());
+	                else
+	                    list = testSectDAO.getAllTestSections();        
+	            }
+	        } catch (Exception e) {
+	            //bugzilla 2154
+	            LogEvent.logError("UserTestSectionDAOImpl","getAllUserTestSectionsForAdmin()",e.toString()); 
+	            throw new LIMSRuntimeException("Error in UserTestSectionDAOImpl getAllUserTestSectionsForAdmin()", e);
+	        }   
+	        return list;
+	    }
 }

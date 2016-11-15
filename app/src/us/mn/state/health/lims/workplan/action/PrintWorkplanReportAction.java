@@ -20,15 +20,21 @@ package us.mn.state.health.lims.workplan.action;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperCompileManager;
+import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.engine.JasperRunManager;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+import net.sf.jasperreports.engine.util.JRProperties;
+
 import org.apache.struts.Globals;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.ActionMessages;
+
 import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.BaseActionForm;
+import us.mn.state.health.lims.common.connection.PostgreSQLConnector;
 import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -43,7 +49,9 @@ import us.mn.state.health.lims.workplan.reports.TestWorkplanReport;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.List;
 
@@ -57,29 +65,34 @@ public class PrintWorkplanReportAction extends BaseAction {
 		
 		//no forward necessary if successful, returning stream
 		String forward = FWD_FAIL;
-		
 		ActionError error = null;
 		ActionMessages errors = new ActionMessages();
 		
 		BaseActionForm dynaForm = (BaseActionForm) form;
 		
 		request.getSession().setAttribute(SAVE_DISABLED, "true");
-				
+		String type = request.getParameter("type");
 		String workplanType = dynaForm.getString("workplanType");
-		String workplanName;
+		String workplanName, testSectionId, startedDate, completedDate, receivedDate;
+		String panelId = "";
+		String testId = "";
 		
-		if (workplanType.equals("test") ){
-			String testID = (String)dynaForm.get("testTypeID");
+		if (workplanType.equals("test")) {
+			String testID = (String) dynaForm.get("testTypeID");
 			workplanName = getTestTypeName(testID);
-		}else {
+			testId = dynaForm.getString("selectedSearchID");
+		} else {
 			workplanType = Character.toUpperCase(workplanType.charAt(0))+ workplanType.substring(1);
 			workplanName = dynaForm.getString("testName");
+			panelId = dynaForm.getString("selectedSearchID");
 		}
+		testSectionId = dynaForm.getString("testSectionId");
+		receivedDate = dynaForm.getString("receivedDate");
+		startedDate = dynaForm.getString("startedDate");
+		completedDate = dynaForm.getString("completedDate");
 		
-
 		//get workplan report based on testName
-		workplanReport = getWorkplanReport(workplanType, workplanName);
-		
+		workplanReport = getWorkplanReport(workplanType, workplanName, testSectionId, testId, panelId, receivedDate, startedDate, completedDate);
 		workplanReport.setReportPath(getReportPath());
 				
 		//set jasper report parameters
@@ -89,17 +102,25 @@ public class PrintWorkplanReportAction extends BaseAction {
 		List<?> workplanRows = workplanReport.prepareRows(dynaForm);
 				
 		//set Jasper report file name
-		String reportFileName = workplanReport.getFileName();
+		String reportFileName = "WorkPlan_Report";//workplanReport.getFileName();
 		String reportFile = this.getServlet().getServletConfig().getServletContext().getRealPath("WEB-INF/reports/" + reportFileName + ".jasper");
 						
 	    try {
 	        	
 	        byte[] bytes = null;
 			 
-			JRDataSource dataSource = createReportDataSource(workplanRows);
-			bytes = JasperRunManager.runReportToPdf(reportFile, parameterMap, dataSource);
-				
+			//JRDataSource dataSource = createReportDataSource(workplanRows);
+//			JRProperties.setProperty("net.sf.jasperreports.default.pdf.font.name", "Arial");
+//			JRProperties.setProperty("net.sf.jasperreports.default.pdf.encoding", "Identity-H");
+//			JRProperties.setProperty("net.sf.jasperreports.default.pdf.embedded", "false");
+			
+			PostgreSQLConnector postgreSQLConnector = new PostgreSQLConnector();
+			Connection con = postgreSQLConnector.getConnection();
+			bytes = JasperRunManager.runReportToPdf(reportFile, parameterMap, con);
+
+			//bytes = JasperRunManager.runReportToPdf(reportFile, parameterMap, dataSource);
 			ServletOutputStream servletOutputStream = response.getOutputStream();
+			response.setCharacterEncoding("utf-8");
 			response.setContentType("application/pdf");
 			response.setContentLength(bytes.length);
 
@@ -109,10 +130,11 @@ public class PrintWorkplanReportAction extends BaseAction {
 	
 	    }
 	    catch (JRException jre) {
-	    	LogEvent.logError("PringWorkplanReportAction","processRequest()", jre.toString());
+	    	LogEvent.logError("PrintWorkplanReportAction","processRequest()", jre.toString());
 	    	error = new ActionError("error.jasper", null, null);
 	    } catch (Exception e) {
 	    	LogEvent.logError("PrintWorkplanReportAction","processRequest()", e.toString());
+	    	e.printStackTrace();
 	    	error = new ActionError("error.jasper", null, null);
 	    }
 	    
@@ -158,16 +180,18 @@ public class PrintWorkplanReportAction extends BaseAction {
 		return TestService.getUserLocalizedTestName( id );
 	}
 	
-	public IWorkplanReport getWorkplanReport(String testType, String name) {
+	public IWorkplanReport getWorkplanReport(String testType, String name,
+			String testSectionId, String testId, String panelId, String receivedDate, String startedDate, String completedDate) {
 	      
     	IWorkplanReport workplan;
     	
     	if ("test".equals(testType)) {
-    		workplan = new TestWorkplanReport(name);  		
+    		//workplan = new TestWorkplanReport(name);
+    		workplan = new TestSectionWorkplanReport(name, testSectionId, testId, panelId, receivedDate, startedDate, completedDate);
     	}else if ("Serology".equals(testType)) {
     		workplan = new ElisaWorkplanReport(name);
     	}else {
-    		workplan = new TestSectionWorkplanReport(name); 
+    		workplan = new TestSectionWorkplanReport(name, testSectionId, testId, panelId, receivedDate, startedDate, completedDate); 
     	}
        	
     	return workplan;

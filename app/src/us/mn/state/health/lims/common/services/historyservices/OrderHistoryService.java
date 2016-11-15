@@ -28,7 +28,12 @@ import us.mn.state.health.lims.referencetables.dao.ReferenceTablesDAO;
 import us.mn.state.health.lims.referencetables.daoimpl.ReferenceTablesDAOImpl;
 import us.mn.state.health.lims.requester.valueholder.SampleRequester;
 import us.mn.state.health.lims.sample.valueholder.Sample;
+import us.mn.state.health.lims.common.util.DateUtil;
 
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +43,12 @@ public class OrderHistoryService extends HistoryService {
     private static final String SAMPLE_REQUESTER_TABLE_ID;
 
 	private static final String ACCESSION_ATTRIBUTE = "accessionNumber";
+	private static final String STATUS_ATTRIBUTE = "status";
     private static final String ORGANIZATION_ATTRIBUTE = "requestingOrganization";
     private static final String PROVIDER_ATTRIBUTE = "requestingProvider";
+    private static final String ONSET_OF_DATE_ATTRIBUTE = "onsetOfDate";
+    private static final String RECEIVED_DATE_ATTRIBUTE = "receivedDate";
+    private static final String RECEIVED_TIME_ATTRIBUTE = "receivedTime";
 	
 	static {
 		ReferenceTablesDAO tableDAO = new ReferenceTablesDAOImpl();
@@ -64,6 +73,10 @@ public class OrderHistoryService extends HistoryService {
         attributeToIdentifierMap.put(ORGANIZATION_ATTRIBUTE, StringUtil.getMessageForKey( "organization.organization" ));
         attributeToIdentifierMap.put(PROVIDER_ATTRIBUTE, StringUtil.getContextualMessageForKey( "nonconformity.provider.label" ));
         attributeToIdentifierMap.put(ACCESSION_ATTRIBUTE, StringUtil.getContextualMessageForKey( "quick.entry.accession.number" ));
+        attributeToIdentifierMap.put(STATUS_ATTRIBUTE, StringUtil.getContextualMessageForKey( "status" ));
+        attributeToIdentifierMap.put(ONSET_OF_DATE_ATTRIBUTE, StringUtil.getContextualMessageForKey( "quick.entry.onset.date" ));
+        attributeToIdentifierMap.put(RECEIVED_DATE_ATTRIBUTE, StringUtil.getContextualMessageForKey( "quick.entry.received.date" ));
+        attributeToIdentifierMap.put(RECEIVED_TIME_ATTRIBUTE, StringUtil.getContextualMessageForKey( "quick.entry.received.date" ));
 
         History searchHistory = new History();
 		searchHistory.setReferenceId(sample.getId());
@@ -76,6 +89,18 @@ public class OrderHistoryService extends HistoryService {
 
 		newValueMap.put(STATUS_ATTRIBUTE, StatusService.getInstance().getStatusNameFromId(sample.getStatusId()));
 		newValueMap.put(ACCESSION_ATTRIBUTE, sample.getAccessionNumber());
+		
+        if (sample.getOnsetOfDate() != null) {
+            String onsetDate = sample.getOnsetOfDate().toString().split(" ")[0];
+            Timestamp ts = DateUtil.convertStringDateToTimestampWithPattern(onsetDate, "yyyy-MM-dd");
+            onsetDate = DateUtil.convertTimestampToStringDate(ts);
+            newValueMap.put(ONSET_OF_DATE_ATTRIBUTE, onsetDate);
+        } else {
+            newValueMap.put(ONSET_OF_DATE_ATTRIBUTE, "");
+        }
+        
+		newValueMap.put(RECEIVED_DATE_ATTRIBUTE, sample.getReceivedDate() != null ? sample.getReceivedDateForDisplay() + " "
+	        + sample.getReceived24HourTimeForDisplay() : "");
 
 	}
 
@@ -108,14 +133,22 @@ public class OrderHistoryService extends HistoryService {
         AuditTrailItem item = getCoreTrail( history );
         if( history.getReferenceTable().equals( SAMPLE_REQUESTER_TABLE_ID)){
              if( history.getReferenceId( ).equals( currentProviderRequestLinkId )){
-                 item.setIdentifier( "Provider" );
+                 item.setIdentifier( StringUtil.getMessageForKey( "provider.browse.title" ) );
                  item.setNewValue( newValueMap.get(PROVIDER_ATTRIBUTE) );
              }else if( history.getReferenceId().equals( currentOrganizationRequesterLinkId )){
                  item.setIdentifier( StringUtil.getMessageForKey( "organization.organization" ) );
                  item.setNewValue( newValueMap.get(ORGANIZATION_ATTRIBUTE) );
              }
+        } else if (history.getReferenceTable().equals( SAMPLE_TABLE_ID )) {
+            // When reference table of history is not sample requester, organization
+            // And It equals sample table id (1)
+            // We set identifier with accession_attribute again.
+            item.setIdentifier( attributeToIdentifierMap.get( ACCESSION_ATTRIBUTE ));
+            item.setNewValue( newValueMap.get( ACCESSION_ATTRIBUTE ));
         }
-		items.add( item );
+        if (!StringUtil.isNullorNill(item.getNewValue())) {
+            items.add( item );
+        }
 	}
 
 	@Override
@@ -126,14 +159,14 @@ public class OrderHistoryService extends HistoryService {
 		}
 		simpleChange(changeMap, changes, ACCESSION_ATTRIBUTE);
 
-        if( history.getReferenceTable().equals( SAMPLE_REQUESTER_TABLE_ID )){
+        if ( history.getReferenceTable().equals( SAMPLE_REQUESTER_TABLE_ID )) {
             if( history.getReferenceId( ).equals( currentProviderRequestLinkId )){
                 String value = extractSimple(changes, "requesterId");
                 if (value != null) {
                     PersonService personService = new PersonService( new PersonDAOImpl().getPersonById( value ) );
-                    changeMap.put(PROVIDER_ATTRIBUTE, personService.getLastFirstName());
+                    changeMap.put( PROVIDER_ATTRIBUTE, personService.getLastFirstName() != null ? personService.getLastFirstName() : "");
                 }
-            }else if( history.getReferenceId().equals( currentOrganizationRequesterLinkId )){
+            } else if ( history.getReferenceId().equals( currentOrganizationRequesterLinkId )){
                 String value = extractSimple(changes, "requesterId");
 
                 if (value != null) {
@@ -141,9 +174,29 @@ public class OrderHistoryService extends HistoryService {
                 }
             }
         }
+        // When onsetDate, receivedDate, receivedTime of sample were changed
+        if ( history.getReferenceTable().equals( SAMPLE_TABLE_ID )) {
+            String value = extractSimple(changes, "onsetOfDate");
+            if (value != null) {
+                String date[] = value.split(" ");
+                Timestamp ts = DateUtil.convertStringDateToTimestampWithPattern(date[0], "yyyy-MM-dd");
+                String onsetDate = DateUtil.convertTimestampToStringDate(ts);
+                changeMap.put(ONSET_OF_DATE_ATTRIBUTE, onsetDate);
+            }
+            value = extractSimple(changes, "receivedDateForDisplay");
+            if (!StringUtil.isNullorNill(value)) {
+                value += extractSimple(changes, "receivedTimeForDisplay") != null ? 
+                        (" " + extractSimple(changes, "receivedTimeForDisplay")) : "";  
+                changeMap.put(RECEIVED_DATE_ATTRIBUTE, value);
+            } else {
+                value = extractSimple(changes, "receivedTimeForDisplay");
+                if (!StringUtil.isNullorNill(value)) {
+                    changeMap.put(RECEIVED_TIME_ATTRIBUTE, value);
+                }
+            }
+        }
 
 	}
-
 	@Override
 	protected String getObjectName() {
 		return StringUtil.getMessageForKey("auditTrail.order");

@@ -8,17 +8,21 @@
 package us.mn.state.health.lims.patienttype.daoimpl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
@@ -46,8 +50,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 				auditDAO.saveHistory(newData,oldData,sysUserId,event,tableName);
 			}
 		}  catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in PATIENT_TYPE AuditTrail deleteData()", e);
+			LogEvent.logError("PatientTypeDAOImpl","deleteData()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType AuditTrail deleteData()", e);
 		}  
 		
 		try {					
@@ -58,14 +62,13 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 				HibernateUtil.getSession().clear();				
 			}			
 		} catch (Exception e) {
-			e.printStackTrace();
+			LogEvent.logError("PatientTypeDAOImpl","deleteData()", Arrays.toString(e.getStackTrace()));
 			throw new LIMSRuntimeException("Error in PatientType deleteData()", e);
 		} 
 	}
 
 	public boolean insertData(PatientType patientType) throws LIMSRuntimeException {
 		try {	
-			
 			if (duplicatePatientTypeExists(patientType)) {
 				throw new LIMSDuplicateRecordException(
 						"Duplicate record exists for "
@@ -81,24 +84,14 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();					
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in patientType insertData()", e);
+			LogEvent.logError("PatientTypeDAOImpl","insertData()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType insertData()", e);
 		}
 		
 		return true;
 	}
 
 	public void updateData(PatientType patientTypes) throws LIMSRuntimeException {
-		try {
-			/*if (duplicatePatientTypeExists(patientTypes)) {
-				throw new LIMSDuplicateRecordException(
-						"Duplicate record exists for "
-								+ patientTypes.getDescription());
-			}*/
-		} catch (Exception e) {
-			throw new LIMSRuntimeException("Error in patientType updateData()",
-					e);
-		}
 		
 		PatientType oldData = readPatientType(patientTypes.getId().toString());
 		PatientType newData = patientTypes;
@@ -111,8 +104,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			String tableName = "PATIENT_TYPE";
 			auditDAO.saveHistory(newData,oldData,sysUserId,event,tableName);
 		}  catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in patientType AuditTrail updateData()", e);
+			LogEvent.logError("PatientTypeDAOImpl","updateData()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType AuditTrail updateData()", e);
 		}  
 						
 		try {			
@@ -122,23 +115,26 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().evict(patientTypes);
 			HibernateUtil.getSession().refresh(patientTypes);			
 		} catch (Exception e) {
-			e.printStackTrace();
+			LogEvent.logError("PatientTypeDAOImpl","updateData()", Arrays.toString(e.getStackTrace()));
 			throw new LIMSRuntimeException("Error in PatientType updateData()", e);
 		}
 	}
 
 	public void getData(PatientType patientType) throws LIMSRuntimeException {		
 		try {			
-			PatientType cityvns = (PatientType)HibernateUtil.getSession().get(PatientType.class, patientType.getId());
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
+			PatientType cityvns = null;
+			if (patientType != null && !StringUtil.isNullorNill(patientType.getId())) {
+				cityvns = (PatientType)HibernateUtil.getSession().get(PatientType.class, patientType.getId());
+				HibernateUtil.getSession().flush();
+				HibernateUtil.getSession().clear();
+			}
 			if (cityvns != null) {
 				PropertyUtils.copyProperties(patientType, cityvns);
 			} else {
 				patientType.setId(null);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			LogEvent.logError("PatientTypeDAOImpl","getData()", Arrays.toString(e.getStackTrace()));
 			throw new LIMSRuntimeException("Error in PatientType getData()", e);
 		} 
 	}
@@ -154,8 +150,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in patientType getAllPatientTypes()", e);
+			LogEvent.logError("PatientTypeDAOImpl","getAllPatientTypes()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType getAllPatientTypes()", e);
 		} 
 
 		return list;
@@ -176,8 +172,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in getPageOfPatientType()",e);
+			LogEvent.logError("PatientTypeDAOImpl","getPageOfPatientType()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType getPageOfPatientType()",e);
 		} 
 
 		return list;
@@ -190,7 +186,7 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			e.printStackTrace();
+			LogEvent.logError("PatientTypeDAOImpl","readPatientType()", Arrays.toString(e.getStackTrace()));
 			throw new LIMSRuntimeException("Error in PatientType readPatientType()", e);
 		}			
 		
@@ -209,21 +205,39 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in patientType getPatientTypes(String filter)", e);
+			LogEvent.logError("PatientTypeDAOImpl","getPatientTypes()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType getPatientTypes(String filter)", e);
 		}
 		
 		return list;
 	}
+	
+	public PatientType getPatientTypeByDescription(PatientType pType) throws LIMSRuntimeException {      
+        PatientType patientType = new PatientType();
+	    try {           
+            String sql = "from PatientType l where l.description = :param";
+            org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setParameter("param", pType.getDescription());       
 
+            List<PatientType> list = query.list();
+            if (list.size() >= 1) {
+                patientType = (PatientType) list.get(0);
+            }
+            closeSession();
+            
+        } catch (Exception e) {
+            LogEvent.logError("PatientTypeDAOImpl","getPatientTypes()", Arrays.toString(e.getStackTrace()));
+            throw new LIMSRuntimeException("Error in PatientType getPatientTypes(String filter)", e);
+        }
+        
+        return patientType;
+    }
+	
 	public List getNextPatientTypeRecord(String id) throws LIMSRuntimeException {
-
 		return getNextRecord(id, "PatientType", PatientType.class);
-
 	}
 
 	public List getPreviousPatientTypeRecord(String id) throws LIMSRuntimeException {
-
 		return getPreviousRecord(id, "PatientType", PatientType.class);
 	}
 
@@ -243,7 +257,7 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			return patientTypes;
 			
 		} catch (Exception e) {
-			e.printStackTrace();
+			LogEvent.logError("PatientTypeDAOImpl","getPatientTypeByName()", Arrays.toString(e.getStackTrace()));
 			throw new LIMSRuntimeException("Error in PatientType getPatientTypeByName()", e);
 		}
 	}
@@ -273,9 +287,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 					rrn + 1).setMaxResults(2).list();
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in getNextRecord() for "
-					+ table, e);
+			LogEvent.logError("PatientTypeDAOImpl","getNextRecord()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType getNextRecord() for " + table, e);
 		}
 		return list;		
 	}
@@ -299,8 +312,8 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			.setMaxResults(2)
 			.list();
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException("Error in getPreviousRecord() for " + table, e);
+			LogEvent.logError("PatientTypeDAOImpl","getPreviousRecord()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType getPreviousRecord() for " + table, e);
 		} 
 
 		return list;
@@ -337,9 +350,9 @@ public class PatientTypeDAOImpl extends BaseDAOImpl implements PatientTypeDAO {
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new LIMSRuntimeException(
-					"Error in duplicatePatientTypeExists()", e);
+			LogEvent.logError("PatientTypeDAOImpl","duplicatePatientTypeExists()", Arrays.toString(e.getStackTrace()));
+			throw new LIMSRuntimeException("Error in PatientType duplicatePatientTypeExists()", e);
 		}		
 	}
+
 }

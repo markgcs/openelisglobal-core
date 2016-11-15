@@ -50,7 +50,7 @@
 	
 	  <tr>	
 	   <td class="textcontent">
-	      <html:multibox name="<%=formName%>" property="selectedIDs">
+	      <html:multibox name="<%=formName%>" property="selectedIDs" onclick="output()">
 	         <bean:write name="piID" />
 	      </html:multibox>
      
@@ -66,7 +66,7 @@
 	      <bean:write name="pi" property="panel.panelName"/>
 	   </td>
 	   <td class="textcontent">
-	      <bean:write name="pi" property="testName"/>
+	      <bean:write name="pi" property="test.name"/>
 	   </td>
 	   <%--td class="textcontent">
 	    <logic:notEmpty name="pi" property="panel">

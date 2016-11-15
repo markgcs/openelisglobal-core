@@ -22,12 +22,14 @@ import us.mn.state.health.lims.common.valueholder.EnumValueItemImpl;
 import us.mn.state.health.lims.common.valueholder.SimpleBaseEntity;
 import us.mn.state.health.lims.common.valueholder.ValueHolder;
 import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
+import us.mn.state.health.lims.dictionary.valueholder.Dictionary;
 
 public class Organization extends EnumValueItemImpl implements SimpleBaseEntity<String>{
     private static final long serialVersionUID = 1L;
 
-    private String city;
-	private String cliaNum;
+    private ValueHolderInterface city;
+    private String selectedCityId;
+    private String cliaNum;
 	private String id;
 	private String internetAddress;
 	private String isActive;
@@ -50,10 +52,7 @@ public class Organization extends EnumValueItemImpl implements SimpleBaseEntity<
 	public Organization() {
 		super();
 		this.organization = new ValueHolder();
-	}
-
-	public String getCity() {
-		return this.city;
+		this.city = new ValueHolder();
 	}
 
 	public String getCliaNum() {
@@ -118,10 +117,6 @@ public class Organization extends EnumValueItemImpl implements SimpleBaseEntity<
 
 	public String getZipCode() {
 		return this.zipCode;
-	}
-
-	public void setCity(String city) {
-		this.city = city;
 	}
 
 	public void setCliaNum(String cliaNum) {
@@ -222,13 +217,7 @@ public class Organization extends EnumValueItemImpl implements SimpleBaseEntity<
                         + shortName + "]";
     }
 
-    /**
-     *
-     * @param organizationTypes
-     *
-     * @deprecated this seem to be bogus and will cause a null pointer exception in session flush.  Use the Organization_organization_type link method
-     */
-    @Deprecated
+    //these seem to be bogus and will cause a null pointer exception in session flush.  Use the Organization_organization_type link method
     public void setOrganizationTypes(Set<OrganizationType> organizationTypes) {
         this.organizationTypes = organizationTypes;
     }
@@ -244,4 +233,31 @@ public class Organization extends EnumValueItemImpl implements SimpleBaseEntity<
 	public void setCode(String code){
 		this.code = code;
 	}
+	
+	/*
+     * Get city 
+     *
+     * @return city
+     */
+    public Dictionary getCity() {
+        return (Dictionary) this.city.getValue();
+    }
+
+    /*
+     * Set city 
+     *
+     * @param city the city to set
+     */
+    public void setCity(Dictionary city) {
+        this.city.setValue(city);
+    }
+
+    public String getSelectedCityId() {
+        return selectedCityId;
+    }
+
+    public void setSelectedCityId(String selectedCityId) {
+        this.selectedCityId = selectedCityId;
+    }
+
 }

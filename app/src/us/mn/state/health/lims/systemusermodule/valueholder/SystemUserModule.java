@@ -19,6 +19,7 @@ package us.mn.state.health.lims.systemusermodule.valueholder;
 
 import us.mn.state.health.lims.common.valueholder.ValueHolder;
 import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
+import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
 
 /**
@@ -30,34 +31,56 @@ public class SystemUserModule extends PermissionModule {
 	private static final long serialVersionUID = 1L;
 	
 	private String systemUserId;
+	private String systemModuleId;
 	private ValueHolderInterface systemUser;
+	private ValueHolderInterface systemModule;
 	
 	public SystemUserModule() {
 		super();
 		this.systemUser = new ValueHolder();
+		this.systemModule = new ValueHolder();
 	}
 
 	protected void setSystemUserHolder(ValueHolderInterface systemUser) {
 		this.systemUser = systemUser;
 	}
-
 	protected ValueHolderInterface getSystemUserHolder() {
 		return this.systemUser;
+	}
+	
+	protected void setSystemModuleHolder(ValueHolderInterface systemModule) {
+		this.systemModule = systemModule;
+	}
+	protected ValueHolderInterface getSystemModuleHolder() {
+		return this.systemModule;
 	}
 
 	public void setSystemUser(SystemUser systemUser) {
 		this.systemUser.setValue(systemUser);
 	}
-
 	public SystemUser getSystemUser() {
 		return (SystemUser) this.systemUser.getValue();
 	}
 
+	public void setSystemModule(SystemModule systemModule) {
+		this.systemModule.setValue(systemModule);
+	}
+	public SystemModule getSystemModule() {
+		return (SystemModule) this.systemModule.getValue();
+	}
+	
 	public void setSystemUserId(String systemUserId) {
 		this.systemUserId = systemUserId;
 	}
 	public String getSystemUserId() {
 		return systemUserId;
+	}
+	
+	public void setSystemModuleId(String systemModuleId) {
+		this.systemModuleId = systemModuleId;
+	}
+	public String getSystemModuleId() {
+		return systemModuleId;
 	}
 
 	@Override

@@ -36,6 +36,7 @@ import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.typeofsample.daoimpl.TypeOfSampleDAOImpl;
 import us.mn.state.health.lims.typeofsample.daoimpl.TypeOfSampleTestDAOImpl;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSampleTest;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult.ResultType;
 
 import java.sql.Date;
 import java.util.ArrayList;
@@ -68,12 +69,8 @@ public class ResultService {
 	}
 
 	public String getTestName() {
-		return TestService.getUserLocalizedTestName(test);
+		return TestService.getUserLocalizedTestName( test );
 	}
-
-    public String getReportingTestName() {
-        return TestService.getUserLocalizedReportingTestName(test);
-    }
 
 	public String getTestDescription() {
 		return TestService.getLocalizedTestNameWithType( test );
@@ -115,9 +112,9 @@ public class ResultService {
             return "";
         }
 
-        if (TypeOfTestResultService.ResultType.isDictionaryVariant( getTestType() )) {
+        if (ResultType.isDictionaryVariant( getTestType() )) {
             return getDictEntry(  );
-        } else if (TypeOfTestResultService.ResultType.NUMERIC.matches(getTestType())) {
+        } else if (ResultType.NUMERIC.matches(getTestType())) {
             int significantPlaces = result.getSignificantDigits();
             if (significantPlaces == 0) {
                 return result.getValue().split("\\.")[0];
@@ -137,7 +134,7 @@ public class ResultService {
             }
 
             return value.toString();
-        }else if (TypeOfTestResultService.ResultType.ALPHA.matches(result.getResultType()) && !GenericValidator.isBlankOrNull(result.getValue())) {
+        }else if (ResultType.ALPHA.matches(result.getResultType()) && !GenericValidator.isBlankOrNull(result.getValue())) {
             return result.getValue().split("\\(")[0].trim();
         }else {
             return result.getValue();
@@ -159,7 +156,7 @@ public class ResultService {
 			return "";
 		}
 
-		if (TypeOfTestResultService.ResultType.DICTIONARY.matches(getTestType())) {
+		if (ResultType.DICTIONARY.matches(getTestType())) {
 		    
 		    if (!printable) {
 		        return result.getValue();
@@ -174,9 +171,9 @@ public class ResultService {
                     List<Result> dictionaryResults = new ArrayList<Result>();
                     Result quantification = null;
                     for( Result sibResult : resultList ){
-                        if( TypeOfTestResultService.ResultType.DICTIONARY.matches( sibResult.getResultType() ) ){
+                        if( ResultType.DICTIONARY.matches( sibResult.getResultType() ) ){
                             dictionaryResults.add( sibResult );
-                        }else if( TypeOfTestResultService.ResultType.ALPHA.matches( sibResult.getResultType() ) && sibResult.getParentResult() != null ){
+                        }else if( ResultType.ALPHA.matches( sibResult.getResultType() ) && sibResult.getParentResult() != null ){
                             quantification = sibResult;
                         }
                     }
@@ -199,14 +196,14 @@ public class ResultService {
             }
 
 			return StringEscapeUtils.escapeHtml(reportResult);
-		} else if (TypeOfTestResultService.ResultType.isMultiSelectVariant(getTestType())) {
+		} else if (ResultType.isMultiSelectVariant(getTestType())) {
 			StringBuilder buffer = new StringBuilder();
 			boolean firstPass = true;
 
 			List<Result> results = new ResultDAOImpl().getResultsByAnalysis(result.getAnalysis());
 
 			for (Result multiResult : results) {
-				if (!GenericValidator.isBlankOrNull(multiResult.getValue()) && TypeOfTestResultService.ResultType.isMultiSelectVariant(multiResult.getResultType())) {
+				if (!GenericValidator.isBlankOrNull(multiResult.getValue()) && ResultType.isMultiSelectVariant(multiResult.getResultType())) {
 					if (firstPass) {
 						firstPass = false;
 					} else {
@@ -216,11 +213,8 @@ public class ResultService {
 				}
 			}
 			return buffer.toString();
-		} else if (TypeOfTestResultService.ResultType.NUMERIC.matches(getTestType())) {
+		} else if (ResultType.NUMERIC.matches(getTestType())) {
             int significantPlaces = result.getSignificantDigits();
-            if( significantPlaces == -1){
-                return result.getValue() + appendUOM( includeUOM );
-            }
             if (significantPlaces == 0) {
                 return result.getValue().split("\\.")[0] + appendUOM( includeUOM );
             }
@@ -239,7 +233,7 @@ public class ResultService {
             }
 
             return value.toString() + appendUOM( includeUOM );
-        }else if (TypeOfTestResultService.ResultType.ALPHA.matches(result.getResultType()) && !GenericValidator.isBlankOrNull(result.getValue())) {
+        }else if (ResultType.ALPHA.matches(result.getResultType()) && !GenericValidator.isBlankOrNull(result.getValue())) {
             return result.getValue().split("\\(")[0].trim();
         }else {
             return result.getValue();
@@ -264,14 +258,14 @@ public class ResultService {
             return "";
         }
 
-        if (TypeOfTestResultService.ResultType.MULTISELECT.getCharacterValue().equals(getTestType())) {
+        if (ResultType.MULTISELECT.getDBValue().equals(getTestType())) {
             StringBuilder buffer = new StringBuilder();
             boolean firstPass = true;
 
             List<Result> results = new ResultDAOImpl().getResultsByAnalysis(result.getAnalysis());
 
             for (Result multiResult : results) {
-                if (!GenericValidator.isBlankOrNull(multiResult.getValue()) && TypeOfTestResultService.ResultType.isMultiSelectVariant(multiResult.getResultType())) {
+                if (!GenericValidator.isBlankOrNull(multiResult.getValue()) && ResultType.isMultiSelectVariant(multiResult.getResultType())) {
                     if (firstPass) {
                         firstPass = false;
                     } else {
@@ -329,11 +323,11 @@ public class ResultService {
 
     public String getDisplayReferenceRange(boolean includeSelectList){
         String range = "";
-        if( TypeOfTestResultService.ResultType.NUMERIC.matches( result.getResultType() ) ){
+        if( ResultType.NUMERIC.matches( result.getResultType() ) ){
             if( result.getMinNormal() != null && result.getMaxNormal() != null && !result.getMinNormal().equals( result.getMaxNormal() ) ){
                 range = ResultLimitService.getDisplayNormalRange( result.getMinNormal(), result.getMaxNormal(), String.valueOf( result.getSignificantDigits() ), "-" );
             }
-        }else if( includeSelectList && TypeOfTestResultService.ResultType.isDictionaryVariant( result.getResultType() )){
+        }else if( includeSelectList && ResultType.isDictionaryVariant( result.getResultType() )){
             List<ResultLimit> limits = getResultLimits();
             if( !limits.isEmpty() && !GenericValidator.isBlankOrNull( limits.get( 0 ).getDictionaryNormalId() )){
                 range = dictionaryDAO.getDataForId( limits.get( 0 ).getDictionaryNormalId() ).getLocalizedName();
@@ -342,16 +336,17 @@ public class ResultService {
         return range;
     }
 
+	@SuppressWarnings("unchecked")
 	private List<ResultLimit> getResultLimits() {
 		if (resultLimit == null) {
-			resultLimit = test != null ? new ResultLimitDAOImpl().getAllResultLimitsForTest(test.getId()) : new ArrayList<ResultLimit>();
+			resultLimit = new ResultLimitDAOImpl().getAllResultLimitsForTest(test);
 		}
 
 		return resultLimit;
 	}
 
     public boolean isAbnormalDictionaryResult(){
-        if( result.getValue() != null && TypeOfTestResultService.ResultType.isDictionaryVariant( result.getResultType() )){
+        if( result.getValue() != null && ResultType.isDictionaryVariant( result.getResultType() )){
             List<ResultLimit> limits = getResultLimits();
             if( !limits.isEmpty()){
                 return !result.getValue().equals( limits.get(0).getDictionaryNormalId() );
@@ -394,7 +389,7 @@ public class ResultService {
         StringBuilder currentString = new StringBuilder( );
 
         for(Result result : resultList){
-            if( TypeOfTestResultService.ResultType.isMultiSelectVariant( result.getResultType() ) && result.getValue() != null){
+            if( ResultType.isMultiSelectVariant( result.getResultType() ) && result.getValue() != null){
                 if( currentGrouping != result.getGrouping()){
                     if( currentString.length() > 1 ){
                         currentString.setLength( currentString.length() - 1 );

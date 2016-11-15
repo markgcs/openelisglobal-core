@@ -18,8 +18,10 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.AnalysisService;
 import us.mn.state.health.lims.common.services.SampleService;
@@ -42,6 +44,7 @@ import us.mn.state.health.lims.test.valueholder.Test;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 /**
  * @author Paul A. Hill (pahill@uw.edu)
@@ -237,4 +240,27 @@ public class ReferredOutReport extends PatientReport implements IReportParameter
 	protected void setReferredResult(ClinicalPatientData data, Result result) {
 		data.setResult(data.getResult() );
 	}
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		lowDateStr = hashmap.get("lowerDateRange");
+        highDateStr = hashmap.get("upperDateRange");
+        locationId = hashmap.get("locationCode");
+        dateRange = new DateRange(lowDateStr, highDateStr);
+        reportLocation = getValidOrganization(locationId);
+        
+        errorFound = !validateSubmitParameters();
+        createReportParameters();
+        if ( errorFound ) {
+            return;
+        }
+        initializeReportItems();
+        createReportItems();
+        if ( this.reportItems.size() == 0 ) {
+            add1LineErrorMessage("report.error.message.noPrintableItems");
+        }
+        Collections.sort(reportItems, new ReportItemsComparator() );
+        return;
+	}
+	
 }

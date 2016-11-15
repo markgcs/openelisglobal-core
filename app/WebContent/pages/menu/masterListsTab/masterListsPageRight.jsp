@@ -66,6 +66,12 @@ if (request.getAttribute("menuDefinition") != null) {
 <logic:equal name="menuDef" value="OrganizationMenuDefinition">
   <tiles:insert attribute="rightOrganization" />
 </logic:equal>
+<logic:equal name="menuDef" value="CityMenuDefinition">
+  <tiles:insert attribute="rightCity" />
+</logic:equal>
+<logic:equal name="menuDef" value="DistrictMenuDefinition">
+  <tiles:insert attribute="rightDistrict" />
+</logic:equal>
 <logic:equal name="menuDef" value="PanelMenuDefinition">
   <tiles:insert attribute="rightPanel" />
 </logic:equal>
@@ -155,6 +161,12 @@ if (request.getAttribute("menuDefinition") != null) {
 </logic:equal>
 <logic:equal name="menuDef" value="TypeOfSamplePanelMenuDefinition">
   <tiles:insert attribute="rightTypeOfSamplePanel" />
+</logic:equal>
+<logic:equal name="menuDef" value="TypeOfSampleSourceMenuDefinition">
+  <tiles:insert attribute="rightTypeOfSampleSource" />
+</logic:equal>
+<logic:equal name="menuDef" value="SampleLabelMenuDefinition">
+  <tiles:insert attribute="rightSampleLabel" />
 </logic:equal>
 <logic:equal name="menuDef" value="TypeOfTestResultMenuDefinition">
   <tiles:insert attribute="rightTypeOfTestResult" />

@@ -60,5 +60,6 @@ public interface SampleItemDAO extends BaseDAO {
 	public List<SampleItem> getSampleItemsBySampleIdAndStatus(String id, Set<Integer> includedStatusList) throws LIMSRuntimeException;
 
 	public SampleItem getData(String sampleItemId) throws LIMSRuntimeException;
-
+	public String insertDataWS(SampleItem sampleItem) throws LIMSRuntimeException;
+	public SampleItem getSampleItemsBySampleIdAndStatusId(String id, Integer includedStatusList) throws LIMSRuntimeException;
 }

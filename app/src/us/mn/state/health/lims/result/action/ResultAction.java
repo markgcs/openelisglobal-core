@@ -79,16 +79,18 @@ public class ResultAction extends BaseAction {
 
 			// initialize analyteId
 			if (result.getAnalyte() != null) {
-				result.setAnalyte(result.getAnalyte());
+				result.setAnalyteId(result.getAnalyte().getId());
 			}
 
 			// initialize analysisId
-			result.setAnalysis(result.getAnalysis());
-
+			if (result.getAnalysis() != null) {
+				result.setAnalysisId(result.getAnalysis().getId());
+			}
 
 			// initialize testResultId
-			result.setTestResult(result.getTestResult());
-
+			if (result.getTestResult() != null) {
+				result.setTestResultId(result.getTestResult().getId());
+			}
 			isNew = false; // this is to set correct page title
 
 			// do we need to enable next or previous?

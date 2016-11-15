@@ -34,18 +34,7 @@
 <bean:define id="pagingSearch" name='<%=formName%>' property="paging.searchTermToPage"  />
 
 <bean:define id="logbookType" name="<%=formName%>" property="logbookType" />
-<logic:equal  name="<%=formName %>" property="displayTestSections" value="true">
-	<bean:define id="testSectionsByName" name="<%=formName%>" property="testSectionsByName" />
-	<script type="text/javascript" >
-		var testSectionNameIdHash = [];		
-		<% 
-			for( IdValuePair pair : (List<IdValuePair>) testSectionsByName){
-				out.print( "testSectionNameIdHash[\"" + pair.getId()+ "\"] = \"" + pair.getValue() +"\";\n");
-			}
-		%>
-	</script>
-</logic:equal>
-	
+ <bean:define id="testSectionsByName" name="<%=formName%>" property="testSectionsByName" />
 <%!
 	List<String> hivKits;
 	List<String> syphilisKits;
@@ -118,8 +107,11 @@
 <link rel="stylesheet" type="text/css" href="css/jquery.asmselect.css?ver=<%= Versioning.getBuildNumber() %>" />
 
 
-
 <script type="text/javascript" >
+
+var invalidElements = new Array();
+var requiredFields = new Array("testSectionsId", "searchReceivedDate");
+
 
 <%if( ConfigurationProperties.getInstance().isPropertyValueEqual(Property.ALERT_FOR_INVALID_RESULTS, "true")){%>
        outOfValidRangeMsg = '<%= StringUtil.getMessageForKey("result.outOfValidRange.msg") %>';
@@ -143,6 +135,7 @@ var pagingSearch = {};
 	}
 %>
 
+
 $jq(document).ready( function() {
 			var searchTerm = '<%=searchTerm%>';
             loadMultiSelects();
@@ -165,7 +158,7 @@ $jq(document).ready( function() {
                 e.preventDefault();
                 $jq('#reflexSelect').modal('hide');
 			});
-
+            
             loadPagedReflexSelections('<%= StringUtil.getMessageForKey("button.label.edit")%>');
             $jq(".asmContainer").css("display","inline-block");
             disableRejectedResults();
@@ -195,21 +188,210 @@ function toggleKitDisplay( button ){
 	}
 }
 
+//Added by markaae.fr 2016-10-04 10:52AM
+function /*void*/ updateFieldError(field) {
+	if (field.value) {
+		selectFieldErrorDisplay(true, $(field.id));
+		setSampleFieldValidity(true, field.id);
+	}
+}
 
-function markUpdated( index, userChoiceReflex, siblingReflexKey ){
+function /*void*/ validateField(field) {
+	var isValid = false;
+	if (field.value) {
+		isValid = true;
+	}
+	selectFieldErrorDisplay(isValid, $(field.id));
+	setSampleFieldValidity(isValid, field.id);
+}
+
+function  /*void*/ processValidateEntryDateSuccess(xhr) {
+	var message = xhr.responseXML.getElementsByTagName("message").item(0).firstChild.nodeValue;
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0).firstChild.nodeValue;
+	var isValid = message == "<%=IActionConstants.VALID%>";
+
+	//utilities.js
+	$jq('#saveButtonId').attr('disabled', !isValid);
+	selectFieldErrorDisplay( isValid, $(formField));
+	setSampleFieldValidity( isValid, formField );
+	if (formField == "searchReceivedDate") {
+    	setSearch();
+    }
+	
+	if( message == '<%=IActionConstants.INVALID_TO_LARGE%>' ){
+		alert( "<bean:message key="error.date.inFuture"/>" );
+	}else if( message == '<%=IActionConstants.INVALID_TO_SMALL%>' ){
+		alert( "<bean:message key="error.date.inPast"/>" );
+	}
+	
+	if (!isValid) {
+		$(formField).focus();
+	} else {
+		autofill($(formField));
+	}
+}
+
+//check date enter is valid
+function checkValidEntryDate(date, dateRange, blankAllowed) {
+	var isNumeric = true;
+	if (date.value.indexOf("/") > 0 && date.value.length <= 6) {
+		var dateSplit = date.value.split("/");
+		var newDate = new Date(dateSplit[1] + "/" + dateSplit[0]);
+		if (newDate != "Invalid Date") {
+			var yyyy = new Date().getFullYear();
+			var mm = (newDate.getMonth()+1).toString(); // getMonth() is zero-based
+			var dd  = newDate.getDate().toString();
+			date.value = (dd[1]?dd:"0"+dd[0]) + "/" + (mm[1]?mm:"0"+mm[0]) + "/" + yyyy;
+		}
+	}
+	
+	if((!date.value || date.value == "") && !blankAllowed){
+        isNumeric = false;
+    } else if ((!date.value || date.value == "") && blankAllowed) {
+    	selectFieldErrorDisplay( true, $(date.id));
+        setSampleFieldValidity( true, date.id );
+        if (date.id == "searchReceivedDate") {
+        	setSearch();
+        }
+        autofill(date);
+        return;
+    }
+    
+    if( !dateRange || dateRange == ""){
+        dateRange = 'past';
+    }
+	
+    // Check if date value is numeric
+    try {
+	    var dateSplit = date.value.split("/");
+	    if (isNotaNumber(dateSplit[0]) || isNotaNumber(dateSplit[1]) || isNotaNumber(dateSplit[2]) || !isNumeric) {
+	    	selectFieldErrorDisplay( false, $(date.id));
+	        setSampleFieldValidity( false, date.id );
+	        if (date.id == "searchReceivedDate") {
+	        	setSearch();
+	        }
+	        return;
+	        
+	    } else {
+	        //ajax call from utilities.js
+	    	isValidDate( date.value, processValidateEntryDateSuccess, date.id, dateRange );
+	    }
+    } catch (Exception) {
+    	$jq('#saveButtonId').attr('disabled', true);
+    	selectFieldErrorDisplay( false, $(date.id));
+        setSampleFieldValidity( false, date.id );
+        if (date.id == "searchReceivedDate") {
+        	setSearch();
+        }
+        return;
+    }
+}
+
+// Check date enter is number
+function /*boolean*/ isNotaNumber(str) {
+	var regex = /^[a-zA-Z]+$/;
+	// loop through every character
+	for(var i=0; i < str.length; i++) {
+		// check if the i-th character is not a number
+		if(isNaN(str[i]) || regex.test(str)) {
+			return true;
+		}
+	}
+	// if the loop has finished and no letters have been found, return false
+	return false;
+}
+
+function setSampleFieldValidity(valid, fieldId) {
+	if (valid) {
+		setFieldValid(fieldId);
+	} else {
+		setFieldInvalid(fieldId);
+	}
+}
+
+function setFieldInvalid(field) {
+    if ( $jq.inArray(field, invalidElements) == -1 ) {
+        invalidElements.push(field);
+    }
+}
+
+function setFieldValid(field) {
+    var removeIndex = $jq.inArray(field, invalidElements);
+    if ( removeIndex != -1 ) {
+    	invalidElements.splice(removeIndex, 1);
+    }
+}
+
+//disable or enable submit/search button based on validity of fields
+function setSearch() {
+	var validToSearch = isSearchEnabled() && requiredFieldsValid();
+	//disable or enable submit/search button based on validity/visibility of fields
+	$("searchResultsID").disabled = !validToSearch;
+}
+
+function /*bool*/ isSearchEnabled() {
+	return invalidElements.length == 0;
+}
+
+function /*bool*/ requiredFieldsValid(){
+    for(var i = 0; i < requiredFields.length; ++i){
+        // check if required field exists
+        if (!$jq('#' + requiredFields[i]).length)
+        	return false;
+        if ($jq('#' + requiredFields[i]).is(':input')) {
+    		// check for empty input values
+        	if ($jq.trim($jq('#' + requiredFields[i]).val()).length === 0)
+            	return false;
+        } else {
+			// check for empty spans/divs
+			if ($jq.trim($jq('#' + requiredFields[i]).text()).length === 0)
+				return false;
+		}
+    }
+    
+    return true;
+}
+// End of Code Addition
+
+//nhuql.gv ADD
+function hiddenButtonSave(source) {
+	  var inputs = document.getElementsByTagName("input");
+	  var cbs = []; //will contain all checkboxes  
+	  var checked = []; //will contain all checked checkboxes  
+	  for (var i = 0; i < inputs.length; i++) {  
+	      if (inputs[i].type == "checkbox") {  
+	          cbs.push(inputs[i]);  
+	          if (inputs[i].checked) {  
+	              checked.push(inputs[i]);  
+	          }  
+	      }  
+	  }  
+	  var nbCbs = cbs.length; //number of checkboxes  
+	  var nbChecked = checked.length; //number of checked checkboxes  
+      if(nbChecked > 0){
+    	  document.getElementById("saveButtonId").disabled = false; 
+      }else{
+    	  document.getElementById("saveButtonId").disabled = true; 
+      }
+}
+//END nhuql.gv ADD
+
+function markUpdated( index, userChoiceReflex, siblingReflexKey ) {
 	if( userChoiceReflex ){
 		var siblingId = siblingReflexKey != 'null' ? $(siblingReflexKey).value : null;
 		showUserReflexChoices( index, $("resultId_" + index).value, siblingId );
 	}
-
-	$("modified_" + index).value = "true";
+	// Check null
+	if( $("modified_" + index) != null ) {
+		$("modified_" + index).value = "true";
+	}
 
 	makeDirty();
 
     $jq("#saveButtonId").removeAttr("disabled");
 }
 
-function updateLogValue(element, index ){
+function updateLogValue(element, index) {
 	var logField = $("log_" + index );
 
 	if( logField ){
@@ -223,39 +405,49 @@ function updateLogValue(element, index ){
 	}
 }
 
-
-function /*void*/ setRadioValue( index, value){
+function /*void*/ setRadioValue(index, value) {
 	$("results_" + index).value = value;
 }
 
-function  /*void*/ setMyCancelAction(form, action, validate, parameters)
-{
+function  /*void*/ setMyCancelAction(form, action, validate, parameters) {
 	//first turn off any further validation
 	setAction(window.document.forms[0], 'Cancel', 'no', '');
 }
 
-function /*void*/ autofill( sourceElement ){
-	var techBoxes = $$(".techName"),
-	    boxCount = techBoxes.length,
-	    value = sourceElement.value;
+function /*void*/ autofill( sourceElement ) {
+	if (sourceElement.id == 'autofillBeginDate') {
+		var techBoxes = $$(".startedDate");
+	} else if (sourceElement.id == 'autofillcompletedDate') {
+		var techBoxes = $$(".completedDate");
+	} else {
+		var techBoxes = $$(".techName");	
+	}
+	var boxCount = techBoxes.length,
+	    value = sourceElement.value,
 	    i = 0;
 	
 	for( ; i < boxCount; ++i){
-		techBoxes[i].value = value;
+		if (!techBoxes[i].disabled) {
+			techBoxes[i].value = value;
+			var index = parseInt(techBoxes[i].name.match((/\d+/g)));
+			markUpdated(index);
+			$jq("#modified_" + index).val("true");
+		}
 	}	
 }
-function validateForm(){
+
+function validateForm() {
 	return true;
 }
 
-function handleReferralCheckChange(checkbox,  index ){
+function handleReferralCheckChange(checkbox,  index) {
 	var referralReason = $( "referralReasonId_" + index );
 	referralReason.value = 0;
 	referralReason.disabled = !checkbox.checked;
     $("shadowReferred_" + index).value = checkbox.checked;
 }
 
-function /*void*/ handleReferralReasonChange(select,  index ){
+function /*void*/ handleReferralReasonChange(select, index ) {
 	if( select.value == 0 ){
 		$( "referralId_" + index ).checked = false;
 		select.disabled = true;
@@ -263,18 +455,59 @@ function /*void*/ handleReferralReasonChange(select,  index ){
 }
 
 //this overrides the form in utilities.jsp
-function  /*void*/ savePage()
-{
-	
+function  /*void*/ savePage() {
+	var href = window.top.location.href;
+	var urlParams = parseURLParams(href);
+	var accessionNumber = "undefined";
+    var patientID = "undefined";
+
 	$jq( "#saveButtonId" ).prop("disabled",true);
 	window.onbeforeunload = null; // Added to flag that formWarning alert isn't needed.
+	//Dũng add
+    valueSearch = $jq("#searchValue").val();
+    criteria = $jq("#searchCriteria").val();
 	var form = window.document.forms[0];
-	form.action = '<%=formName%>'.sub('Form','') + "Update.do"  + '<%= logbookType == "" ? "" : "?type=" + logbookType  %>';
+	// Added by Mark 2016.06.28 05:45PM
+	// Get accessionNumber and patientID from request if not in StatusResults page
+	if (('<%=formName%>'.sub('Form','')) != ("<bean:message key="status.results"/>")) { 
+		accessionNumber = urlParams.accessionNumber;
+	    patientID = urlParams.patientID;
+	}    
+	// End of Modification
+	form.action = '<%=formName%>'.sub('Form','') + "Update.do" + "?accessionNumber=" + accessionNumber + "&patientID=" + patientID  + '<%= logbookType == "" ? "" : "&type=" + logbookType  %>' +"&criteria="+criteria+ "&valueSearch="+valueSearch;
 	form.submit();
 }
 
-function updateReflexChild( group){
+//Dung add new
+function parseURLParams(url) {
+    var queryStart = url.indexOf("?") + 1,
+        queryEnd   = url.indexOf("#") + 1 || url.length + 1,
+        query = url.slice(queryStart, queryEnd - 1),
+        pairs = query.replace(/\+/g, " ").split("&"),
+        parms = {}, i, n, v, nv;
 
+    if (query === url || query === "") {
+        return;
+    }
+
+    for (i = 0; i < pairs.length; i++) {
+        nv = pairs[i].split("=");
+        n = decodeURIComponent(nv[0]);
+        v = decodeURIComponent(nv[1]);
+
+        if (!parms.hasOwnProperty(n)) {
+            parms[n] = [];
+        }
+
+        parms[n].push(nv.length === 2 ? v : null);
+    }
+
+    return parms;
+}
+//end dung add new
+
+function updateReflexChild( group) {
+	
  	var reflexGroup = $$(".reflexGroup_" + group);
 	var childReflex = $$(".childReflex_" + group);
  	var i, childId, rowId, resultIds = "", values="", requestString = "";
@@ -289,7 +522,6 @@ function updateReflexChild( group){
 				values += "," + reflexGroup[i].value;
 			}
 		}
-		
 		requestString +=   "results=" +resultIds.slice(1) + "&values=" + values.slice(1) + "&childRow=" + childId;
 
 		new Ajax.Request (
@@ -303,15 +535,13 @@ function updateReflexChild( group){
                            }
                           );
  	}
-
 }
 
-function processTestReflexCD4Failure(){
+function processTestReflexCD4Failure() {
 	alert("failed");
 }
 
-function processTestReflexCD4Success(parameters)
-{
+function processTestReflexCD4Success(parameters) {
     var xhr = parameters.xhr;
 	//alert( xhr.responseText );
 	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0);
@@ -327,12 +557,17 @@ function processTestReflexCD4Success(parameters)
 			$("results_" + childRow).value = value;
 		}
 	}
-
 }
 
-function submitTestSectionSelect( element ) {
-	window.location.href = "LogbookResults.do?testSectionId=" + element.value + "&type=" + testSectionNameIdHash[element.value] ;	
-}
+function submitTestSectionSelect() {
+	var testSectionNameIdHash = [];
+	<%	for( IdValuePair pair : (List<IdValuePair>) testSectionsByName){
+			out.print( "testSectionNameIdHash[\'" + pair.getId()+ "\'] = \'" + pair.getValue() +"\';\n");
+		}
+	%>
+	window.location.href = "LogbookResults.do?testSectionId=" + $('testSectionsId').value + "&type=" + testSectionNameIdHash[$('testSectionsId').value] +
+							'&searchReceivedDate=' + $('searchReceivedDate').value;
+} 
 
 var showForceWarning = true;
 function forceTechApproval(checkbox, index ){
@@ -357,9 +592,9 @@ function processDateCallbackEvaluation(xhr) {
 
     if( !isValid ){
         if( message == 'invalid_value_to_large' ){
-            alert( '<bean:message key="error.date.inFuture"/>' );
+            alert( "<bean:message key="error.date.inFuture"/>" );
         }else if( message == 'invalid_value_to_small' ){
-            alert( '<bean:message key="error.date.inPast"/>' );
+            alert( "<bean:message key="error.date.inPast"/>" );
         }else if( message == "invalid"){
             alert( givenDate + " " + "<%=StringUtil.getMessageForKey("errors.date", "" )%>");
         }
@@ -372,23 +607,48 @@ function updateShadowResult(source, index){
   $jq("#shadowResult_" + index).val(source.value);
 }
 
+function /*void*/ handleEnterEvent() {
+	savePage();
+}
+
 </script>
 
 <logic:equal  name="<%=formName %>" property="displayTestSections" value="true">
 <div id="searchDiv" class="colorFill"  >
 <div id="PatientPage" class="colorFill" style="display:inline" >
 <h2><bean:message key="sample.entry.search"/></h2>
-	<table width="30%">
+	<table style="margin-left: auto; margin-right: auto;">
 		<tr bgcolor="white">
-			<td width="50%" align="right" >
-				<%= StringUtil.getMessageForKey("workplan.unit.types") %>
+			<td>
+				<%= StringUtil.getMessageForKey("workplan.unit.types") %><span class="requiredlabel">*</span>:&nbsp;
 			</td>
 			<td>
-			<html:select name='<%= formName %>' property="testSectionId" 
-				 onchange="submitTestSectionSelect(this);" >
-				<app:optionsCollection name="<%=formName%>" property="testSections" label="value" value="id" />
-			</html:select>
+				<html:select name='<%= formName %>' property="testSectionId" styleId="testSectionsId" 
+								onchange="validateField(this);" onblur="setSearch();" style="margin-left:3px; margin-right:6px;" >
+					<app:optionsCollection name="<%=formName%>" property="testSections" label="value" value="id" />
+				</html:select>
 	   		</td>
+	   		<!-- Added by markaae.fr 2016/10/04 10:13AM -->
+			<td>
+				<bean:message key="sample.receivedDate"/><span class="requiredlabel">*</span>:&nbsp;
+			</td>
+			<td>			
+				<app:text name="<%=formName%>" styleId="searchReceivedDate" onblur="checkValidEntryDate(this,'past',false);" maxlength="10"
+						property="searchReceivedDate" onkeyup="updateFieldError(this);addDateSlashes(this, event);" style="width:100px; margin-left:3px; margin-right:6px;" />
+		   	</td>
+		   	<td>
+	            <input type="button"
+		           name="searchResultsButton"
+		           class="btn btn-default"
+		           value="<%= StringUtil.getMessageForKey("label.patient.search")%>"
+		           id="searchResultsID"
+		           onclick="submitTestSectionSelect();"
+		           disabled="disabled"
+		           style="margin-top: -9px!important;height:30px;margin-left:3px;"
+		           class="btn btn-default"
+		           disabled="false" />
+		   	</td>	   			
+			<!-- End of Code Addition -->	   		
 		</tr>
 	</table>
 	<br/>
@@ -505,6 +765,8 @@ function updateShadowResult(source, index){
 	<html:hidden styleId="currentPageID" name="<%=formName%>" property="paging.currentPage"/>
 	<bean:define id="total" name="<%=formName%>" property="paging.totalPages"/>
 	<bean:define id="currentPage" name="<%=formName%>" property="paging.currentPage"/>
+	<bean:define id="currentPageTotal" name="<%=formName%>" property="paging.currentPageTotal"/>
+	<bean:define id="totalItems" name="<%=formName%>" property="paging.totalItems"/>
 
 	<%if( "1".equals(currentPage)) {%>
 		<input type="button" value='<%=StringUtil.getMessageForKey("label.button.previous") %>' style="width:100px;" disabled="disabled" >
@@ -518,15 +780,21 @@ function updateShadowResult(source, index){
 	<% } %>
 
 	&nbsp;
-	<bean:write name="<%=formName%>" property="paging.currentPage"/> <bean:message key="report.pageNumberOf" />
-	<bean:write name="<%=formName%>" property="paging.totalPages"/>
+		<bean:write name="<%=formName%>" property="paging.currentPage"/> <bean:message key="list.of"/>
+		<bean:write name="<%=formName%>" property="paging.totalPages"/>&nbsp;<bean:message key="list.pages"/>
+		
+	&nbsp; | &nbsp; 
+	<bean:write name="<%=formName%>" property="paging.currentPageTotal"/>
+	<bean:message key="list.of"/>
+	<bean:write name="<%=formName%>" property="paging.totalItems"/>&nbsp;<bean:message key="list.items"/>
+	
 	<div class='textcontent' style="float: right" >
 	<span style="visibility: hidden" id="searchNotFound"><em><%= StringUtil.getMessageForKey("search.term.notFound") %></em></span>
-	<%=StringUtil.getContextualMessageForKey("result.sample.id")%> : &nbsp;
+	<%=StringUtil.getContextualMessageForKey("resultsentry.accessionNumber")%> : &nbsp;
 	<input type="text"
 	       id="labnoSearch"
 	       maxlength='<%= Integer.toString(accessionNumberValidator.getMaxAccessionLength())%>' />
-	<input type="button" onclick="pageSearch.doLabNoSearch($(labnoSearch))" value='<%= StringUtil.getMessageForKey("label.button.search") %>'>
+	<input type="button"  class="btn btn-default" onclick="pageSearch.doLabNoSearch($(labnoSearch))" value='<%= StringUtil.getMessageForKey("label.button.search") %>' style="margin-top: -9px!important;height:30px;margin-left:3px;">
 	</div>
 </logic:notEqual>
 
@@ -542,6 +810,9 @@ function updateShadowResult(source, index){
 <Table style="width:100%" border="0" cellspacing="0" >
 	<!-- header -->
 	<tr >
+		<th style="text-align: center">
+	  		<bean:message key="row.label"/>
+		</th>
 		<% if( !compactHozSpace ){ %>
 		<th style="text-align: left">
 			<%=StringUtil.getContextualMessageForKey("result.sample.id")%>
@@ -553,21 +824,31 @@ function updateShadowResult(source, index){
 		</logic:equal>
 		<% } %>
 
-		<th style="text-align: left">
-			<bean:message key="result.test.date"/><br/>
-			<%=DateUtil.getDateUserPrompt()%>
+		<th style="text-align: center">
+			<bean:message key="result.test.beginDate"/><br/>
+			<!-- Trung Add -->
+			<input type="text" size="10" style="width:75px;" maxlength="10" id="autofillBeginDate"
+				onkeyup="addDateSlashes(this, event);"
+				onblur="checkValidEntryDate(this, 'past', true);"/>
+			<%-- <%=DateUtil.getDateUserPrompt()%> --%>
 		</th>
-		<logic:equal  name="<%=formName%>" property="displayTestMethod" value="true">
+		<th style="text-align: center; width: 110px;">
+			<bean:message key="analysis.result.date"/><br/>
+			<input type="text" size="10" style="width:75px;" maxlength="10" id="autofillcompletedDate" 
+				onkeyup="addDateSlashes(this, event);"
+				onblur="checkValidEntryDate(this, 'past', true);" />
+		</th>
+		<logic:equal name="<%=formName%>" property="displayTestMethod" value="true">
 			<th style="width: 72px; padding-right: 10px; text-align: center">
 				<bean:message key="result.method.auto"/>
 			</th>
 		</logic:equal>
-		<th style="text-align: left">
+		<th style="text-align: center">
 			<bean:message key="result.test"/>
 		</th>
 		<th style="width:16px">&nbsp;</th>
 		<th style="width: 56px; padding-right: 10px; text-align: center"><%= StringUtil.getContextualMessageForKey("result.forceAccept.header") %></th>
-		<th style="width:165px; text-align: left">
+		<th style="width:165px; text-align: center">
 			<bean:message key="result.result"/>
 		</th>
 		<% if( ableToRefer ){ %>
@@ -576,11 +857,11 @@ function updateShadowResult(source, index){
 		</th>
 		<% } %>
 		<% if( useTechnicianName ){ %>
-		<th style="text-align: left">
+		<th style="text-align: center;">
 			<bean:message key="result.technician"/>
-			<span class="requiredlabel">*</span><br/>
+			<span class="requiredlabel">*</span>
 			<% if(autofillTechBox){ %>
-			Autofill:<input type="text" size='10em' onchange="autofill( this )">
+			<bean:message key="result.autofill"/>: </br><input type="text" size='10em' onchange="autofill( this )">
 			<% } %>
 		</th>
 		<% }%>
@@ -589,12 +870,13 @@ function updateShadowResult(source, index){
             <bean:message key="result.rejected"/>&nbsp;
         </th>
         <% }%>
-		<th style="width:2%;text-align: left">
+		<th style="text-align: center">
 			<bean:message key="result.notes"/>
 		</th>
 	</tr>
 	<!-- body -->
 	<logic:iterate id="testResult" name="<%=formName%>"  property="testResult" indexId="index" type="TestResultItem">
+	<bean:define id="currentPage" name="<%=formName%>" property="paging.currentPage"/>
 	<logic:equal name="testResult" property="isGroupSeparator" value="true">
 	<tr>
 		<td colspan="10"><hr/></td>
@@ -620,14 +902,40 @@ function updateShadowResult(source, index){
 		<bean:define id="rowColor" value='<%=(testResult.getSampleGroupingNumber() % 2 == 0) ? "evenRow" : "oddRow" %>' />
 		<bean:define id="readOnly" value='<%=testResult.isReadOnly() ? "disabled=\'true\'" : "" %>' />
 		<bean:define id="accessionNumber" name="testResult" property="accessionNumber"/>
-
+	
+	<% 
+	boolean enableRowFields = false;
+    if (testResult.getStatusUserSession().getHasAssign().equals("Y")) {
+	    if (testResult.getStatusUserSession().getHasComplete().equals("Y")) {
+        	enableRowFields = true;
+	    } else {
+	    	if ( !StringUtil.isNullorNill(testResult.getResultValue()) && !testResult.getResultValue().equals("0") ) {
+	        	enableRowFields = true;
+	    	}
+	    }
+    }    
+   %>	
+   <logic:equal name="testResult" property="statusUserSession.hasView" value="Y">
    <% if( compactHozSpace ){ %>
    <logic:equal  name="testResult" property="showSampleDetails" value="true">
 		<tr class='<%= rowColor %>Head <%= accessionNumber%>' >
 			<td colspan="10" class='InterstitialHead' >
-			    <%=StringUtil.getContextualMessageForKey("result.sample.id")%> : &nbsp;
+			    <%=StringUtil.getContextualMessageForKey("resultsentry.accessionNumber")%> : &nbsp;
 				<b><bean:write name="testResult" property="accessionNumber"/> -
-				<bean:write name="testResult" property="sequenceNumber"/></b>
+				<bean:write name="testResult" property="sequenceNumber"/>
+				<logic:notEmpty  name="testResult" property="emergency">
+					<logic:equal name="testResult" property="emergency" 
+						value='<%=StringUtil.getContextualMessageForKey("vn.hse1.emergency")%>'>
+						<span style="color: blue;">(<bean:write name="testResult" property="emergency"/>)</span>&nbsp;
+					</logic:equal>
+					<logic:notEqual name="testResult" property="emergency" 
+						value='<%=StringUtil.getContextualMessageForKey("vn.hse1.emergency")%>'>
+						<span>(<bean:write name="testResult" property="emergency"/>)</span>&nbsp;
+					</logic:notEqual>
+				</logic:notEmpty>
+				</b>
+				<%=StringUtil.getContextualMessageForKey("project.browse.title")%>: &nbsp;
+				<b><bean:write name="testResult" property="projectName"/></b>
 				<% if(useInitialCondition){ %>
 					&nbsp;&nbsp;&nbsp;&nbsp;<bean:message key="sample.entry.sample.condition" />:
 					<b><bean:write name="testResult" property="initialSampleCondition" /></b>
@@ -648,6 +956,7 @@ function updateShadowResult(source, index){
 		</tr>
 	</logic:equal>
     <% } %>
+	
 	<tr class='<%= rowColor %>'  id='<%="row_" + index %>'>
 			<html:hidden name="testResult" property="isModified"  indexed="true" styleId='<%="modified_" + index%>' />
 			<html:hidden name="testResult" property="analysisId"  indexed="true" styleId='<%="analysisId_" + index%>' />
@@ -669,6 +978,10 @@ function updateShadowResult(source, index){
 			<logic:notEmpty name="testResult" property="thisReflexKey">
 					<input type="hidden" id='<%= testResult.getThisReflexKey() %>' value='<%= index %>' />
 			</logic:notEmpty>
+		
+		<td class="ruled" id="'<%="rowNum_" + index %>'" style="text-align:center;">
+    		<%= (index + 1) + ((Integer.parseInt(currentPage.toString()) - 1) * IActionConstants.PAGING_SIZE) %>
+   		</td>	
 		 <% if( !compactHozSpace ){ %>
 	     <td class='<%= accessionNumber%>'>
 			<logic:equal  name="testResult" property="showSampleDetails" value="true">
@@ -686,16 +999,39 @@ function updateShadowResult(source, index){
 		</logic:equal>
 		<% } %>
 		<!-- date cell -->
-		<td class="ruled">
+		<td class="ruled" style="text-align:center;">
 			<html:text name="testResult"
-                       property="testDate"
+                       property="startedDate"
                        indexed="true"
                        size="10"
+                       style="width:75px;"
                        maxlength="10"
                        tabindex='-1'
                        onchange='<%="markUpdated(" + index + ");checkValidDate(this, processDateCallbackEvaluation, \'past\', false)" %>'
+                       onblur="checkValidEntryDate(this, 'past', true);"
                        onkeyup="addDateSlashes(this, event);"
-                       styleId='<%="testDate_" + index%>'/>
+                       styleId='<%="startedDate_" + index%>'
+                       disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'
+                       styleClass='<%= GenericValidator.isBlankOrNull(testResult.getTechnicianSignatureId()) ? "startedDate" : "" %>'/>
+		</td>
+		<!-- Trung Add -->
+		<td class="ruled" style="text-align:center;">
+			<html:text name="testResult"
+                       property="completedDate"
+                       indexed="true"
+                       size="10"
+                       style="width:75px;"
+                       maxlength="10"
+                       tabindex='-1'
+                       onchange='<%="markUpdated(" + index + ");checkValidDate(this, processDateCallbackEvaluation, \'past\', false)" %>'
+                       onblur="checkValidEntryDate(this, 'past', true);"
+                       onkeyup="addDateSlashes(this, event);"
+                       styleId='<%="completedDate_" + index%>'
+                       disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'
+                       styleClass='<%= GenericValidator.isBlankOrNull(testResult.getTechnicianSignatureId()) ? "completedDate" : "" %>'/>
+			<%-- <input type="text" size="10" style="width:75px;" maxlength="10" id="newColumn"
+				onkeyup="addDateSlashes(this, event);"
+				class='<%= GenericValidator.isBlankOrNull(testResult.getTechnicianSignatureId()) ? "completedDate" : "" %>'/> --%>
 		</td>
 		<logic:equal  name="<%=formName%>" property="displayTestMethod" value="true">
 			<td class="ruled" style='text-align: center'>
@@ -703,7 +1039,8 @@ function updateShadowResult(source, index){
 							property="analysisMethod"
 							indexed="true"
 							tabindex='-1'
-							onchange='<%="markUpdated(" + index + ");"%>' />
+							onchange='<%="markUpdated(" + index + ");"%>'
+                       		disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'/>
 			</td>
 		</logic:equal>
 		<!-- results -->
@@ -760,10 +1097,11 @@ function updateShadowResult(source, index){
 		<logic:notEqual name="testResult" property="resultDisplayType" value="HIV"><logic:notEqual name="testResult" property="resultDisplayType" value="SYPHILIS">
 			<td style="vertical-align:middle" class="ruled">
                 <%= testResult.getTestName() %>
-				<logic:notEmpty  name="testResult"  property="normalRange" >
-					<br/><bean:write name="testResult" property="normalRange"/>&nbsp;
-					<bean:write name="testResult" property="unitsOfMeasure"/>
+                <br/>
+				<logic:notEmpty  name="testResult" property="normalRange" >
+					<bean:write name="testResult" property="normalRange"/>&nbsp;
 				</logic:notEmpty>
+				<bean:write name="testResult" property="unitsOfMeasure"/>
 			</td>
 		</logic:notEqual></logic:notEqual>
 
@@ -783,8 +1121,8 @@ function updateShadowResult(source, index){
 							property="forceTechApproval"
 							indexed="true"
 							tabindex='-1'
-							onchange='<%="markUpdated(" + index + "); forceTechApproval(this, " + index + ");" %>' 
-							/>
+							onchange='<%="markUpdated(" + index + "); " %>'
+                       		disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'/>
 		</td>
 		<!-- result cell -->
 		<td id='<%="cell_" + index %>' class="ruled" >
@@ -794,53 +1132,59 @@ function updateShadowResult(source, index){
 			           size="6" 
 			           value='<%= testResult.getResultValue() %>' 
 			           id='<%= "results_" + index %>'
-			           style='<%="background: " + (testResult.isValid() ? testResult.isNormal() ? "#ffffff" : "#ffffa0" : "#ffa0a0") %>'
+                       <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                       <%=!enableRowFields ? "disabled='disabled'" : ""%>
+			           style='<%=!(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? 
+			                   "background: " + (testResult.isValid() ? testResult.isNormal() ? "#ffffff" : "#ffffa0" : "#ffa0a0") :
+			                       "background: #eeeeee"%>'
 			           title='<%= (testResult.isValid() ? testResult.isNormal() ? "" : StringUtil.getMessageForKey("result.value.abnormal") : StringUtil.getMessageForKey("result.value.invalid")) %>' 
-					   <%= testResult.isReadOnly() ? "disabled='disabled'" : ""%>
 					   class='<%= (testResult.isReflexGroup() ? "reflexGroup_" + testResult.getReflexParentGroup()  : "")  +  (testResult.isChildReflex() ? " childReflex_" + testResult.getReflexParentGroup() : "") %> ' 
 					   onchange='<%="validateResults( this," + index + "," + lowerBound + "," + upperBound + "," + lowerAbnormalBound + "," + upperAbnormalBound + "," + significantDigits +", \"XXXX\" );" +
 						               "markUpdated(" + index + "); " +
-						                (testResult.isReflexGroup() && !testResult.isChildReflex() ? "updateReflexChild(" + testResult.getReflexParentGroup()  +  " ); " : "") +
-						                ( noteRequired && !"".equals(testResult.getResultValue())  ? "showNote( " + index + ");" : ""  ) + 
+						                (testResult.isReflexGroup() && !testResult.isChildReflex() ? "updateReflexChild(" + testResult.getReflexParentGroup()  +  " ); " : "") 
+						                   + 
 						                ( testResult.isDisplayResultAsLog() ? " updateLogValue(this, " + index + ");" : "" ) +
 						                  " updateShadowResult(this, " + index + ");"%>'/>
-			</logic:equal><logic:equal name="testResult" property="resultType" value="A">
+			</logic:equal>
+			<logic:equal name="testResult" property="resultType" value="A">
 				<app:text name="testResult"
 						  indexed="true"
 						  property="resultValue"
 						  size="20"
-						  disabled='<%= testResult.isReadOnly() %>'
-						  style='<%="background: " + (testResult.isValid() ? testResult.isNormal() ? "#ffffff" : "#ffffa0" : "#ffa0a0") %>'
+                          disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6)  || !enableRowFields%>'
+						  style='<%=!(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? 
+                               "background: " + (testResult.isValid() ? testResult.isNormal() ? "#ffffff" : "#ffffa0" : "#ffa0a0") :
+                                   "background: #eeeeee"%>'
 						  title='<%= (testResult.isValid() ? testResult.isNormal() ? "" : StringUtil.getMessageForKey("result.value.abnormal") : StringUtil.getMessageForKey("result.value.invalid")) %>' 
 						  styleId='<%="results_" + index %>'
 						  onchange='<%="markUpdated(" + index + ");"  +
 						  			   ( testResult.isDisplayResultAsLog() ? " updateLogValue(this, " + index + ");" : "" ) +
-						               ((noteRequired && !"".equals(testResult.getResultValue()) ) ? "showNote( " + index + ");" : "") +
 						                " updateShadowResult(this, " + index + ");"%>'/>
-			</logic:equal><logic:equal name="testResult" property="resultType" value="R">
+			</logic:equal>
+			<logic:equal name="testResult" property="resultType" value="R">
 				<!-- text results -->
 				<app:textarea name="testResult"
 						  indexed="true"
 						  property="resultValue"
 						  rows="2"
-						  disabled='<%= testResult.isReadOnly() %>'
+                       	  disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'/>
 						  style='<%="background: " + (testResult.isValid() ? testResult.isNormal() ? "#ffffff" : "#ffffa0" : "#ffa0a0") %>'
 						  title='<%= (testResult.isValid() ? testResult.isNormal() ? "" : StringUtil.getMessageForKey("result.value.abnormal") : StringUtil.getMessageForKey("result.value.invalid")) %>'
 						  styleId='<%="results_" + index %>'
 						  onkeyup='<%="value = value.substr(0, 200); markUpdated(" + index + ");"  +
-						               ((noteRequired && !"".equals(testResult.getResultValue()) ) ? "showNote( " + index + ");" : "") +
 						                " updateShadowResult(this, " + index + ");"%>'
 						  />
 			</logic:equal>
-			<% if( "D".equals(testResult.getResultType())  ){ %>
+			<% if("D".equals(testResult.getResultType())  ){ %>
 			<!-- dictionary results -->
 			<select name="<%="testResult[" + index + "].resultValue" %>"
-			        onchange="<%="markUpdated(" + index + ", " + testResult.isUserChoiceReflex() +  ", \'" + testResult.getSiblingReflexKey() + "\');"   +
-						               ((noteRequired && !"".equals(testResult.getResultValue()) )? "showNote( " + index + ");" : "") +
+			        onchange="<%="markUpdated(" + index + ", " + testResult.isUserChoiceReflex() +  ", \'" + testResult.getSiblingReflexKey() + "\');"   +				               
 						               (testResult.getQualifiedDictionaryId() != null ? "showQuanitiy( this, "+ index + ", " + testResult.getQualifiedDictionaryId() + ", 'D');" :"") +
 						                 " updateShadowResult(this, " + index + ");"%>"
 			        id='<%="resultId_" + index%>'
-			        <%=testResult.isReadOnly()? "disabled=\'true\'" : "" %> >
+                    <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                    <%=!enableRowFields ? "disabled='disabled'" : ""%>
+                     >
 					<option value="0"></option>
 					<logic:iterate id="optionValue" name="testResult" property="dictionaryResults" type="IdValuePair" >
 						<option value='<%=optionValue.getId()%>'  <%if(optionValue.getId().equals(testResult.getResultValue())) out.print("selected"); %>  >
@@ -852,22 +1196,29 @@ function updateShadowResult(source, index){
 			           name='<%="testResult[" + index + "].qualifiedResultValue" %>' 
 			           value='<%= testResult.getQualifiedResultValue() %>' 
 			           id='<%= "qualifiedDict_" + index %>'
-			           style = '<%= "display:" + (testResult.isHasQualifiedResult() ? "inline" : "none") %>'
-					   <%= testResult.isReadOnly() ? "disabled='disabled'" : ""%>
-					   onchange='<%="markUpdated(" + index + ");" %>'
+                       <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                       <%=!enableRowFields ? "disabled='disabled'" : ""%>
+					   style = '<%= "display:" + ((testResult.isHasQualifiedResult() || 
+					           (testResult.getQualifiedDictionaryId() != null 
+					           && testResult.getResultValue() != "" 
+					           && !"0".equals(testResult.getResultValue()) 
+					           && testResult.getQualifiedDictionaryId().indexOf(testResult.getResultValue()) != -1)) ? "inline" : "none") %>'
+					   onchange='<%="markUpdated(" + index + ");$jq(\"#hasQualifiedResult_" + index + "\").val(\"true\");"%>'
 					    />
-			<% } %><logic:equal name="testResult" property="resultType" value="M">
+			<% } %>
+			<logic:equal name="testResult" property="resultType" value="M">
 			<!-- multiple results -->
 			<select name="<%="testResult[" + index + "].multiSelectResultValues" %>"
 					id='<%="resultId_" + index + "_0"%>'
                     class="<%=testResult.isUserChoiceReflex() ? "userSelection" : "" %>"
 					multiple="multiple"
-					<%=testResult.isReadOnly()? "disabled=\'disabled\'" : "" %> 
-						 title='<%= StringUtil.getMessageForKey("result.multiple_select")%>'
-						 onchange='<%="markUpdated(" + index + "); "  +
-						               ((noteRequired && testResult.getMultiSelectResultValues() != null && testResult.getMultiSelectResultValues().length() > 2 ) ? "showNewNote( " + index + ");" : "") +
-						               (testResult.getQualifiedDictionaryId() != null ? "showQuanitiy( this, "+ index + ", " + testResult.getQualifiedDictionaryId() + ", \"M\" );" :"")%>' >
-						<logic:iterate id="optionValue" name="testResult" property="dictionaryResults" type="IdValuePair" >
+                    <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                    <%=!enableRowFields ? "disabled='disabled'" : ""%>
+				 	title='<%= StringUtil.getMessageForKey("result.multiple_select")%>'
+				 	onchange='<%="markUpdated(" + index + "); "  +
+				               ((noteRequired && testResult.getMultiSelectResultValues() != null && testResult.getMultiSelectResultValues().length() > 2 ) ? "showNewNote( " + index + ");" : "") +
+				               (testResult.getQualifiedDictionaryId() != null ? "showQuanitiy( this, "+ index + ", " + testResult.getQualifiedDictionaryId() + ", \"M\" );" :"")%>' >
+					<logic:iterate id="optionValue" name="testResult" property="dictionaryResults" type="IdValuePair" >
 						<option value='<%=optionValue.getId()%>' >
 							<bean:write name="optionValue" property="value"/>
 						</option>
@@ -879,7 +1230,8 @@ function updateShadowResult(source, index){
                    value='<%= testResult.getQualifiedResultValue() %>'
                    id='<%= "qualifiedDict_" + index %>'
                    style = '<%= "display:" + ( testResult.isHasQualifiedResult() ? "inline" : "none") %>'
-                    <%= testResult.isReadOnly() ? "disabled='disabled'" : ""%>
+                   <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                   <%=!enableRowFields ? "disabled='disabled'" : ""%>
                    onchange='<%="markUpdated(" + index + ");" %>'
                 />
 			</logic:equal>
@@ -891,7 +1243,8 @@ function updateShadowResult(source, index){
                         id='<%="resultId_" + index + "_0"%>'
                         class="<%=testResult.isUserChoiceReflex() ? "userSelection" : "" %>"
                         multiple="multiple"
-                        <%=testResult.isReadOnly()? "disabled=\'disabled\'" : "" %>
+                    	<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                    	<%=!enableRowFields ? "disabled='disabled'" : ""%>
                         title='<%= StringUtil.getMessageForKey("result.multiple_select")%>'
                         onchange='<%="markUpdated(" + index + "); "  +
 						               ((noteRequired && testResult.getMultiSelectResultValues() != null && testResult.getMultiSelectResultValues().length() > 2 ) ? "showNewNote( " + index + ");" : "") +
@@ -910,7 +1263,8 @@ function updateShadowResult(source, index){
                        value='<%= testResult.getQualifiedResultValue() %>'
                        id='<%= "qualifiedDict_" + index %>'
                        style = '<%= "display:" + ( testResult.isHasQualifiedResult() ? "inline" : "none") %>'
-                        <%= testResult.isReadOnly() ? "disabled='disabled'" : ""%>
+                       <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                       <%=!enableRowFields ? "disabled='disabled'" : ""%>
                        onchange='<%="markUpdated(" + index + ");" %>'
                         />
 
@@ -929,8 +1283,9 @@ function updateShadowResult(source, index){
 													out.print("--");} %>'
 									size='6' /> log
 					<% } %>
-            <bean:write name="testResult" property="unitsOfMeasure"/>
+           <%--  <bean:write name="testResult" property="unitsOfMeasure"/> --%>
 		</td>
+		<!-- End result cell -->
 		<% if( ableToRefer ){ %>
 		<td style="white-space: nowrap" class="ruled">
             <html:hidden name="testResult" property="referralId" indexed='true'/>
@@ -965,16 +1320,18 @@ function updateShadowResult(source, index){
 		</td>
 		<% } %>
 		<% if( useTechnicianName){ %>
-		<td style="text-align: left" class="ruled">
+		<td style="text-align: center" class="ruled">
 			<app:text name="testResult"
 					   styleId='<%="technicianSig_" + index %>'
 					   styleClass='<%= GenericValidator.isBlankOrNull(testResult.getTechnicianSignatureId()) ? "techName" : "" %>'
 					   property="technician"
-					   disabled='<%= testResult.isReadOnly() %>'
-					   indexed="true" style="margin: 1px"
 					   size="10em"
-                       maxlength="18"
-					   onchange='<%="markUpdated(" + index + ");"%>'/>
+                       maxlength="20"
+                       tabindex="-1"
+					   onchange='<%="markUpdated(" + index + ");"%>'
+                       disabled='<%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields%>'
+                       />
+                       
 		</td>
 		<% } %>
 		<% if( useRejected){ %> 
@@ -990,12 +1347,13 @@ function updateShadowResult(source, index){
 	                    onchange='<%="markUpdated(" + index + "); showHideRejectionReasons(" + index + ", \'" + StringUtil.getContextualMessageForKey( "result.delete.confirm" ) + "\' );" %>' />
 	   		</td>
 		<% } %>
-		<td style="text-align:left" class="ruled">
+		<td style="text-align:center" class="ruled">
 						 	<img src="./images/note-add.gif"
-						 	     onclick='<%= "showHideNotes( " + index + ");" %>'
+						 	     onclick='<%= "showHideNotes( " + index + ", this);" %>'
 						 	     id='<%="showHideButton_" + index %>'
+						 	     <%=((!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) || !enableRowFields) ? "disabled=true" : ""%>
 						    />
-            <input type="hidden" name="hideShowFlag" value="hidden" id='<%="hideShow_" + index %>' >
+            <input type="hidden" name="hideShowFlag" value="hidden" id='<%="hideShow_" + index %>'>
 		</td>
 	</tr>
 	<tr id='<%="rejectReasonRow_" + index %>'
@@ -1005,7 +1363,8 @@ function updateShadowResult(source, index){
         <td colspan="6" style="text-align:right" >
                <select name="<%="testResult[" + index + "].rejectReasonId"%>"
                     id='<%="rejectReasonId_" + index%>'
-                    <%=testResult.isReadOnly()? "disabled=\'true\'" : "" %> >
+                    <%=(!StringUtil.isNullorNill(testResult.getAnalysisStatusId()) && Integer.valueOf(testResult.getAnalysisStatusId()) == 6) ? "disabled='disabled'" : ""%>
+                    <%=!enableRowFields ? "disabled='disabled'" : ""%>
                     <logic:iterate id="optionValue" name="<%=formName %>" property="rejectReasons" type="IdValuePair" >
                         <option value='<%=optionValue.getId()%>'  <%if(optionValue.getId().equals(testResult.getRejectReasonId())) out.print("selected"); %>  >
                             <bean:write name="optionValue" property="value"/>
@@ -1025,14 +1384,17 @@ function updateShadowResult(source, index){
 	<tr id='<%="noteRow_" + index %>'
 		class='<%= rowColor %>'
 		style="display: none;">
-		<td colspan="4" style="vertical-align:top;text-align:right"><% if(noteRequired &&
+		<!-- Commented by Mark 2016/06/14 04:07 VST -->
+		<%-- <td colspan="4" style="vertical-align:top;text-align:right"><% if(noteRequired &&
 														 !(GenericValidator.isBlankOrNull(testResult.getMultiSelectResultValues()) && 
 														   GenericValidator.isBlankOrNull(testResult.getResultValue()))){ %>
 													  <bean:message key="note.required.result.change"/>		
 													<% } else {%>
 													<bean:message key="note.note"/>
 													<% } %>
-													:</td>
+													:</td> --%>
+		<!-- End of Comment -->											
+		<td colspan="4" style="vertical-align:top;text-align:right"><bean:message key="note.note"/>:</td>
 		<td colspan="6" style="text-align:left" >
 			<html:textarea styleId='<%="note_" + index %>'
 						   onchange='<%="markUpdated(" + index + ");"%>'
@@ -1040,9 +1402,12 @@ function updateShadowResult(source, index){
 			           	   property="note"
 			           	   indexed="true"
 			           	   cols="100"
-			           	   rows="3" />
+			           	   style="resize:none;"
+			           	   rows="6" 
+			           	   disabled='<%=!enableRowFields%>'/>
 		</td>
 	</tr>
+	</logic:equal>
 	</logic:equal>
 	</logic:iterate>
 </Table>
@@ -1050,6 +1415,8 @@ function updateShadowResult(source, index){
 	<html:hidden styleId="currentPageID" name="<%=formName%>" property="paging.currentPage"/>
 	<bean:define id="total" name="<%=formName%>" property="paging.totalPages"/>
 	<bean:define id="currentPage" name="<%=formName%>" property="paging.currentPage"/>
+	<bean:define id="currentPageTotal" name="<%=formName%>" property="paging.currentPageTotal"/>
+	<bean:define id="totalItems" name="<%=formName%>" property="paging.totalItems"/>
 
 	<%if( "1".equals(currentPage)) {%>
 		<input type="button" value='<%=StringUtil.getMessageForKey("label.button.previous") %>' style="width:100px;" disabled="disabled" >
@@ -1063,8 +1430,13 @@ function updateShadowResult(source, index){
 	<% } %>
 
 	&nbsp;
-	<bean:write name="<%=formName%>" property="paging.currentPage"/> of
-	<bean:write name="<%=formName%>" property="paging.totalPages"/>
+		<bean:write name="<%=formName%>" property="paging.currentPage"/> <bean:message key="list.of"/>
+		<bean:write name="<%=formName%>" property="paging.totalPages"/>&nbsp;<bean:message key="list.pages"/>
+		
+	&nbsp; | &nbsp; 
+	<bean:write name="<%=formName%>" property="paging.currentPageTotal"/>
+	<bean:message key="list.of"/>
+	<bean:write name="<%=formName%>" property="paging.totalItems"/>&nbsp;<bean:message key="list.items"/>
 </logic:notEqual>
 
 </logic:notEqual>
@@ -1072,9 +1444,9 @@ function updateShadowResult(source, index){
 
 <logic:equal  name="<%=formName %>" property="displayTestSections" value="true">
 	<logic:equal name="testCount"  value="0">
-		<logic:notEmpty name="<%=formName %>" property="testSectionId">
+		<logic:notEqual name="<%=formName %>" property="testSectionId" value="0">
 		<h2><%= StringUtil.getContextualMessageForKey("result.noTestsFound") %></h2>
-		</logic:notEmpty>
+		</logic:notEqual>
 	</logic:equal>
 </logic:equal>
 

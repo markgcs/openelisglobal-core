@@ -17,6 +17,7 @@
 package us.mn.state.health.lims.common.services.historyservices;
 
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.audittrail.action.workers.AuditTrailItem;
 import us.mn.state.health.lims.audittrail.valueholder.History;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -43,6 +44,16 @@ public class PatientHistoryHistoryService extends HistoryService {
 
 	private static final String ORGANIZATION_ATTRIBUTE = "organization";
     private static final String REFERRING_PATIENT_ID_ATTRIBUTE = "referrersPatientId";
+    // Added by Mark 2016-09-12 01:27PM
+    private static final String PAYMENT_STATUS_ATTRIBUTE = "paymentStatus";
+    private static final String ORDER_URGENCY_ATTRIBUTE = "orderUrgency";
+    private static final String PATIENT_DIAGNOSIS_ATTRIBUTE = "patientDiagnosis";
+    private static final String PATIENT_AGE_VALUE_ATTRIBUTE = "patientAgeValue";
+    private static final String PATIENT_AGE_UNITS_ATTRIBUTE = "patientAgeUnits";
+    private static final String PATIENT_CLINICAL_DEPT_ID_ATTRIBUTE = "patientClinicalDeptId";
+    private static final String SPECIES_NAME_ATTRIBUTE = "speciesName";
+    private static final String RECEIVED_DATE_ATTRIBUTE = "receivedDate";
+    // End of Modification
 
 	private static ObservationHistoryDAO observationDAO = new ObservationHistoryDAOImpl();
 	private static SampleOrganizationDAO sampleOrgDAO = new SampleOrganizationDAOImpl();
@@ -62,6 +73,17 @@ public class PatientHistoryHistoryService extends HistoryService {
 		attributeToIdentifierMap = new HashMap<String, String>();
 		attributeToIdentifierMap.put(ORGANIZATION_ATTRIBUTE, "Referring Organization");
         attributeToIdentifierMap.put(REFERRING_PATIENT_ID_ATTRIBUTE, StringUtil.getMessageForKey( "sample.referring.patientNumber" ));
+        
+        // Added by Mark 2016-09-12 01:27PM
+        attributeToIdentifierMap.put(PAYMENT_STATUS_ATTRIBUTE, StringUtil.getMessageForKey("payment.status"));
+        attributeToIdentifierMap.put(ORDER_URGENCY_ATTRIBUTE, StringUtil.getMessageForKey("order.urgency"));
+        attributeToIdentifierMap.put(PATIENT_DIAGNOSIS_ATTRIBUTE, StringUtil.getMessageForKey("patient.patient.diagnosis"));
+        attributeToIdentifierMap.put(PATIENT_AGE_VALUE_ATTRIBUTE, StringUtil.getMessageForKey("patient.age.value"));
+        attributeToIdentifierMap.put(PATIENT_AGE_UNITS_ATTRIBUTE, StringUtil.getMessageForKey("patient.age.units"));
+        attributeToIdentifierMap.put(PATIENT_CLINICAL_DEPT_ID_ATTRIBUTE, StringUtil.getMessageForKey("patient.department"));
+        attributeToIdentifierMap.put(SPECIES_NAME_ATTRIBUTE, StringUtil.getMessageForKey("patient.speciesName"));
+        attributeToIdentifierMap.put(RECEIVED_DATE_ATTRIBUTE, StringUtil.getMessageForKey("quick.entry.received.date"));
+        // End of Modification
 
 		newValueMap = new HashMap<String, String>();
         historyList = new ArrayList<History>();
@@ -95,7 +117,8 @@ public class PatientHistoryHistoryService extends HistoryService {
             identifier = ObservationHistoryTypeMap.getInstance().getTypeFromId(observation.getObservationHistoryTypeId());
             setIdentifierForKey( identifier );
 			AuditTrailItem item = getCoreTrail(history);
-			item.setNewValue(getObservationValue(observation));
+			String observationKey = history.getReferenceId();
+			item.setNewValue(newValueMap.get(observationKey));
 			items.add(item);
 		} else {
 			setAndAddIfValueNotNull(items, history, ORGANIZATION_ATTRIBUTE);
@@ -110,7 +133,8 @@ public class PatientHistoryHistoryService extends HistoryService {
 			changeMap.put(STATUS_ATTRIBUTE, status);
 		}
 		String value = extractSimple(changes, "value");
-		if (value != null) {
+		// add to check value empty, missing checking empty will lead to error
+		if (value != null && !value.isEmpty()) {
 			value = getCorrectValueForHistory(history, value);
 			
 			changeMap.put(VALUE_ATTRIBUTE, value);
@@ -133,7 +157,10 @@ public class PatientHistoryHistoryService extends HistoryService {
 		obsHistory = observationDAO.getById(obsHistory);
 		//System.out.println(obsHistory.getObservationHistoryTypeId() + " : " + value);
 		if( "D".equals(obsHistory.getValueType())){
-			return dictDAO.getDataForId(value).getDictEntry();
+		    Dictionary dict = dictDAO.getDataForId(value);
+		    if (dict != null) {
+		        return dictDAO.getDataForId(value).getDictEntry();
+		    }
 		}
 		
 		return value;

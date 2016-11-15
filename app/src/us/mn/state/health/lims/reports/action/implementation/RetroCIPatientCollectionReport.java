@@ -2,6 +2,7 @@ package us.mn.state.health.lims.reports.action.implementation;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.beanutils.PropertyUtils;
@@ -70,6 +71,36 @@ public class RetroCIPatientCollectionReport extends CollectionReport implements 
 			}
 		}
 		return byteList;
+	}
+
+	@Override
+	public void setImageUrl(String url) {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public byte[] runReportForExcel() throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String getReportName() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		// TODO Auto-generated method stub
+	}
+
+	/* (non-Javadoc)
+	 * @see us.mn.state.health.lims.reports.action.implementation.IReportCreator#setRightImageUrl(java.lang.String)
+	 */
+	@Override
+	public void setRightImageUrl(String url) {
+		// TODO Auto-generated method stub
 	}
 
 }

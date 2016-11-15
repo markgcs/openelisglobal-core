@@ -16,36 +16,39 @@
  */
 package us.mn.state.health.lims.workplan.action;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.AnalysisService;
 import us.mn.state.health.lims.common.services.DisplayListService;
-import us.mn.state.health.lims.common.services.ObservationHistoryService;
 import us.mn.state.health.lims.common.services.DisplayListService.ListType;
+import us.mn.state.health.lims.common.services.ObservationHistoryService;
 import us.mn.state.health.lims.common.services.ObservationHistoryService.ObservationType;
 import us.mn.state.health.lims.common.services.QAService;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
-import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.StringUtil;
-import us.mn.state.health.lims.resultvalidation.bean.AnalysisItem;
+import us.mn.state.health.lims.login.dao.UserModuleDAO;
+import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.test.dao.TestSectionDAO;
 import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
 import us.mn.state.health.lims.test.valueholder.TestSection;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.List;
 
 public class WorkplanByTestSectionAction extends BaseWorkplanAction {
 
@@ -66,6 +69,9 @@ public class WorkplanByTestSectionAction extends BaseWorkplanAction {
 		request.getSession().setAttribute(SAVE_DISABLED, "true");
 
 		String testSectionId = (request.getParameter("testSectionId"));
+        String receivedDate = (request.getParameter("receivedDate"));
+        String completedDate = (request.getParameter("completedDate"));
+        String startedDate = (request.getParameter("startedDate"));
 
 		// Initialize the form.
 		dynaForm.initialize(mapping);
@@ -73,51 +79,66 @@ public class WorkplanByTestSectionAction extends BaseWorkplanAction {
 		
 		// load testSections for drop down
 		TestSectionDAO testSectionDAO = new TestSectionDAOImpl();
-		PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.getList(ListType.TEST_SECTION));
+		//Tien add
+		UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
+		// check if user is admin, load all test sections
+		if(userModuleDAO.isUserAdmin(request)){
+		    PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.getList(ListType.TEST_SECTION));
+		}
+		//if not admin, only load test sections belong to this user
+		else{
+		    PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.createTestSectionListByUserId(currentUserId));
+		}
+		//end
+//		PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.createTestSectionListByUserId(currentUserId));		
 		PropertyUtils.setProperty(dynaForm, "testSectionsByName", DisplayListService.getList(ListType.TEST_SECTION_BY_NAME));
 		
 		TestSection ts = null;
-		
 		if (!GenericValidator.isBlankOrNull(testSectionId)) {
 			ts = testSectionDAO.getTestSectionById(testSectionId);
-			PropertyUtils.setProperty(dynaForm, "testSectionId", "0");
+			PropertyUtils.setProperty(dynaForm, "testSectionId", testSectionId);
 		}
-		
-		
 		
 		List<TestResultItem> workplanTests = new ArrayList<TestResultItem>();
 
 		nfsTestIdList = new ArrayList<String>();
-		if( HAS_NFS_PANEL){
+		if (HAS_NFS_PANEL) {
 			setNFSTestIdList();
 		}
 
 		// workplan by department
 		setRequestType(ts == null ? StringUtil.getMessageForKey("workplan.unit.types") : ts.getLocalizedName());
-		if (!GenericValidator.isBlankOrNull(testSectionId)) {
+		if (!GenericValidator.isBlankOrNull(testSectionId)/* && 
+                (!GenericValidator.isBlankOrNull(receivedDate) || !GenericValidator.isBlankOrNull(resultDate))*/) {
 			// get tests based on test section
-			workplanTests = getWorkplanByTestSection(testSectionId);
+			workplanTests = getWorkplanByTestSection(testSectionId, receivedDate, startedDate, completedDate);
+            // Added by markaae.fr 2016-10-04 07:50AM
+            PropertyUtils.setProperty(dynaForm, "receivedDate", receivedDate);
+            PropertyUtils.setProperty(dynaForm, "completedDate", completedDate);
+            PropertyUtils.setProperty(dynaForm, "startedDate", startedDate);
+            // End of Modification
 			PropertyUtils.setProperty(dynaForm, "workplanTests", workplanTests);
 			PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.TRUE);
-			PropertyUtils.setProperty(dynaForm, "testName", ts.getLocalizedName());
 
 		} else {
 			// set workplanTests as empty
 			PropertyUtils.setProperty(dynaForm, "workplanTests", new ArrayList<TestResultItem>());
 		}
-		resultsLoadUtility.sortByAccessionAndSequence(workplanTests);
+		//resultsLoadUtility.sortByAccessionAndSequence(workplanTests);
+		
 		// add Patient Name to test table 
 		if (isPatientNameAdded())
 		    addPatientNamesToList(workplanTests);
 		PropertyUtils.setProperty(dynaForm, "workplanType", workplan);
 		PropertyUtils.setProperty(dynaForm, "searchLabel", StringUtil.getMessageForKey("workplan.unit.types"));
+		
 		return mapping.findForward(FWD_SUCCESS);
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<TestResultItem> getWorkplanByTestSection(String testSectionId) {
+	private List<TestResultItem> getWorkplanByTestSection(String testSectionId, String receivedDate, String startedDate, String completedDate) {
 
-		List<Analysis> testList = new ArrayList<Analysis>();
+		List<Object[]> testList = new ArrayList<Object[]>();
 		List<TestResultItem> workplanTestList = new ArrayList<TestResultItem>();
 		String currentAccessionNumber = new String();
 		String subjectNumber = new String();
@@ -129,17 +150,24 @@ public class WorkplanByTestSectionAction extends BaseWorkplanAction {
 		boolean isNFSTest = false;
 		TestResultItem testResultItem = new TestResultItem();
 
-		if (!(GenericValidator.isBlankOrNull(testSectionId))) {
+		if ( !GenericValidator.isBlankOrNull(testSectionId)/* && 
+                (!GenericValidator.isBlankOrNull(receivedDate) || !GenericValidator.isBlankOrNull(resultDate))*/ ) {
 
-			String sectionId = testSectionId; 
-			testList = (List<Analysis>) analysisDAO.getAllAnalysisByTestSectionAndStatus(sectionId, statusList, true);
+			String sectionId = testSectionId; //getTestSectionId();
+			testList = (List<Object[]>) analysisDAO.getAllAnalysisByTestSectionAndStatusAndDate(sectionId, statusList, true,
+			                                                                                     receivedDate, startedDate, completedDate);
 
 			if (testList.isEmpty()) {
 				return new ArrayList<TestResultItem>();
 			}
 			
 			
-			for (Analysis analysis : testList) {
+			for (Object[] analysisInfo : testList) {
+				String analysisId = (String) ((BigDecimal)analysisInfo[0]).toString();
+				Analysis analysis = (Analysis) analysisDAO.getAnalysisById(analysisId);
+				String emergency = (String) (analysisInfo[3] != null ? analysisInfo[3] : "");
+				String projectName = (String) (analysisInfo[4] != null ? analysisInfo[4] : "");
+				
 				Sample sample = analysis.getSampleItem().getSample();
 				String analysisAccessionNumber = sample.getAccessionNumber();
 
@@ -176,6 +204,11 @@ public class WorkplanByTestSectionAction extends BaseWorkplanAction {
 				testResultItem.setNonconforming(QAService.isAnalysisParentNonConforming(analysis));
 				testResultItem.setPatientInfo(subjectNumber);
 				testResultItem.setNextVisitDate( nextVisit );
+				testResultItem.setStartedDate(analysis.getStartedDateForDisplay());
+				testResultItem.setCompletedDate(analysis.getCompletedDateForDisplay());
+				testResultItem.setEmergency(emergency);
+				testResultItem.setProjectName(projectName);
+				
 				if (isPatientNameAdded())
 				    testResultItem.setPatientName(patientName);
 				testIdList.add(testResultItem.getTestId());

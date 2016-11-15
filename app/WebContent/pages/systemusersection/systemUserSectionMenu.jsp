@@ -14,7 +14,7 @@
 <bean:define id="formName" value='<%= (String)request.getAttribute(IActionConstants.FORM_NAME) %>' />
 
 
-<table width="100%" border=2">
+<table width="100%" border=2" id="sUserSection">
 	<tr>
 	   <th>
 	     <bean:message key="label.form.select"/>
@@ -39,17 +39,20 @@
 	   </th>
 	   <th>
 	   	  <bean:message key="systemusersection.has.cancel"/>
+	   </th>
+	   <th>
+	   	  <bean:message key="systemusersection.has.admin"/>
 	   </th>		   	   
 	</tr>
 	<logic:iterate id="systemUserSection" indexId="ctr" name="<%=formName%>" property="menuList" type="us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection">
 	<bean:define id="systemUserSectionId" name="systemUserSection" property="id"/>
 	  <tr>
 	   <td class="textcontent">
-	      <html:multibox name="<%=formName%>" property="selectedIDs">
+	      <html:multibox name="<%=formName%>" property="selectedIDs" onclick="output();">
 	         <bean:write name="systemUserSectionId" />
 	      </html:multibox>
    	   </td>
-	   <td class="textcontent">
+	   <td class="textcontent" style="text-align: left!important;">
  			<logic:notEmpty name="systemUserSection" property="systemUser">
 	   	  		<bean:write name="systemUserSection" property="systemUser.id"/>
 	   	  		&nbsp;&nbsp;
@@ -58,7 +61,7 @@
 		   	</logic:notEmpty>
 		   	 &nbsp;
 	   </td>
-	   <td class="textcontent">
+	   <td class="textcontent" style="text-align: left!important;">
 			<logic:notEmpty name="systemUserSection" property="testSection">
 	   	  		<bean:write name="systemUserSection" property="testSection.id"/>
 	   	  		&nbsp;&nbsp;
@@ -81,7 +84,9 @@
 	   <td class="textcontent">
 	   	  <bean:write name="systemUserSection" property="hasCancel"/>
 	   </td>	   	   	   	   
-	   
+	   <td class="textcontent">
+	   	  <bean:write name="systemUserSection" property="isAdmin"/>
+	   </td>
        </tr>
 	</logic:iterate>
 </table>

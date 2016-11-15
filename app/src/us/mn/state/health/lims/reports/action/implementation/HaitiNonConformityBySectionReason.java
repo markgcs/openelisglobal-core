@@ -16,6 +16,8 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 
@@ -39,4 +41,10 @@ public class HaitiNonConformityBySectionReason extends NonConformityBySectionRea
 		reportParameters.put("labName1", ConfigurationProperties.getInstance().getPropertyValue(Property.SiteName));
 		reportParameters.put("labName2", "");
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

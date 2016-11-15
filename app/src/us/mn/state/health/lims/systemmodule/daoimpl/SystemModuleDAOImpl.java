@@ -15,9 +15,12 @@
 */
 package us.mn.state.health.lims.systemmodule.daoimpl;
 
+import java.util.List;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -30,8 +33,6 @@ import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.systemmodule.dao.SystemModuleDAO;
 import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
-
-import java.util.List;
 
 /**
  *  @author     Hung Nguyen (Hung.Nguyen@health.state.mn.us)
@@ -187,15 +188,15 @@ public class SystemModuleDAOImpl extends BaseDAOImpl implements SystemModuleDAO 
 		return list;
 	}
 
-	public SystemModule readSystemModule(String idString) {		
+	public SystemModule readSystemModule(String idString) throws LIMSRuntimeException {		
 		SystemModule sysModule;
 		try {			
-			sysModule = (SystemModule)HibernateUtil.getSession().get(SystemModule.class, idString);
+			sysModule = (SystemModule) HibernateUtil.getSession().get(SystemModule.class, idString);
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			LogEvent.logError("SystemModuleDAOImpl","readSystemModule()",e.toString());
-			throw new LIMSRuntimeException("Error in SystemModule readSystemModule(idString)", e);
+			LogEvent.logError("SystemModuleDAOImpl", "readSystemModule()", e.toString());
+			throw new LIMSRuntimeException("Error in SystemModuleDAOImpl readSystemModule(idString)", e);
 		}			
 		
 		return sysModule;
@@ -292,9 +293,9 @@ public class SystemModuleDAOImpl extends BaseDAOImpl implements SystemModuleDAO 
 
 			List list;
 
-			String sql = "from SystemModule s where trim(s.systemModuleName) = :moduleName and s.id != :moduleId";
+			String sql = "from SystemModule s where trim(lower(s.systemModuleName)) = :moduleName and s.id != :moduleId";
 			Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setParameter("moduleName", systemModule.getSystemModuleName().trim());
+			query.setParameter("moduleName", systemModule.getSystemModuleName().toLowerCase().trim());
 	
 			String systemModuleId = "0";
 			if (!StringUtil.isNullorNill(systemModule.getId())) {

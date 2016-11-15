@@ -16,6 +16,8 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 
 public class PatientIndeterminateVersion2Report extends PatientIndeterminateReport implements  IReportCreator {
 	@Override
@@ -28,4 +30,10 @@ public class PatientIndeterminateVersion2Report extends PatientIndeterminateRepo
 	    super.createReportParameters();
 		reportParameters.put("contact", "CHU de Treichville, 01 BP 1712 Tel : 21-21-42-50/21-25-4189 Fax : 21-24-29-69/ 21-25-10-63");
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

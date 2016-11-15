@@ -32,7 +32,9 @@ public interface SystemUserSectionDAO extends BaseDAO {
 
 	public List getAllSystemUserSections() throws LIMSRuntimeException;
 
-	public List getPageOfSystemUserSections(int startingRecNo) throws LIMSRuntimeException;
+    public List getPageOfSystemUserSectionsForAdmin(int startingRecNo) throws LIMSRuntimeException;
+
+    public List getPageOfSystemUserSectionsForSectionAdmin(int startingRecNo, int sectionAdminId) throws LIMSRuntimeException;
 
 	public void getData(SystemUserSection systemUserSection) throws LIMSRuntimeException;
 
@@ -43,7 +45,13 @@ public interface SystemUserSectionDAO extends BaseDAO {
 	public List getPreviousSystemUserSectionRecord(String id) throws LIMSRuntimeException;
 	
 	public Integer getTotalSystemUserSectionCount() throws LIMSRuntimeException; 
-	
-	public List getAllSystemUserSectionsBySystemUserId(int systemUserId) throws LIMSRuntimeException;
+    
+    public List getAllSystemUserSectionsBySystemUserId(int systemUserId) throws LIMSRuntimeException;
+    
+    public List getAllSystemAdminUserSectionsBySystemUserId(int systemUserId) throws LIMSRuntimeException;
+    
+    public List getPageOfSearchSystemUserSectionsForAdmin(String searchString) throws LIMSRuntimeException;
+    
+    public List getPageOfSearchSystemUserSectionsForSectionAdmin(String searchString, int sectionAdminId) throws LIMSRuntimeException;
 
 }

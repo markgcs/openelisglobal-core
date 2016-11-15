@@ -25,8 +25,7 @@ import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 
 public interface AnalyzerTestMappingDAO extends BaseDAO {
 
-	List<AnalyzerTestMapping> getAllAnalyzerTestMappings() throws LIMSRuntimeException;
-	void deleteData(List<AnalyzerTestMapping> testMappingList,  String currentUserId) throws LIMSRuntimeException;
-	void insertData(AnalyzerTestMapping analyzerTestMapping, String currentUserId) throws LIMSRuntimeException;
-	void updateMapping(AnalyzerTestMapping analyzerTestNameMapping, String currentUserId) throws LIMSRuntimeException;
+	public List<AnalyzerTestMapping> getAllAnalyzerTestMappings() throws LIMSRuntimeException;
+	public void deleteData(List<AnalyzerTestMapping> testMappingList,  String currentUserId) throws LIMSRuntimeException;
+	public void insertData(AnalyzerTestMapping analyzerTestMapping, String currentUserId) throws LIMSRuntimeException;
 }

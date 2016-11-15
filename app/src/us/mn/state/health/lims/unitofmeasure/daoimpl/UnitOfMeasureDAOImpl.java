@@ -15,9 +15,12 @@
 */
 package us.mn.state.health.lims.unitofmeasure.daoimpl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
 import org.apache.commons.beanutils.PropertyUtils;
-import org.hibernate.HibernateException;
-import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -31,27 +34,26 @@ import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.unitofmeasure.dao.UnitOfMeasureDAO;
 import us.mn.state.health.lims.unitofmeasure.valueholder.UnitOfMeasure;
 
-import java.util.List;
-
 /**
  * @author diane benz
  */
-public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDAO {
+public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements
+		UnitOfMeasureDAO {
 
 	public void deleteData(List unitOfMeasures) throws LIMSRuntimeException {
 		//add to audit trail
 		try {
 			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
-			for (Object unitOfMeasure : unitOfMeasures) {
-				UnitOfMeasure data = (UnitOfMeasure) unitOfMeasure;
-
-				UnitOfMeasure oldData = readUnitOfMeasure(data.getId());
+			for (int i = 0; i < unitOfMeasures.size(); i++) {
+				UnitOfMeasure data = (UnitOfMeasure)unitOfMeasures.get(i);
+			
+				UnitOfMeasure oldData = (UnitOfMeasure)readUnitOfMeasure(data.getId());
 				UnitOfMeasure newData = new UnitOfMeasure();
 
 				String sysUserId = data.getSysUserId();
 				String event = IActionConstants.AUDIT_TRAIL_DELETE;
 				String tableName = "UNIT_OF_MEASURE";
-				auditDAO.saveHistory(newData, oldData, sysUserId, event, tableName);
+				auditDAO.saveHistory(newData,oldData,sysUserId,event,tableName);
 			}
 		}  catch (Exception e) {
 			//bugzilla 2154
@@ -59,11 +61,11 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 			throw new LIMSRuntimeException("Error in UnitOfMeasure AuditTrail deleteData()", e);
 		}  
 		
-		try {
-			for (Object unitOfMeasure : unitOfMeasures) {
-				UnitOfMeasure data = (UnitOfMeasure) unitOfMeasure;
-
-				data = readUnitOfMeasure(data.getId());
+		try {		
+			for (int i = 0; i < unitOfMeasures.size(); i++) {
+				UnitOfMeasure data = (UnitOfMeasure) unitOfMeasures.get(i);
+				//bugzilla 2206
+				data = (UnitOfMeasure)readUnitOfMeasure(data.getId());
 				HibernateUtil.getSession().delete(data);
 				HibernateUtil.getSession().flush();
 				HibernateUtil.getSession().clear();
@@ -91,7 +93,7 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
 			String sysUserId = unitOfMeasure.getSysUserId();
 			String tableName = "UNIT_OF_MEASURE";
-			auditDAO.saveNewHistory(unitOfMeasure, sysUserId, tableName);
+			auditDAO.saveNewHistory(unitOfMeasure,sysUserId,tableName);
 			
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();						
@@ -103,7 +105,34 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 		
 		return true;
 	}
+	
+	public void updateDataWithoutDuplicateCheck(UnitOfMeasure unitOfMeasure) throws LIMSRuntimeException {
+        UnitOfMeasure oldData = (UnitOfMeasure) readUnitOfMeasure(unitOfMeasure.getId());
+        //add to audit trail
+        try {
+            AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+            String sysUserId = unitOfMeasure.getSysUserId();
+            String event = IActionConstants.AUDIT_TRAIL_UPDATE;
+            String tableName = "UNIT_OF_MEASURE";
+            
+            UnitOfMeasure newUnitOfMeasure = new UnitOfMeasure();
+            newUnitOfMeasure = getUnitOfMeasureById(unitOfMeasure.getId());
+            newUnitOfMeasure.setId(unitOfMeasure.getId());
+            newUnitOfMeasure.setUnitOfMeasureName(unitOfMeasure.getUnitOfMeasureName());
+            newUnitOfMeasure.setDescription(unitOfMeasure.getDescription());
 
+            HibernateUtil.getSession().update(newUnitOfMeasure);
+            auditDAO.saveHistory(unitOfMeasure, oldData, sysUserId, event, tableName);
+            
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        }  catch (Exception e) {
+            LogEvent.logError("UnitOfMeasureDAOImpl", "AuditTrail updateDataWithoutDuplicateCheck()", e.toString());
+            throw new LIMSRuntimeException("Error in UnitOfMeasure AuditTrail updateDataWithoutDuplicateCheck()", e);
+        }  
+    }
+	
 	public void updateData(UnitOfMeasure unitOfMeasure) throws LIMSRuntimeException {
 		// bugzilla 1482 throw Exception if record already exists
 		try {
@@ -113,20 +142,25 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 								+ unitOfMeasure.getUnitOfMeasureName());
 			}
 		} catch (Exception e) {
-
+    		//bugzilla 2154
 			LogEvent.logError("UnitOfMeasureDAOImpl","updateData()",e.toString());
 			throw new LIMSRuntimeException("Error in UnitOfMeasure updateData()",
 					e);
 		}
 		
-		UnitOfMeasure oldData = readUnitOfMeasure(unitOfMeasure.getId());
+		UnitOfMeasure oldData = (UnitOfMeasure)readUnitOfMeasure(unitOfMeasure.getId());
+		UnitOfMeasure newData = unitOfMeasure;
 
 		//add to audit trail
 		try {
 			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
-			auditDAO.saveHistory(unitOfMeasure,oldData,unitOfMeasure.getSysUserId(),IActionConstants.AUDIT_TRAIL_UPDATE,"UNIT_OF_MEASURE");
+			String sysUserId = unitOfMeasure.getSysUserId();
+			String event = IActionConstants.AUDIT_TRAIL_UPDATE;
+			String tableName = "UNIT_OF_MEASURE";
+			auditDAO.saveHistory(newData,oldData,sysUserId,event,tableName);
 		}  catch (Exception e) {
-			LogEvent.logError("UnitOfMeasureDAOImpl", "AuditTrail updateData()",e.toString());
+			//bugzilla 2154
+			LogEvent.logError("UnitOfMeasureDAOImpl","AuditTrail updateData()",e.toString());
 			throw new LIMSRuntimeException("Error in UnitOfMeasure AuditTrail updateData()", e);
 		}  
 				
@@ -141,23 +175,6 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 			LogEvent.logError("UnitOfMeasureDAOImpl","updateData()",e.toString());
 			throw new LIMSRuntimeException("Error in UnitOfMeasure updateData()", e);
 		}
-	}
-
-
-	@Override
-	public UnitOfMeasure getUnitOfMeasureById(String uomId) throws LIMSRuntimeException {
-		String sql = "from UnitOfMeasure uom where id = :id";
-		try{
-			Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setInteger( "id", Integer.parseInt(uomId));
-			UnitOfMeasure uom = (UnitOfMeasure)query.uniqueResult();
-			closeSession();
-			return uom;
-		}catch(HibernateException e){
-			handleException(e, "getUnitOfMeeasureById");
-		}
-
-		return null;
 	}
 
 	public void getData(UnitOfMeasure unitOfMeasure) throws LIMSRuntimeException {
@@ -178,7 +195,7 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 	}
 
 	public List getAllUnitOfMeasures() throws LIMSRuntimeException {
-		List list;
+		List list = new Vector();
 		try {
 			String sql = "from UnitOfMeasure";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
@@ -195,41 +212,9 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 
 		return list;
 	}
-	
-	public List<UnitOfMeasure> getAllActiveUnitOfMeasures() {
-		List list;
-		try {
-			String sql = "from UnitOfMeasure";
-			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			//query.setMaxResults(10);
-			//query.setFirstResult(3);				
-			list = query.list();
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
-		} catch (Exception e) {
-			//bugzilla 2154
-			LogEvent.logError("UnitOfMeasureDAOImpl","getAllUnitOfMeasures()",e.toString());
-			throw new LIMSRuntimeException("Error in UnitOfMeasure getAllUnitOfMeasures()", e);
-		}
-
-		return list;		
-	}
-//		String sql = "from TestSection t where t.isActive = 'Y' order by t.sortOrderInt";
-//		
-//		try {
-//			Query query = HibernateUtil.getSession().createQuery(sql);
-//			@SuppressWarnings("unchecked")
-//			List<TestSection> sections = query.list();
-//			closeSession();
-//			return sections;
-//		} catch (HibernateException e) {
-//			handleException(e, "getAllActiveTestSections");
-//		}
-//		return null;
-//	}
 
 	public List getPageOfUnitOfMeasures(int startingRecNo) throws LIMSRuntimeException {
-		List list;
+		List list = new Vector();
 		try {
 			// calculate maxRow to be one more than the page size
 			int endingRecNo = startingRecNo + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
@@ -251,9 +236,9 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 
 		return list;
 	}
-
+	
 	public UnitOfMeasure readUnitOfMeasure(String idString) {
-		UnitOfMeasure data;
+		UnitOfMeasure data = null;
 		try {
 			data = (UnitOfMeasure)HibernateUtil.getSession().get(UnitOfMeasure.class, idString);
 			HibernateUtil.getSession().flush();
@@ -266,7 +251,7 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 		
 		return data;
 	}
-
+	
 	public List getNextUnitOfMeasureRecord(String id)
 			throws LIMSRuntimeException {
 
@@ -279,6 +264,19 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 
 		return getPreviousRecord(id, "UnitOfMeasure", UnitOfMeasure.class);
 	}
+	
+	public UnitOfMeasure getUnitOfMeasureById(String idString) throws LIMSRuntimeException {
+        try {
+            UnitOfMeasure unitOfMeasure = (UnitOfMeasure) HibernateUtil.getSession().get(UnitOfMeasure.class, idString);
+            HibernateUtil.getSession().flush();
+            
+            return unitOfMeasure;
+            
+        } catch (Exception e) {
+            handleException(e, "getUnitOfMeasureById");
+        }
+        return null;
+    }
 
 	public UnitOfMeasure getUnitOfMeasureByName(UnitOfMeasure unitOfMeasure) throws LIMSRuntimeException {
 		try {
@@ -302,16 +300,16 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 		}
 
 	}
-
+	
+	//bugzilla 1411
 	public Integer getTotalUnitOfMeasureCount() throws LIMSRuntimeException {
 		return getTotalCount("UnitOfMeasure", UnitOfMeasure.class);
 	}
-
-
+	
 	//overriding BaseDAOImpl bugzilla 1427 pass in name not id
 	public List getNextRecord(String id, String table, Class clazz) throws LIMSRuntimeException {	
 				
-		List list;
+		List list = new Vector();
 		try {			
 			String sql = "from "+table+" t where name >= "+ enquote(id) + " order by t.unitOfMeasureName";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
@@ -332,7 +330,7 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 	//overriding BaseDAOImpl bugzilla 1427 pass in name not id
 	public List getPreviousRecord(String id, String table, Class clazz) throws LIMSRuntimeException {		
 		
-		List list;
+		List list = new Vector();
 		try {			
 			String sql = "from "+table+" t order by t.unitOfMeasureName desc where name <= "+ enquote(id);
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
@@ -349,10 +347,11 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 		return list;
 	}
 	
+	// bugzilla 1482
 	private boolean duplicateUnitOfMeasureExists(UnitOfMeasure unitOfMeasure) throws LIMSRuntimeException {
 		try {
 
-			List list;
+			List list = new ArrayList();
 
 			// not case sensitive hemolysis and Hemolysis are considered
 			// duplicates
@@ -373,7 +372,11 @@ public class UnitOfMeasureDAOImpl extends BaseDAOImpl implements UnitOfMeasureDA
 			HibernateUtil.getSession().flush();
 			HibernateUtil.getSession().clear();
 
-			return !list.isEmpty();
+			if (list.size() > 0) {
+				return true;
+			} else {
+				return false;
+			}
 
 		} catch (Exception e) {
 			//bugzilla 2154

@@ -282,7 +282,7 @@ public class HumanSampleTwoUpdateAction extends BaseAction {
 			if (!StringUtil.isNullorNill(sample.getId())) {
 				sampleHuman.setSampleId(sample.getId());
 				sampleHumanDAO.getDataBySample(sampleHuman);
-				sampleOrganization.setSample(sample);
+				sampleOrganization.setSampleId(sample.getId());
 				sampleOrganizationDAO.getDataBySample(sampleOrganization);
 				//bugzilla 1773 need to store sample not sampleId for use in sorting
 				sampleItem.setSample(sample);
@@ -493,7 +493,7 @@ public class HumanSampleTwoUpdateAction extends BaseAction {
 						- decreaseOIIndexBy++);
 
 			}
-			sampleProjectDAO.deleteData(listOfSampleProjectObjectsToDelete);
+			sampleProjectDAO.deleteData(listOfSampleProjectObjectsToDelete, sysUserId);
 		}
 
 		if (newSampleProjects != null) {
@@ -582,6 +582,7 @@ public class HumanSampleTwoUpdateAction extends BaseAction {
 			sampleHuman.setPatientId(patient.getId());
 			sampleHuman.setProviderId(provider.getId());
 			sampleHumanDAO.updateData(sampleHuman);
+			sampleOrganization.setSampleId(sample.getId());
 			sampleOrganization.setSample(sample);
 			sampleOrganizationDAO.updateData(sampleOrganization);
 			

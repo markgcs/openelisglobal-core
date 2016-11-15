@@ -106,7 +106,7 @@ public class SampleSearchPopulateProvider extends BaseQueryProvider {
     private Organization getOrganizationForSample(Sample sample) {
         SampleOrganizationDAO soDAO = new SampleOrganizationDAOImpl();
         SampleOrganization so = new SampleOrganization();
-        so.setSample(sample);
+        so.setSampleId(sample.getId());
         soDAO.getDataBySample(so);
         return so.getOrganization();
     }

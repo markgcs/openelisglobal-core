@@ -53,11 +53,12 @@ function validateForm(form) {
 							<bean:message key="panelitem.panelParent"/>:<span class="requiredlabel">*</span>
 						</td>	
 						<td> 
-	   		             	<html:text styleId="parentPanelName" size="30" name="<%=formName%>" property="parentPanelName" /> 
+	   		             	<html:text styleId="parentPanelName" size="30" name="<%=formName%>" property="parentPanelName" maxlength="64" /> 
 			             	<span id="indicator1" style="display:none;"><img src="<%=basePath%>images/indicator.gif"/></span>
  	   		           		 <input id="selectedPanelId" name="selectedPanelId" type="hidden" size="30" />
  						</td>
  		</tr>
+		<!--
 		<tr>
 						<td class="label">
 							<bean:message key="panelitem.methodName"/>:
@@ -69,22 +70,22 @@ function validateForm(form) {
 						                     
 						</td>
 		</tr>
-		
+		-->
 		<tr>
 						<td class="label">
 						    <%--bugzilla 1401 added asterisk for required--%>
 							<bean:message key="panelitem.testName"/>:<span class="requiredlabel">*</span>
 						</td>	
 						<td> 
-					   	  <html:text styleId="testName" size="30" name="<%=formName%>" property="testName" /> 
+					   	  <html:text styleId="testName" size="30" name="<%=formName%>" property="testName" maxlength="60" /> 
 			              <span id="indicator3" style="display:none;"><img src="<%=basePath%>images/indicator.gif"/></span>
- 	   					   <input id="selectedTestName" name="selectedTestName" type="hidden" size="30" />
+ 	   					   <input id="selectedTestName" name="selectedTestName" type="hidden" property="testName" size="30" />
 						                     
 						</td>
 		</tr>
 		<tr>
 						<td class="label">
-							<bean:message key="panelitem.sortOrder"/>:<span class="requiredlabel">*</span>
+							<bean:message key="panelitem.sortOrder"/>:
 						</td>	
 						<td> 
 							<html:text name="<%=formName%>" property="sortOrder" />
@@ -114,16 +115,12 @@ function validateForm(form) {
   parameters="testName={testName},provider=TestAutocompleteProvider,fieldName=testName,idName=id"
   indicator="indicator3"
   minimumCharacters="1" />
-  
-    <ajax:autocomplete
-  source="parentPanelName"
-  target="selectedPanelId"
-  baseUrl="ajaxAutocompleteXML"
-  className="autocomplete"
-  parameters="parentPanelName={parentPanelName},provider=PanelAutocompleteProvider,fieldName=panelName,idName=id"
-  indicator="indicator1"
-  minimumCharacters="1" />
-  
+
+<ajax:autocomplete source="parentPanelName" target="selectedPanelId"
+	baseUrl="ajaxAutocompleteXML" className="autocomplete"
+	parameters="parentPanelName={parentPanelName},provider=PanelAutocompleteProvider,fieldName=panelName,idName=id"
+	indicator="indicator1" minimumCharacters="1" />
+
 
 
 <html:javascript formName="panelItemForm"/>

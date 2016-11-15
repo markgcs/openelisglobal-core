@@ -53,7 +53,7 @@ import us.mn.state.health.lims.test.valueholder.TestSection;
 import us.mn.state.health.lims.testtrailer.dao.TestTrailerDAO;
 import us.mn.state.health.lims.testtrailer.daoimpl.TestTrailerDAOImpl;
 import us.mn.state.health.lims.testtrailer.valueholder.TestTrailer;
-import us.mn.state.health.lims.common.services.TypeOfSampleService;
+import us.mn.state.health.lims.typeofsample.util.TypeOfSampleUtil;
 
 /**
  * @author diane benz
@@ -176,7 +176,7 @@ public class TestUpdateAction extends BaseAction {
 				// INSERT
 				testDAO.insertData(test);
 			}
-			TypeOfSampleService.clearCache();
+			TypeOfSampleUtil.clearCache();
 			tx.commit();
 		} catch (LIMSRuntimeException lre) {
     		//bugzilla 2154

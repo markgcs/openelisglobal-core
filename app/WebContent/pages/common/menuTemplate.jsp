@@ -136,7 +136,11 @@ function setMenuAction(button, form, action, validate, parameters) {
 
   form.action = context + '/' + action + parsedFormName + '.do' + sessionid + parameters;
   
-  if ((button.name == 'edit' && ID == '') || (button.name=='search' && searchString == '') ||(button.name=='searchString' && searchString == '') ) {
+  if ((button.name == 'edit' && ID == '') || 
+		  /* (button.name=='search' && searchString == '') 
+		  *Commented by Dung need the parameter is null for search
+		  * for submit form when the parameter search is empty value
+		   ||*/(button.name=='searchString' && searchString == '') ) {
   } else {
       form.submit();
   }

@@ -235,7 +235,7 @@ public class SampleTrackingPopupAction extends BaseAction {
 		//bugzilla 2455
 		specimenOrIsolatea.add(i,specimenOrIsolate);
 		
-		sampleOrganization.setSample(sample);
+		sampleOrganization.setSampleId(sample.getId());
 		sampleOrganizationDAO.getDataBySample(sampleOrganization);
 		
 		if (null != sampleOrganization.getOrganization()){	

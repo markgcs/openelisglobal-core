@@ -20,6 +20,7 @@ import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.testanalyte.valueholder.TestAnalyte;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
+import vi.mn.state.health.lims.dataexchange.dto.TestResultDTO;
 
 import java.util.List;
 
@@ -65,5 +66,7 @@ public interface TestResultDAO extends BaseDAO {
 	public TestResult getTestResultsByTestAndDictonaryResult(String testId, String result)throws LIMSRuntimeException;
 
 	public List<TestResult> getActiveTestResultsByTest( String testId )throws LIMSRuntimeException;
+
+	public TestResultDTO getTestResultByResult( String accessionNumber, String mainResult, String testId )throws LIMSRuntimeException;
 
 }

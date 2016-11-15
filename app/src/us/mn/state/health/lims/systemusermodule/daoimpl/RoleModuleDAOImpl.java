@@ -20,6 +20,7 @@ package us.mn.state.health.lims.systemusermodule.daoimpl;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -37,6 +38,7 @@ import us.mn.state.health.lims.userrole.dao.UserRoleDAO;
 import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -232,8 +234,12 @@ public class RoleModuleDAOImpl extends BaseDAOImpl implements PermissionAgentMod
 
         try{
             Query query = HibernateUtil.getSession().createQuery( sql );
-            query.setInteger( "moduleId", Integer.parseInt( moduleId ) );
-            query.setInteger( "roleId", Integer.parseInt( roleId ) );
+            if (!StringUtil.isNullorNill(moduleId)) {
+            	query.setInteger( "moduleId", Integer.parseInt( moduleId ) );
+            }
+            if (!StringUtil.isNullorNill(roleId)) {
+            	query.setInteger( "roleId", Integer.parseInt( roleId ) );
+            }
             List<RoleModule> modules = query.list();
             closeSession();
             return modules.isEmpty() ? new RoleModule() : modules.get( 0 );
@@ -243,6 +249,23 @@ public class RoleModuleDAOImpl extends BaseDAOImpl implements PermissionAgentMod
 
         return null;
     }
+    
+    public List<RoleModule> getRoleModuleByRoleId(String roleId){
+        String sql = "From RoleModule rm where rm.role.id = :roleId";
+        try{
+            Query query = HibernateUtil.getSession().createQuery( sql );
+            query.setInteger( "roleId", Integer.parseInt( roleId ) );
+            List<RoleModule> modules = query.list();
+            closeSession();
+            return modules.isEmpty() ? new ArrayList<RoleModule>() : modules;
+            
+        }catch( HibernateException he ){
+            handleException( he, "getRoleModuleByRoleId" );
+        }
+
+        return null;
+    }
+    
 	public List getNextPermissionModuleRecord(String id) throws LIMSRuntimeException {
 
 		return getNextRecord(id, "RoleModule", RoleModule.class);

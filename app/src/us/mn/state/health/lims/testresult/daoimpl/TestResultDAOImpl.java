@@ -18,6 +18,9 @@
 package us.mn.state.health.lims.testresult.daoimpl;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.hibernate.Query;
+import org.hibernate.SQLQuery;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -31,6 +34,9 @@ import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.testanalyte.valueholder.TestAnalyte;
 import us.mn.state.health.lims.testresult.dao.TestResultDAO;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
+import vi.mn.state.health.lims.dataexchange.dto.TestResultDTO;
+import vi.mn.state.health.lims.dataexchange.transformer.DataExchangeTransformer;
+import vi.mn.state.health.lims.dataexchange.transformerimpl.DataExchangeTransformerImpl;
 
 import java.util.List;
 import java.util.Vector;
@@ -321,7 +327,53 @@ public class TestResultDAOImpl extends BaseDAOImpl implements TestResultDAO {
 			handleException(e, "getActiveTestResultsByTest");
 		}
 
-	return null;
+		return null;
+	}
+	
+	
+	/**
+	 * Get testresult data (by result, accessionNumber, testId)
+	 * 
+	 * @param accessionNumber
+	 * @param result
+	 * @param testId
+	 */
+	@SuppressWarnings("unchecked")
+	public TestResultDTO getTestResultByResult(String accessionNumber, String result, String testId) throws LIMSRuntimeException {
+		TestResultDTO retVal = null;
+		String sqlAnalysis = " FROM sample s JOIN sample_item si ON si.samp_id = s.id JOIN analysis a ON a.sampitem_id = si.id ";
+		StringBuilder sqlTestResult = new StringBuilder();
+        sqlTestResult.append(" SELECT s.accession_number, si.id AS sampitem_id, a.test_id, ");
+        sqlTestResult.append(" tr.id AS test_result_id, tr.tst_rslt_type AS result_type, ");
+        sqlTestResult.append(" tr.value AS result_value, tr.is_quantifiable, s.sys_user_id, a.id ");
+        sqlTestResult.append(sqlAnalysis + " JOIN test_result tr ON tr.test_id = a.test_id ");
+        sqlTestResult.append(" WHERE s.accession_number = :accessionNumber AND a.test_id = :testId");
+        sqlTestResult.append(" AND ((tr.tst_rslt_type = 'D' AND tr.value = :testResultValue) ");
+        sqlTestResult.append(" OR (tr.tst_rslt_type = 'N')) ORDER BY s.accession_number, si.id ");
+        
+		try {
+			SQLQuery query = HibernateUtil.getSession().createSQLQuery(sqlTestResult.toString());
+			query.setString("accessionNumber", accessionNumber);
+			query.setInteger("testId", Integer.valueOf(testId));
+			query.setString("testResultValue", result);
+	        List <Object[]> objArrayTestResult = query.list();
+	        
+	        Object[] objTestResult = null;
+	        if (objArrayTestResult != null && !objArrayTestResult.isEmpty()) {
+	            objTestResult = objArrayTestResult.get(0);
+	        }
+	        
+	        if (objTestResult != null) {
+	            DataExchangeTransformer dataExchangeTransformer = new DataExchangeTransformerImpl();
+	            retVal = dataExchangeTransformer.convertToTestResultDTO(objTestResult);
+	        }
+			closeSession();
+
+		} catch (Exception e) {
+			handleException(e, "getTestResultByResult");
+		}
+
+		return retVal;
 	}
 
 }

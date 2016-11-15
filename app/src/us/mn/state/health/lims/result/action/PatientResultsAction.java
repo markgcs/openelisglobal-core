@@ -23,9 +23,11 @@ import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.DynaActionForm;
+
 import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.services.DisplayListService;
+import us.mn.state.health.lims.common.services.DisplayListService.ListType;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
@@ -42,6 +44,7 @@ import us.mn.state.health.lims.test.beanItems.TestResultItem;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,32 +64,47 @@ public class PatientResultsAction extends BaseAction {
 		PropertyUtils.setProperty(dynaForm, "referralReasons", DisplayListService.getList( DisplayListService.ListType.REFERRAL_REASONS));
         PropertyUtils.setProperty( dynaForm, "rejectReasons", DisplayListService.getNumberedListWithLeadingBlank( DisplayListService.ListType.REJECTION_REASONS ) );
         PatientSearch patientSearch = new PatientSearch();
-        patientSearch.setLoadFromServerWithPatient( true );
+        // Modified by Mark 2016.06.30 11:36AM
+        // Set to show patient list even if only one patient is found (Results->Search by Patient)
+        patientSearch.setLoadFromServerWithPatient( false );
+        // End of Modification
         patientSearch.setSelectedPatientActionButtonText( StringUtil.getMessageForKey( "resultsentry.patient.search" ) );
         PropertyUtils.setProperty(dynaForm, "patientSearch", patientSearch);
 
+
+     		
 		ResultsPaging paging = new ResultsPaging();
 		String newPage = request.getParameter("page");
 		if (GenericValidator.isBlankOrNull(newPage)) {
 
 			String patientID = request.getParameter("patientID");
-
-			if (!GenericValidator.isBlankOrNull(patientID)) {
-
+			//Dũng fix show text.
+			String criteria= request.getParameter("criteria");
+			String valueSearch=request.getParameter("valueSearch");
+			if(!GenericValidator.isBlankOrNull(criteria) && !GenericValidator.isBlankOrNull(valueSearch)){
+				request.setAttribute(IActionConstants.CIRITERIA, criteria);
+				request.setAttribute(IActionConstants.VALUE_SEARCH, valueSearch);
+			}else{
+				request.setAttribute(IActionConstants.CIRITERIA, "");
+				request.setAttribute(IActionConstants.VALUE_SEARCH, "");
+			}
+			//end Dũng add
+			if (!GenericValidator.isBlankOrNull(patientID) && !GenericValidator.isBlankOrNull(criteria)) {
 				PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.TRUE);
 				Patient patient = getPatient(patientID);
-
+				
 				String statusRules = ConfigurationProperties.getInstance().getPropertyValueUpperCase(Property.StatusRules);
 				if (statusRules.equals(	IActionConstants.STATUS_RULES_RETROCI)) {
 					resultsUtility.addExcludedAnalysisStatus( AnalysisStatus.TechnicalRejected );
 					resultsUtility.addExcludedAnalysisStatus( AnalysisStatus.Canceled );
 				}else if (statusRules.equals(IActionConstants.STATUS_RULES_HAITI) ||
 						  statusRules.equals(IActionConstants.STATUS_RULES_HAITI_LNSP) ) {
+					resultsUtility.addExcludedAnalysisStatus( AnalysisStatus.ReferredIn );
 					resultsUtility.addExcludedAnalysisStatus( AnalysisStatus.Canceled );
 				}
 
-                List<TestResultItem> results = resultsUtility.getGroupedTestsForPatient( patient );
-
+                List<TestResultItem> results = resultsUtility.getGroupedTestsForPatient( patient, getUserSection() );
+                
 				PropertyUtils.setProperty(dynaForm, "testResult", results);
 
 				// move this out of results utility
@@ -98,9 +116,11 @@ public class PatientResultsAction extends BaseAction {
 				} else {
 					addEmptyInventoryList(dynaForm);
 				}
-
 				 paging.setDatabaseResults(request, dynaForm, results);
 
+				 // load testSectionsByName for drop down
+		     		PropertyUtils.setProperty(dynaForm, "testSectionsByName", DisplayListService.getList(ListType.TEST_SECTION_BY_NAME));
+		     		
 			} else {
 				PropertyUtils.setProperty(dynaForm, "testResult", new ArrayList<TestResultItem>());
 				PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.FALSE);
@@ -108,7 +128,7 @@ public class PatientResultsAction extends BaseAction {
 		} else {
 			paging.page(request, dynaForm, newPage);
 		}
-
+		
 		return mapping.findForward(forward);
 	}
 

@@ -254,7 +254,8 @@ public class BatchResultsVerificationViewAction extends BatchResultsVerification
 										sampleHuman.setSampleId(sample.getId());
 										sampleHumanDAO
 										.getDataBySample(sampleHuman);
-										sampleOrganization.setSample(sample);
+										sampleOrganization.setSampleId(sample
+												.getId());
 										sampleOrganizationDAO
 										.getDataBySample(sampleOrganization);
 										if (sampleHuman != null) {

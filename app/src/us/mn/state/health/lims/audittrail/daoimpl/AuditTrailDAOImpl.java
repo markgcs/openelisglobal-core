@@ -62,7 +62,7 @@ public class AuditTrailDAOImpl extends BaseDAOImpl implements AuditTrailDAO {
 			LogEvent.logDebug("AuditTrailDAOImpl","saveNewHistory()","NO CHANGES: REF TABLE KEEP_HISTORY IS N");
 			return;
 		}
-		//if logging failes an exception should be thrown so that INSERT/UPDATE is rolled back
+		//if logging failed, an exception should be thrown so that INSERT/UPDATE is rolled back
 		if ( referenceTable == null ) {
 			LogEvent.logDebug("AuditTrailDAOImpl","saveNewHistory()","NO CHANGES: REF TABLE IS NULL");
 			throw new LIMSRuntimeException("Reference Table is null in AuditTrailDAOImpl saveNewHistory()");
@@ -81,20 +81,21 @@ public class AuditTrailDAOImpl extends BaseDAOImpl implements AuditTrailDAO {
 		History hist = new History();
 
 		try {
-		Method m1 =	newObject.getClass().getMethod("getId", new Class[0]);
-		String referenceId = (String)m1.invoke(newObject, (Object[])new Class[0]);
-		hist.setReferenceId(referenceId);
-		hist.setSysUserId(sysUserId);
-
-		Method m3 = newObject.getClass().getMethod("getLastupdated", new Class[0]);
-		Timestamp timestamp = (Timestamp)m3.invoke(newObject, (Object[])new Class[0]);
-		if ( timestamp == null )
-			timestamp = new Timestamp(System.currentTimeMillis());
-
-		hist.setTimestamp(timestamp);
-		hist.setActivity(IActionConstants.AUDIT_TRAIL_INSERT);
-		hist.setReferenceTable( referenceTable.getId() );
-		insertData(hist);
+    		Method m1 =	newObject.getClass().getMethod("getId", new Class[0]);
+    		String referenceId = (String)m1.invoke(newObject, (Object[])new Class[0]);
+    		hist.setReferenceId(referenceId);
+    		hist.setSysUserId(sysUserId);
+    
+    		Method m3 = newObject.getClass().getMethod("getLastupdated", new Class[0]);
+    		Timestamp timestamp = (Timestamp)m3.invoke(newObject, (Object[])new Class[0]);
+    		if ( timestamp == null )
+    			timestamp = new Timestamp(System.currentTimeMillis());
+    
+    		hist.setTimestamp(timestamp);
+    		hist.setActivity(IActionConstants.AUDIT_TRAIL_INSERT);
+    		hist.setReferenceTable( referenceTable.getId() );
+    		insertData(hist);
+    		
 		} catch (Exception e) {
 			LogEvent.logError("AuditTrailDAOImpl","saveNewHistory()",e.toString());
 			throw new LIMSRuntimeException("Error occurred logging INSERT", e);
@@ -1413,5 +1414,4 @@ public class AuditTrailDAOImpl extends BaseDAOImpl implements AuditTrailDAO {
 			throw new LIMSRuntimeException("Error in AuditTrail insertData()", e);
 		}
     }
-
 }

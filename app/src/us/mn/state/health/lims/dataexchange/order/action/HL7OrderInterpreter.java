@@ -112,7 +112,7 @@ public class HL7OrderInterpreter implements IOrderInterpreter{
 		}
 		return buildResultList(false);
 	}
-
+	
 	private void extractOrderInformation() throws HL7Exception{
 		ORC orcSegment = (ORC)orderMessage.getORDER().get("ORC");
 

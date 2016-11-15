@@ -939,10 +939,10 @@
             </field>
            <field property="organizationLocalAbbreviation" depends="required,mask">
               <arg0 key="organization.localAbbreviation" />
-                     <var>
-                        <var-name>mask</var-name>
-                        <var-value>^[0-9]{1,4}$</var-value>
-                    </var>
+              	<var>
+                	<var-name>mask</var-name>
+                    <var-value>^[0-9]{1,10}$</var-value>
+                </var>
            </field>
             <field property="shortName" depends="maxlength">
               <arg0 key="organization.short" />
@@ -1011,8 +1011,23 @@
                 <var-value>${yesORno}</var-value>
               </var>
             </field>
-
           </form>
+          
+<!--CITY-->
+         <form name="cityForm">
+            <field property="cityName" depends="required,maxlength">
+              <arg0 key="city.cityName" /> 
+              <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
+               <var><var-name>maxlength</var-name>
+               <var-value>4000</var-value></var>
+            </field>
+            <field property="isActive" depends="required,maxlength">
+              <arg0 key="dictionary.isActive" /> 
+              <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
+               <var><var-name>maxlength</var-name>
+               <var-value>1</var-value></var>
+            </field>
+         </form>    
 
 <!--PANEL-->
          <form name="panelForm">
@@ -1021,14 +1036,31 @@
               <arg0 key="panel.panelName" />
               <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
                <var><var-name>maxlength</var-name>
-               <var-value>20</var-value></var>
+               <var-value>64</var-value></var>
             </field>
             <field property="description" depends="required,maxlength">
               <arg0 key="panel.description" />
               <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
                <var><var-name>maxlength</var-name>
-               <var-value>60</var-value></var>
+               <var-value>64</var-value></var>
             </field>
+            <field property="isActive" depends="required,mask">
+              <arg0 key="panel.isActive" />
+              <var>
+                <var-name>mask</var-name>
+                <var-value>${yesORno}</var-value>
+              </var>
+            </field>
+               <field property="sortOrder" depends="required,mask,maxlength">
+              <arg0 key="panel.sortOrder" />
+                <var>
+                     <var-name>mask</var-name>
+                     <var-value>^[0-9]*$</var-value>
+               </var>
+             <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
+               <var><var-name>maxlength</var-name>
+               <var-value>22</var-value></var>
+             </field>
          </form>
 
 <!--PANEL_ITEM-->
@@ -1038,9 +1070,9 @@
               <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
                <var><var-name>maxlength</var-name>
                <!--bugzilla 1738 lenght of parent panel name is 20-->
-               <var-value>20</var-value></var>
+               <var-value>64</var-value></var>
             </field>
-            <field property="sortOrder" depends="required,mask,maxlength">
+            <!-- <field property="sortOrder" depends="required,mask,maxlength">
               <arg0 key="panelitem.sortOrder" />
                 <var>
                      <var-name>mask</var-name>
@@ -1048,12 +1080,19 @@
                </var>
              <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
                <var><var-name>maxlength</var-name>
-               <var-value>22</var-value></var>
-             </field>
+               <var-value>120</var-value></var>
+             </field> -->
              <!--bugzilla 1401 require test-->
-             <field property="testName" depends="required">
+              <field property="testName" depends="required,maxlength">
               <arg0 key="panelitem.testName" />
-             </field>
+              <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
+               <var><var-name>maxlength</var-name>
+               <var-value>60</var-value></var>
+              </field>
+            <!-- /field>
+             <field property="test.testName" depends="required">
+              <arg0 key="panelitem.testName" />
+             </field -->
          </form>
 
 <!--PATIENT-->
@@ -1265,6 +1304,20 @@
             </field>
 
           </form>
+          
+<!--DISTRICT-->
+         <form name="districtForm">
+            <field property="districtName" depends="required,maxlength">
+              <arg0 key="district.browse.title" />
+              <arg1 name="maxlength" key="${var:maxlength}" resource="false"/>
+               <var><var-name>maxlength</var-name>
+               <var-value>50</var-value></var>
+            </field>
+            <field property="selectedCityId" depends="required">
+              <arg0 key="city.cityName" />
+            </field>
+
+          </form>
 
 <!--PROJECT-->
           <form name="projectForm">
@@ -1284,9 +1337,9 @@
             <field property="sysUserId" depends="required">
               <arg0 key="project.owner" />
             </field>
-            <field property="programCode" depends="required">
+            <!-- <field property="programCode" depends="required">
               <arg0 key="project.program.programName" />
-            </field>
+            </field> -->
             <field property="isActive" depends="required,mask">
               <arg0 key="project.isActive" />
               <var>
@@ -1294,7 +1347,7 @@
                 <var-value>${yesORno}</var-value>
               </var>
             </field>
-            <field property="startedDateForDisplay" depends="required,date">
+            <!-- <field property="startedDateForDisplay" depends="required,date">
               <arg0 key="project.startedDate" />
               <var><var-name>datePattern</var-name>
               <var-value>date.format.validate</var-value></var>
@@ -1320,14 +1373,14 @@
                 <var-value>((*this* == null) or (*this* >= startedDateForDisplay))</var-value>
               </var>
             </field>
-            <!--bugzilla 2438-->
+            bugzilla 2438
             <field property="localAbbreviation" depends="required,mask">
               <arg0 key="project.localAbbreviation" />
               <var>
                 <var-name>mask</var-name>
                 <var-value>${isNumeric}</var-value>
               </var>
-            </field>
+            </field> -->
             <!--bugzilla 1401 don't require scriptlet-->
             <!--field property="scriptletName" depends="required">
               <arg0 key="project.scriptletName" />

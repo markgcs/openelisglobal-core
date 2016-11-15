@@ -35,5 +35,7 @@ public interface PatientTypeDAO extends BaseDAO {
 
 	public PatientType getPatientTypeByName(PatientType patientType) throws LIMSRuntimeException;
 	
+    public PatientType getPatientTypeByDescription(PatientType patientType) throws LIMSRuntimeException;
+	
 	public Integer getTotalPatientTypeCount() throws LIMSRuntimeException; 
 }

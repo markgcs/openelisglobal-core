@@ -17,8 +17,12 @@
  */
 package us.mn.state.health.lims.resultlimits.daoimpl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
@@ -30,9 +34,6 @@ import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.resultlimits.dao.ResultLimitDAO;
 import us.mn.state.health.lims.resultlimits.valueholder.ResultLimit;
 import us.mn.state.health.lims.test.valueholder.Test;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class ResultLimitDAOImpl extends BaseDAOImpl implements ResultLimitDAO {
 
@@ -94,31 +95,60 @@ public class ResultLimitDAOImpl extends BaseDAOImpl implements ResultLimitDAO {
 
 	public void updateData(ResultLimit resultLimit) throws LIMSRuntimeException {
 
-		ResultLimit oldData = readResultLimit(resultLimit.getId());
+        ResultLimit oldData = readResultLimit(resultLimit.getId());
+        try {
+            AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+            String sysUserId = resultLimit.getSysUserId();
+            String event = IActionConstants.AUDIT_TRAIL_UPDATE;
+            String tableName = "RESULT_LIMITS";
+            auditDAO.saveHistory(resultLimit, oldData, sysUserId, event, tableName);
+            
+        } catch (Exception e) {
+            LogEvent.logError("ResultLimitsDAOImpl", "AuditTrail updateData()", e.toString());
+            throw new LIMSRuntimeException("Error in ResultLimit AuditTrail updateData()", e);
+        }
 
-		try {
-			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
-			String sysUserId = resultLimit.getSysUserId();
-			String event = IActionConstants.AUDIT_TRAIL_UPDATE;
-			String tableName = "RESULT_LIMITS";
-			auditDAO.saveHistory(resultLimit, oldData, sysUserId, event, tableName);
-		} catch (Exception e) {
-			LogEvent.logError("ResultLimitsDAOImpl", "AuditTrail updateData()", e.toString());
-			throw new LIMSRuntimeException("Error in ResultLimit AuditTrail updateData()", e);
-		}
-
-		try {
-			HibernateUtil.getSession().merge(resultLimit);
-			HibernateUtil.getSession().flush();
-			HibernateUtil.getSession().clear();
-			HibernateUtil.getSession().evict(resultLimit);
-			HibernateUtil.getSession().refresh(resultLimit);
-		} catch (Exception e) {
-			LogEvent.logError("ResultLimitsDAOImpl", "updateData()", e.toString());
-			throw new LIMSRuntimeException("Error in ResultLimit updateData()", e);
-		}
-	}
-
+        try {
+            HibernateUtil.getSession().merge(resultLimit);
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            HibernateUtil.getSession().evict(resultLimit);
+            HibernateUtil.getSession().refresh(resultLimit);
+            
+        } catch (Exception e) {
+            LogEvent.logError("ResultLimitsDAOImpl", "updateData()", e.toString());
+            throw new LIMSRuntimeException("Error in ResultLimit updateData()", e);
+        }
+    }
+	
+	public void updateDataTestEdit(ResultLimit resultLimit) throws LIMSRuntimeException {
+        
+	    ResultLimit oldData = readResultLimit(resultLimit.getId());
+        try {
+            AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+            String sysUserId = resultLimit.getSysUserId();
+            String event = IActionConstants.AUDIT_TRAIL_UPDATE;
+            String tableName = "RESULT_LIMITS";
+            
+            ResultLimit newResultLimit = new ResultLimit();
+            newResultLimit = getResultLimitByIdTestEdit(resultLimit.getId());
+            newResultLimit.setTestId(resultLimit.getTestId());
+            newResultLimit.setResultTypeId(IActionConstants.STR_TEST_RESULT_TYPE_ID);
+            newResultLimit.setLowNormal(resultLimit.getLowNormal());
+            newResultLimit.setHighNormal(resultLimit.getHighNormal());
+            
+            HibernateUtil.getSession().update(newResultLimit);
+            auditDAO.saveHistory(resultLimit, oldData, sysUserId, event, tableName);
+            
+            HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+            
+        } catch (Exception e) {
+            LogEvent.logError("ResultLimitsDAOImpl", "AuditTrail updateDataTestEdit()", e.toString());
+            throw new LIMSRuntimeException("Error in ResultLimit AuditTrail updateDataTestEdit()", e);
+        }
+    }
+	
 	public void getData(ResultLimit resultLimit) throws LIMSRuntimeException {
 		try {
 			ResultLimit tmpLimit = (ResultLimit) HibernateUtil.getSession().get(ResultLimit.class, resultLimit.getId());
@@ -195,28 +225,42 @@ public class ResultLimitDAOImpl extends BaseDAOImpl implements ResultLimitDAO {
 		return getPreviousRecord(id, "ResultLimit", ResultLimit.class);
 	}
 
-	@SuppressWarnings("unchecked")
-	public List<ResultLimit> getAllResultLimitsForTest(String testId) throws LIMSRuntimeException {
+	public List getAllResultLimitsForTest(Test test) throws LIMSRuntimeException {
 
-		if (GenericValidator.isBlankOrNull(testId)){
-			return new ArrayList<ResultLimit>();
-		}
+		if (test == null || GenericValidator.isBlankOrNull(test.getId())){
+            return new ArrayList<ResultLimit>();
+        }
 
+		List list;
 		try {
 			String sql = "from ResultLimit rl where rl.testId = :test_id";
 			org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-			query.setInteger("test_id", Integer.parseInt(testId));
+			query.setInteger("test_id", Integer.parseInt(test.getId()));
 
-			List<ResultLimit> list = query.list();
-			closeSession();
-			return list;
+			list = query.list();
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
 		} catch (Exception e) {
-			handleException(e, "getAllResultLimitsForTest");
+			LogEvent.logError("ResultLimitDAOImpl", "getAllResultLimitsPerTest()", e.toString());
+			throw new LIMSRuntimeException("Error in ResultLimitDAOImpl getAllResultLimitsForTest()", e);
 		}
 
-		return null;
+		return list;
 	}
 
+    public ResultLimit getResultLimitByIdTestEdit(String resultLimitId) throws LIMSRuntimeException {
+        try {
+            ResultLimit resultLimit = (ResultLimit) HibernateUtil.getSession().get(ResultLimit.class, resultLimitId);
+            HibernateUtil.getSession().flush();
+            
+            return resultLimit;
+            
+        } catch (Exception e) {
+            handleException(e, "getResultLimitByIdTestEdit");
+        }
+        return null;
+    }
+	
 	@Override
 	public ResultLimit getResultLimitById(String resultLimitId) throws LIMSRuntimeException {
 		try {

@@ -15,13 +15,13 @@
 */
 package us.mn.state.health.lims.panelitem.valueholder;
 
-import us.mn.state.health.lims.common.valueholder.EnumValueItemImpl;
 import us.mn.state.health.lims.common.valueholder.ValueHolder;
 import us.mn.state.health.lims.common.valueholder.ValueHolderInterface;
 import us.mn.state.health.lims.panel.valueholder.Panel;
 import us.mn.state.health.lims.test.valueholder.Test;
+import us.mn.state.health.lims.common.valueholder.BaseObject;
 
-public class PanelItem extends EnumValueItemImpl {
+public class PanelItem extends BaseObject {
 
 	private static final long serialVersionUID = 78313088562219465L;
 
@@ -59,9 +59,6 @@ public class PanelItem extends EnumValueItemImpl {
 		this.panel.setValue(panel);
 	}
 
-	protected ValueHolderInterface getPanelHolder() {
-		return this.panel;
-	}
 
 	public String getPanelName() {
 		return this.panelName;
@@ -71,9 +68,6 @@ public class PanelItem extends EnumValueItemImpl {
 		this.id = id;
 	}
 
-	protected void setPanelHolder(ValueHolderInterface panel) {
-		this.panel = panel;
-	}
 
 	public void setPanelName(String panelName) {
 		this.panelName = panelName;
@@ -116,7 +110,7 @@ public class PanelItem extends EnumValueItemImpl {
 	}
 
 	public Test getTest() {
-		return (Test)test.getValue();
+		return (Test) this.test.getValue();
 	}
 
 	public void setTest(Test test) {

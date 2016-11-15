@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.validator.GenericValidator;
 import org.hibernate.HibernateException;
 import org.hibernate.Transaction;
 import org.json.simple.JSONObject;
@@ -126,16 +127,18 @@ public class TestUsageUpdate implements IResultUpdate {
 
 	private void updateData(Map<String, Map<String, Integer>> dateTestMap, List<ReportExternalExport> exports) {
 		for (String date : dateTestMap.keySet()) {
-			ReportExternalExport export = new ReportExternalExport();
-			export.setTypeId(TEST_USAGE_TYPE_ID);
-			export.setEventDate(DateUtil.convertStringDateToTruncatedTimestamp(date));
-			export = queueDAO.getReportByEventDateAndType(export);
-
-			updateExport(export, dateTestMap.get(date));
-
-			export.setCollectionDate(DateUtil.getNowAsTimestamp());
-			
-			exports.add(export);
+			if(!GenericValidator.isBlankOrNull(date)) {
+				ReportExternalExport export = new ReportExternalExport();
+				export.setTypeId(TEST_USAGE_TYPE_ID);
+				export.setEventDate(DateUtil.convertStringDateToTruncatedTimestamp(date));
+				export = queueDAO.getReportByEventDateAndType(export);
+	
+				updateExport(export, dateTestMap.get(date));
+	
+				export.setCollectionDate(DateUtil.getNowAsTimestamp());
+				
+				exports.add(export);
+			}
 		}
 	}
 
@@ -160,21 +163,23 @@ public class TestUsageUpdate implements IResultUpdate {
 		} catch (ParseException pe) {
 			System.out.println(pe);
 		}
-
-		JSONObject json = new JSONObject();
-		for (String name : databaseTestCountList.keySet()) {
-				json.put(name, databaseTestCountList.get(name));
-		}
-
-		StringWriter buffer = new StringWriter();
-		try {
-			json.writeJSONString(buffer);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 		
-		String data = buffer.toString().replace("\n", "");
-		export.setData(data);
+		if (databaseTestCountList != null) {
+			JSONObject json = new JSONObject();
+			for (String name : databaseTestCountList.keySet()) {
+					json.put(name, databaseTestCountList.get(name));
+			}
+	
+			StringWriter buffer = new StringWriter();
+			try {
+				json.writeJSONString(buffer);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			String data = buffer.toString().replace("\n", "");
+			export.setData(data);
+		}
 	}
 
 	private void applyUpdatesToDB(List<ReportExternalExport> exports) {

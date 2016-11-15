@@ -24,26 +24,28 @@ import us.mn.state.health.lims.test.valueholder.Test;
 
 public interface ResultLimitDAO extends BaseDAO {
 
-	boolean insertData(ResultLimit resultLimit)
+	public boolean insertData(ResultLimit resultLimit)
 			throws LIMSRuntimeException;
 
-	void deleteData(List resultLimits) throws LIMSRuntimeException;
+	public void deleteData(List resultLimits) throws LIMSRuntimeException;
 
-	List getAllResultLimits() throws LIMSRuntimeException;
+	public List getAllResultLimits() throws LIMSRuntimeException;
 
-	List getPageOfResultLimits(int startingRecNo)
+	public List getPageOfResultLimits(int startingRecNo)
 			throws LIMSRuntimeException;
 
-	void getData(ResultLimit resultLimit) throws LIMSRuntimeException;
+	public void getData(ResultLimit resultLimit) throws LIMSRuntimeException;
 
-	void updateData(ResultLimit resultLimit) throws LIMSRuntimeException;
+	public void updateData(ResultLimit resultLimit) throws LIMSRuntimeException;
 
-	List getNextResultLimitRecord(String id) throws LIMSRuntimeException;
-
-	List getPreviousResultLimitRecord(String id)
-			throws LIMSRuntimeException;
-
-	List<ResultLimit> getAllResultLimitsForTest(String testId) throws LIMSRuntimeException;
+    public void updateDataTestEdit(ResultLimit resultLimit) throws LIMSRuntimeException;
 	
-	ResultLimit getResultLimitById( String resultLimitId) throws LIMSRuntimeException;
+	public List getNextResultLimitRecord(String id) throws LIMSRuntimeException;
+
+	public List getPreviousResultLimitRecord(String id)
+			throws LIMSRuntimeException;
+
+	public List getAllResultLimitsForTest(Test test) throws LIMSRuntimeException;
+	
+	public ResultLimit getResultLimitById( String resultLimitId) throws LIMSRuntimeException;
 }

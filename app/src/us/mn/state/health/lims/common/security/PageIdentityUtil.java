@@ -23,12 +23,13 @@ import org.apache.commons.validator.GenericValidator;
 
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
-import us.mn.state.health.lims.common.util.StringUtil;
 
 public class PageIdentityUtil {
 
 	private static final String REPORT_PARAMETER = "report";
 	private static final String TYPE_PARAMETER = "type";
+	private static final String ACCESSIONNUMBER_PARAMETER = "accessionNumber";
+	private static final String TESTSECTION_PARAMETER = "testSectionId";
 
 	public static boolean isMainPage(HttpServletRequest request) {
 		String actionName = (String) request.getAttribute(IActionConstants.ACTION_KEY);
@@ -44,16 +45,6 @@ public class PageIdentityUtil {
 		String actionName = null;
 
 		actionName = (String) request.getAttribute(IActionConstants.ACTION_KEY);
-		
-		String localizedName = StringUtil.getContextualMessageForKey("dictionary.result.Positif_VIH_2");
-		System.out.println("gnrTest: " + localizedName);
-		
-		if (actionName == null) {
-			System.out.println("actionName is null");
-			actionName = "dummy";
-		} else {
-			System.out.println("actionName is " + actionName);
-		}
 
 		if (actionName.equals("QuickEntryAddTestPopup")) {
 			actionName = "QuickEntry";
@@ -63,7 +54,6 @@ public class PageIdentityUtil {
 				|| actionName.equals("TestAnalyteTestResultAddNonDictionaryRGPopup")
 				|| actionName.equals("TestAnalyteTestResultAddRGPopup")
 				|| actionName.equals("TestAnalyteTestResultAssignRGPopup")
-				|| actionName.equals("TestAnalyteTestResultEditDictionaryRGPopup")
 				|| actionName.equals("TestAnalyteTestResultEditDictionaryRGPopup")
 				|| actionName.equals("TestAnalyteTestResultEditNonDictionaryRGPopup")) {
 			actionName = "TestAnalyteTestResult";
@@ -75,14 +65,32 @@ public class PageIdentityUtil {
 		actionName = actionName.endsWith("Menu") ? actionName.substring(0, actionName.length() - 4) : actionName;
 
 		if(useParameterExtention){
-			String parameter = request.getParameter(TYPE_PARAMETER);
-
-			if( GenericValidator.isBlankOrNull(parameter)){
-				parameter = request.getParameter(REPORT_PARAMETER);
-			}
-
-			if( !GenericValidator.isBlankOrNull(parameter)){
-				actionName += ":" + parameter;
+			/*	3 Scenarios/Cases to use ResultValidationByAccessionNumber: 
+				(a) ?type=accessionnumber&test= 
+				(b) ?testSectionId=&test=&type=&accessionNumber=1670000002 
+				(c) ?testSectionId=2&test=&type=Biochemistry&receivedDate=12/12/2015 
+			 */
+			if (actionName.equalsIgnoreCase("ResultValidation") && (request.getParameter(TYPE_PARAMETER).equalsIgnoreCase("accessionnumber") || 
+					!GenericValidator.isBlankOrNull(request.getParameter(ACCESSIONNUMBER_PARAMETER)) || !GenericValidator.isBlankOrNull(request.getParameter(TESTSECTION_PARAMETER)))) {
+				actionName = "ResultValidationByAccessionNumber";
+				
+			} else {
+				// Special Case - need to use ResultValidation (?type=biochemistry&test=) 
+				String parameter = request.getParameter(TYPE_PARAMETER);
+				String testSectionParameter = request.getParameter(TESTSECTION_PARAMETER);
+				
+				if (GenericValidator.isBlankOrNull(parameter)) {
+					parameter = request.getParameter(REPORT_PARAMETER);
+				}
+				
+				if ((actionName.equalsIgnoreCase("LogbookResults") || actionName.equalsIgnoreCase("Workplan")) && 
+						!GenericValidator.isBlankOrNull(parameter) && !GenericValidator.isBlankOrNull(testSectionParameter)) {
+					//actionName = actionName;
+				} else {
+					if (!GenericValidator.isBlankOrNull(parameter)) {
+						actionName += ":" + parameter;
+					}
+				}
 			}
 		}
 

@@ -1,41 +1,47 @@
 /**
-* The contents of this file are subject to the Mozilla Public License
-* Version 1.1 (the "License"); you may not use this file except in
-* compliance with the License. You may obtain a copy of the License at
-* http://www.mozilla.org/MPL/
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
  *
-* Software distributed under the License is distributed on an "AS IS"
-* basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
-* License for the specific language governing rights and limitations under
-* the License.
-*
-* The Original Code is OpenELIS code.
-*
-* Copyright (C) The Minnesota Department of Health.  All Rights Reserved.
-*
-* Contributor(s): CIRG, University of Washington, Seattle WA.
-*/
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
+ * License for the specific language governing rights and limitations under
+ * the License.
+ *
+ * The Original Code is OpenELIS code.
+ *
+ * Copyright (C) The Minnesota Department of Health.  All Rights Reserved.
+ *
+ * Contributor(s): CIRG, University of Washington, Seattle WA.
+ */
 package us.mn.state.health.lims.common.util;
-
-import org.apache.commons.validator.GenericValidator;
-import us.mn.state.health.lims.common.log.LogEvent;
-import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 
 import java.io.InputStream;
 import java.sql.Date;
 import java.text.DateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+
+import org.apache.commons.validator.GenericValidator;
+
+import us.mn.state.health.lims.common.log.LogEvent;
+import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 
 /**
  * This class represents the configuration properties of the application
- *
+ * 
  */
 
 public class SystemConfiguration {
 	private static String propertyFile = "/SystemConfiguration.properties";
 
 	private static SystemConfiguration config = null;
-    private List<LocaleChangeListener> localChangeListeners = new ArrayList<LocaleChangeListener>();
+	private List<LocaleChangeListener> localChangeListeners = new ArrayList<LocaleChangeListener>();
 
 	private Properties properties = null;
 	private Map<String, Locale> localePropertyToLocaleMap = new HashMap<String, Locale>();
@@ -52,21 +58,22 @@ public class SystemConfiguration {
 			properties.load(propertyStream);
 
 		} catch (Exception e) {
-			//bugzilla 2154
-			LogEvent.logError("SystemConfiguration","Constructor",e.toString());
+			// bugzilla 2154
+			LogEvent.logError("SystemConfiguration", "Constructor",
+					e.toString());
 		} finally {
 			if (null != propertyStream) {
 				try {
 					propertyStream.close();
 					propertyStream = null;
 				} catch (Exception e) {
-                    //bugzilla 2154
-			        LogEvent.logError("SystemConfiguration","Constructor final",e.toString());
+					// bugzilla 2154
+					LogEvent.logError("SystemConfiguration",
+							"Constructor final", e.toString());
 				}
 			}
 
 		}
-
 
 	}
 
@@ -78,25 +85,24 @@ public class SystemConfiguration {
 				}
 			}
 		}
-		
-		
-		
+
 		return config;
 	}
 
-    public void addLocalChangeListener(LocaleChangeListener listener){
-        localChangeListeners.add(listener);
-    }
+	public void addLocalChangeListener(LocaleChangeListener listener) {
+		localChangeListeners.add(listener);
+	}
+
 	public int getDefaultPageSize() {
 		String pageSize = properties.getProperty("page.defaultPageSize");
 		if (pageSize != null) {
 			return Integer.parseInt(pageSize);
 		}
-		//bugzilla 1409
+		// bugzilla 1409
 		return 20;
 	}
 
-//bugzilla 1742
+	// bugzilla 1742
 	public int getDefaultTreePageSize() {
 		String pageSize = properties.getProperty("page.tree.defaultPageSize");
 		if (pageSize != null) {
@@ -105,9 +111,10 @@ public class SystemConfiguration {
 		return 10;
 	}
 
-	//bugzilla 1742
+	// bugzilla 1742
 	public int getDefaultPaginatedNodeChildCount() {
-		String count = properties.getProperty("page.tree.paginatednode.child.count");
+		String count = properties
+				.getProperty("page.tree.paginatednode.child.count");
 		if (count != null) {
 			return Integer.parseInt(count);
 		}
@@ -115,29 +122,32 @@ public class SystemConfiguration {
 	}
 
 	public Locale getDefaultLocale() {
-        return getLocaleByLocalString( ConfigurationProperties.getInstance().getPropertyValue(Property.DEFAULT_LANG_LOCALE) );
+		return getLocaleByLocalString(ConfigurationProperties.getInstance()
+				.getPropertyValue(Property.DEFAULT_LANG_LOCALE));
 	}
 
-    public Locale getLocaleByLocalString( String localeString){
-        Locale locale = localePropertyToLocaleMap.get(localeString);
+	public Locale getLocaleByLocalString(String localeString) {
+		Locale locale = localePropertyToLocaleMap.get(localeString);
 
-        if( locale == null){
-            if (localeString != null && localeString.length() == 5) {
-                locale = new Locale(localeString.substring(0, 2), localeString.substring(3));
-                localePropertyToLocaleMap.put(localeString, locale);
-            }
-        }
+		if (locale == null) {
+			if (localeString != null && localeString.length() == 5) {
+				locale = new Locale(localeString.substring(0, 2),
+						localeString.substring(3));
+				localePropertyToLocaleMap.put(localeString, locale);
+			}
+		}
 
-        return locale == null ? Locale.US : locale;
-    }
-
-	public void setDefaultLocale( String locale ){
-		ConfigurationProperties.getInstance().setPropertyValue(Property.DEFAULT_LANG_LOCALE, locale);
-        for( LocaleChangeListener listener : localChangeListeners){
-            listener.localeChanged(locale);
-        }
+		return locale == null ? Locale.US : locale;
 	}
-	
+
+	public void setDefaultLocale(String locale) {
+		ConfigurationProperties.getInstance().setPropertyValue(
+				Property.DEFAULT_LANG_LOCALE, locale);
+		for (LocaleChangeListener listener : localChangeListeners) {
+			listener.localeChanged(locale);
+		}
+	}
+
 	public String getDefaultEncoding() {
 		String encodingString = properties.getProperty("default.encoding");
 		if (encodingString != null) {
@@ -147,11 +157,12 @@ public class SystemConfiguration {
 	}
 
 	public String getDefaultApplicationName() {
-		String applicationNameString = properties.getProperty("default.application.name");
+		String applicationNameString = properties
+				.getProperty("default.application.name");
 		if (applicationNameString != null) {
 			return applicationNameString;
 		}
-		//bugzilla 1995
+		// bugzilla 1995
 		return "OpenELIS";
 	}
 
@@ -188,7 +199,8 @@ public class SystemConfiguration {
 	}
 
 	public String getAnalyteTypeRequired() {
-		String analyteTypeRequired = properties.getProperty("analyteTypeRequired");
+		String analyteTypeRequired = properties
+				.getProperty("analyteTypeRequired");
 		if (analyteTypeRequired != null) {
 			return analyteTypeRequired;
 		}
@@ -196,7 +208,8 @@ public class SystemConfiguration {
 	}
 
 	public String getAnalyteTypeNotRequired() {
-		String analyteTypeNotRequired = properties.getProperty("analyteTypeNotRequired");
+		String analyteTypeNotRequired = properties
+				.getProperty("analyteTypeNotRequired");
 		if (analyteTypeNotRequired != null) {
 			return analyteTypeNotRequired;
 		}
@@ -210,58 +223,55 @@ public class SystemConfiguration {
 		}
 		return "N";
 	}
-	//==============================================================
 
-	public String getQuickEntryDefaultReferredCultureFlag()
-	{
-		String def = properties.getProperty("quickEntry.default.sample.referredCultureFlag");
-		if (def != null)
-		{
+	// ==============================================================
+
+	public String getQuickEntryDefaultReferredCultureFlag() {
+		String def = properties
+				.getProperty("quickEntry.default.sample.referredCultureFlag");
+		if (def != null) {
 			return def;
 		}
 		return "S";
 	}
 
-	public String getQuickEntryDefaultStickerReceivedFlag()
-	{
-		String def = properties.getProperty("quickEntry.default.sample.stickerReceivedFlag");
-		if (def != null)
-		{
+	public String getQuickEntryDefaultStickerReceivedFlag() {
+		String def = properties
+				.getProperty("quickEntry.default.sample.stickerReceivedFlag");
+		if (def != null) {
 			return def;
 		}
 		return "N";
 	}
 
-	public String getQuickEntryDefaultNextItemSequence()
-	{
-		String def = properties.getProperty("quickEntry.default.sample.nextItemSequence");
-		if (def != null)
-		{
+	public String getQuickEntryDefaultNextItemSequence() {
+		String def = properties
+				.getProperty("quickEntry.default.sample.nextItemSequence");
+		if (def != null) {
 			return def;
 		}
 		return "1";
 	}
 
-	public String getQuickEntryDefaultRevision()
-	{
-		String def = properties.getProperty("quickEntry.default.sample.revision");
-		if (def != null)
-		{
+	public String getQuickEntryDefaultRevision() {
+		String def = properties
+				.getProperty("quickEntry.default.sample.revision");
+		if (def != null) {
 			return def;
 		}
 		return "0";
 	}
 
-	public String getQuickEntryDefaultCollectionTimeForDisplay()
-	{
-		String def = properties.getProperty("quickEntry.default.sample.collectionTimeForDisplay");
-		if (def != null)
-		{
+	public String getQuickEntryDefaultCollectionTimeForDisplay() {
+		String def = properties
+				.getProperty("quickEntry.default.sample.collectionTimeForDisplay");
+		if (def != null) {
 			return def;
 		}
 		return "00:00";
 	}
-	//==============================================================
+
+	// ==============================================================
 
 	public String getHumanSampleOneDefaultReferredCultureFlag() {
 		String def = properties
@@ -269,7 +279,7 @@ public class SystemConfiguration {
 		if (def != null) {
 			return def;
 		}
-		//bugzilla 1754 - blank is default
+		// bugzilla 1754 - blank is default
 		return "";
 	}
 
@@ -318,60 +328,54 @@ public class SystemConfiguration {
 		return "";
 	}
 
-	//bugzilla 1387 rename this method so more generic
+	// bugzilla 1387 rename this method so more generic
 	public String getHumanDomain() {
-		String def = properties
-				.getProperty("domain.human");
+		String def = properties.getProperty("domain.human");
 		if (def != null) {
 			return def;
 		}
 		return "H";
 	}
 
-   //bugzilla 1387 rename this method so more generic
+	// bugzilla 1387 rename this method so more generic
 	public String getAnimalDomain() {
-		String def = properties
-				.getProperty("domain.animal");
+		String def = properties.getProperty("domain.animal");
 		if (def != null) {
 			return def;
 		}
 		return "A";
 	}
 
-	//bugzilla 1348 - analysis status for verification
+	// bugzilla 1348 - analysis status for verification
 	public String getAnalysisVerifiedStatus() {
-		String def = properties
-				.getProperty("analysis.status.verified");
+		String def = properties.getProperty("analysis.status.verified");
 		if (def != null) {
 			return def;
 		}
 		return "V";
 	}
 
-	//bugzilla 1348 - analysis status for verification
+	// bugzilla 1348 - analysis status for verification
 	public String getAnalysisReadyToVerifyStatus() {
-		String def = properties
-				.getProperty("analysis.status.readytoverify");
+		String def = properties.getProperty("analysis.status.readytoverify");
 		if (def != null) {
 			return def;
 		}
 		return "";
 	}
 
-	//bugzilla - reports id
+	// bugzilla - reports id
 	public String getOpenReportsReportId(String key) {
-		String def = properties
-				.getProperty(key);
+		String def = properties.getProperty(key);
 		if (def != null) {
 			return def;
 		}
 		return "";
 	}
 
-	//bugzilla - reports group
+	// bugzilla - reports group
 	public String getOpenReportsGroupId(String key) {
-		String def = properties
-				.getProperty(key);
+		String def = properties.getProperty(key);
 		if (def != null) {
 			return def;
 		}
@@ -380,24 +384,22 @@ public class SystemConfiguration {
 
 	// bugzilla 1546
 	public String getSampleStatusType() {
-		String def = properties
-		.getProperty("sample.status");
-        if (def != null) {
-	       return def;
-        }
-        return "";
+		String def = properties.getProperty("sample.status");
+		if (def != null) {
+			return def;
+		}
+		return "";
 	}
 
 	public String getAnalysisStatusType() {
-		String def = properties
-		.getProperty("analysis.status");
-        if (def != null) {
-	       return def;
-        }
-        return "";
+		String def = properties.getProperty("analysis.status");
+		if (def != null) {
+			return def;
+		}
+		return "";
 	}
 
-	//bugzilla 2380
+	// bugzilla 2380
 	public String getLabelPrinterName() {
 		String printer = properties.getProperty("print.label.name");
 		if (printer != null) {
@@ -414,9 +416,10 @@ public class SystemConfiguration {
 		return "1";
 	}
 
-	//bugzilla 2374
+	// bugzilla 2374
 	public String getMaxNumberOfLabels() {
-		String maxNumberOfLabels = properties.getProperty("print.label.numeroflabels");
+		String maxNumberOfLabels = properties
+				.getProperty("print.label.numeroflabels");
 		if (maxNumberOfLabels != null) {
 			return maxNumberOfLabels;
 		}
@@ -447,95 +450,101 @@ public class SystemConfiguration {
 		return "300";
 	}
 
-	//bugzilla 2592
+	// bugzilla 2592
 	public String getDefaultSampleLabel(String accessionNumber) {
-		String prependBarcode = properties.getProperty("print.label.sample.prepend.barcode");
-		String prependHumanReadable = properties.getProperty("print.label.sample.prepend.humanreadable");
+		String prependBarcode = properties
+				.getProperty("print.label.sample.prepend.barcode");
+		String prependHumanReadable = properties
+				.getProperty("print.label.sample.prepend.humanreadable");
 		String postpend = properties.getProperty("print.label.sample.postpend");
-		if (prependBarcode != null && prependHumanReadable != null && postpend != null) {
+		if (prependBarcode != null && prependHumanReadable != null
+				&& postpend != null) {
 			StringBuffer sb = new StringBuffer();
-			sb.append(prependBarcode).append(accessionNumber).append(prependHumanReadable).append(accessionNumber).append(postpend);
+			sb.append(prependBarcode).append(accessionNumber)
+					.append(prependHumanReadable).append(accessionNumber)
+					.append(postpend);
 			return sb.toString();
 		}
 		return "";
 	}
 
-	public String getAnalysisStatusAssigned(){
+	public String getAnalysisStatusAssigned() {
 		String val = properties.getProperty("analysis.status.assigned");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "1";
 	}
 
-	//bugzilla 2300
-	public String getAnalysisStatusCanceled(){
+	// bugzilla 2300
+	public String getAnalysisStatusCanceled() {
 		String val = properties.getProperty("analysis.status.canceled");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "2";
 	}
 
-	public String getAnalysisStatusResultCompleted(){
+	public String getAnalysisStatusResultCompleted() {
 		String val = properties.getProperty("analysis.status.result.completed");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "3";
 	}
 
-	public String getAnalysisStatusReleased(){
+	public String getAnalysisStatusReleased() {
 		String val = properties.getProperty("analysis.status.released");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "4";
 	}
 
-	public String getSampleStatusQuickEntryComplete(){
-		String val = properties.getProperty("sample.status.quick.entry.complete");
-		if(val !=null) {
+	public String getSampleStatusQuickEntryComplete() {
+		String val = properties
+				.getProperty("sample.status.quick.entry.complete");
+		if (val != null) {
 			return val;
 		}
 
 		return "1";
 	}
 
-	public String getSampleStatusEntry1Complete(){
+	public String getSampleStatusEntry1Complete() {
 		String val = properties.getProperty("sample.status.entry.1.complete");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "2";
 	}
 
-	public String getSampleStatusEntry2Complete(){
+	public String getSampleStatusEntry2Complete() {
 		String val = properties.getProperty("sample.status.entry.2.complete");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "3";
 	}
 
-	public String getSampleStatusReleased(){
+	public String getSampleStatusReleased() {
 		String val = properties.getProperty("sample.status.released");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
 		return "7";
 	}
 
-	public String getSampleStatusLabelPrinted(){
+	public String getSampleStatusLabelPrinted() {
 		String val = properties.getProperty("sample.status.label.printed");
-		if(val !=null) {
+		if (val != null) {
 			return val;
 		}
 
@@ -558,18 +567,20 @@ public class SystemConfiguration {
 		return "21";
 	}
 
-	//bugzilla 2028
+	// bugzilla 2028
 	public String getAnalysisQaEventActionReferenceTableId() {
-		String refId = properties.getProperty("analysis.qaevent.action.reference.table.id");
+		String refId = properties
+				.getProperty("analysis.qaevent.action.reference.table.id");
 		if (refId != null) {
 			return refId;
 		}
 		return "21";
 	}
 
-	//bugzilla 2500
+	// bugzilla 2500
 	public String getSampleQaEventActionReferenceTableId() {
-		String refId = properties.getProperty("sample.qaevent.action.reference.table.id");
+		String refId = properties
+				.getProperty("sample.qaevent.action.reference.table.id");
 		if (refId != null) {
 			return refId;
 		}
@@ -593,7 +604,8 @@ public class SystemConfiguration {
 	}
 
 	public String getDefaultTransportMethodForXMLTransmission() {
-		String transportMethod = properties.getProperty("default.transport.method");
+		String transportMethod = properties
+				.getProperty("default.transport.method");
 		if (transportMethod != null) {
 			return transportMethod;
 		}
@@ -601,7 +613,8 @@ public class SystemConfiguration {
 	}
 
 	public String getDefaultProcessingIdForXMLTransmission() {
-		String processingId = properties.getProperty("default.transport.processing.id");
+		String processingId = properties
+				.getProperty("default.transport.processing.id");
 		if (processingId != null) {
 			return processingId;
 		}
@@ -609,7 +622,8 @@ public class SystemConfiguration {
 	}
 
 	public String getDefaultTransmissionTextSeparator() {
-		String separator = properties.getProperty("default.transport.text.separator");
+		String separator = properties
+				.getProperty("default.transport.text.separator");
 		if (separator != null) {
 			return separator;
 		}
@@ -617,14 +631,13 @@ public class SystemConfiguration {
 	}
 
 	public String getDefaultTransmissionCodeSystemType() {
-		String codeSystemType = properties.getProperty("default.transport.code.system.type");
+		String codeSystemType = properties
+				.getProperty("default.transport.code.system.type");
 		if (codeSystemType != null) {
 			return codeSystemType;
 		}
 		return "L";
 	}
-
-
 
 	public String getMdhUhlIdForXMLTransmission() {
 		String uhlId = properties.getProperty("mdh.uhl.id");
@@ -643,7 +656,8 @@ public class SystemConfiguration {
 	}
 
 	public String getMdhUniversalIdTypeForXMLTransmission() {
-		String universalIdType = properties.getProperty("mdh.universal.id.type");
+		String universalIdType = properties
+				.getProperty("mdh.universal.id.type");
 		if (universalIdType != null) {
 			return universalIdType;
 		}
@@ -666,34 +680,35 @@ public class SystemConfiguration {
 		return "43";
 	}
 
-	//bugzilla 2393 INFLUENZA XML
+	// bugzilla 2393 INFLUENZA XML
 	public String getInfluenzaDefaultProcessingIdForXMLTransmission() {
-		String processingId = properties.getProperty("default.transport.processing.id.influenza");
+		String processingId = properties
+				.getProperty("default.transport.processing.id.influenza");
 		if (processingId != null) {
 			return processingId;
 		}
 		return "T";
 	}
 
-	//bugzilla 2393
+	// bugzilla 2393
 	public String getInfluenzaDefaultApplicationName() {
-		String applicationNameString = properties.getProperty("default.application.name.influenza");
+		String applicationNameString = properties
+				.getProperty("default.application.name.influenza");
 		if (applicationNameString != null) {
 			return applicationNameString;
 		}
-		//bugzilla 1995
+		// bugzilla 1995
 		return "MN OpenELIS Stage";
 	}
 
-
-	//1742 openreports static ids (tests, projects etc.)
+	// 1742 openreports static ids (tests, projects etc.)
 	public String getStaticIdByName(String name) {
-	   String testId = properties.getProperty(name);
-	   //System.out.println("SystemConfig getting test by name " + name);
-	   if (testId != null) {
-	       return testId;
-	   }
-	   return "";
+		String testId = properties.getProperty(name);
+		// System.out.println("SystemConfig getting test by name " + name);
+		if (testId != null) {
+			return testId;
+		}
+		return "";
 	}
 
 	public String getDefaultDataSource() {
@@ -704,35 +719,38 @@ public class SystemConfiguration {
 		return "LimsDS";
 	}
 
-	//bugzilla 2028 get qaevent code for quickentry sample type NOT GIVEN
+	// bugzilla 2028 get qaevent code for quickentry sample type NOT GIVEN
 	public String getQaEventCodeForRequestNoSampleType() {
-		String string = properties.getProperty("qaeventcode.request.sourcemissing");
+		String string = properties
+				.getProperty("qaeventcode.request.sourcemissing");
 		if (string != null) {
 			return string;
 		}
 		return "RQNSO";
 	}
 
-	//bugzilla 2028 get qaevent code for quickentry missing collection date
+	// bugzilla 2028 get qaevent code for quickentry missing collection date
 	public String getQaEventCodeForRequestNoCollectionDate() {
-		String string = properties.getProperty("qaeventcode.request.collectiondatemissing");
+		String string = properties
+				.getProperty("qaeventcode.request.collectiondatemissing");
 		if (string != null) {
 			return string;
 		}
 		return "RQNCD";
 	}
 
-	//bugzilla 2028 get qaevent code for quickentry submitter unknown
+	// bugzilla 2028 get qaevent code for quickentry submitter unknown
 	public String getQaEventCodeForRequestUnknownSubmitter() {
-		String string = properties.getProperty("qaeventcode.request.submitterunknown");
+		String string = properties
+				.getProperty("qaeventcode.request.submitterunknown");
 		if (string != null) {
 			return string;
 		}
 		return "RQNSNA";
 	}
 
-	//bugzilla 2028 get unknownSubmitterNumber
-	//bugzilla 2589 unknown submitter number is null now
+	// bugzilla 2028 get unknownSubmitterNumber
+	// bugzilla 2589 unknown submitter number is null now
 	public String getUnknownSubmitterNumberForQaEvent() {
 		String string = properties.getProperty("unknown.submitter.number");
 		if (string != null) {
@@ -741,84 +759,99 @@ public class SystemConfiguration {
 		return "";
 	}
 
-	//bugzilla 2028 get qaevent action code for quickentry sample type NOT GIVEN
+	// bugzilla 2028 get qaevent action code for quickentry sample type NOT
+	// GIVEN
 	public String getQaEventActionCodeForRequestNoSampleType() {
-		String string = properties.getProperty("qaeventactioncode.request.sourcemissing");
+		String string = properties
+				.getProperty("qaeventactioncode.request.sourcemissing");
 		if (string != null) {
 			return string;
 		}
 		return "RQSOC";
 	}
 
-	//bugzilla 2028 get qaevent action code for quickentry missing collection date
+	// bugzilla 2028 get qaevent action code for quickentry missing collection
+	// date
 	public String getQaEventActionCodeForRequestNoCollectionDate() {
-		String string = properties.getProperty("qaeventactioncode.request.collectiondatemissing");
+		String string = properties
+				.getProperty("qaeventactioncode.request.collectiondatemissing");
 		if (string != null) {
 			return string;
 		}
 		return "CDC";
 	}
 
-	//bugzilla 2028 get qaevent action code for quickentry submitter unknown
+	// bugzilla 2028 get qaevent action code for quickentry submitter unknown
 	public String getQaEventActionCodeForRequestUnknownSubmitter() {
-		String string = properties.getProperty("qaeventactioncode.request.submitterunknown");
+		String string = properties
+				.getProperty("qaeventactioncode.request.submitterunknown");
 		if (string != null) {
 			return string;
 		}
 		return "SNAC";
 	}
 
-	//bugzilla 2063
+	// bugzilla 2063
 	public String getQaEventDictionaryCategoryType() {
-		String string = properties.getProperty("dictionary.category.qaevent.type");
+		String string = properties
+				.getProperty("dictionary.category.qaevent.type");
 		if (string != null) {
 			return string;
 		}
-		//bugzilla 2221 - we are now defining only exceptions to the rule
+		// bugzilla 2221 - we are now defining only exceptions to the rule
 		return "Q";
 	}
 
-	//bugzilla 2506
+	// bugzilla 2506
 	public String getQaEventDictionaryCategoryCategory() {
-		String string = properties.getProperty("dictionary.category.qaevent.category");
+		String string = properties
+				.getProperty("dictionary.category.qaevent.category");
 		if (string != null) {
 			return string;
 		}
-		//bugzilla 2221 - we are now defining only exceptions to the rule
+		// bugzilla 2221 - we are now defining only exceptions to the rule
 		return "QC";
 	}
 
-	//User Profile
+	// User Profile
 	public String getLoginUserPasswordExpiredDay() {
-		String string = properties.getProperty("login.user.password.expired.day");
+		String string = properties
+				.getProperty("login.user.password.expired.day");
 		if (string != null) {
 			return string;
 		}
 		return "30";
 	}
+
 	public String getLoginUserChangePasswordAllowDay() {
-		String string = properties.getProperty("login.user.change.password.allow.day");
+		String string = properties
+				.getProperty("login.user.change.password.allow.day");
 		if (string != null) {
 			return string;
 		}
 		return "3";
 	}
+
 	public String getLoginUserChangePasswordExpiredMonth() {
-		String string = properties.getProperty("login.user.password.expired.month");
+		String string = properties
+				.getProperty("login.user.password.expired.month");
 		if (string != null) {
 			return string;
 		}
 		return "1";
 	}
-	//bugzilla 2286 password reminder days
+
+	// bugzilla 2286 password reminder days
 	public String getLoginUserPasswordExpiredReminderDay() {
-		String string = properties.getProperty("login.user.password.expired.reminder.day");
+		String string = properties
+				.getProperty("login.user.password.expired.reminder.day");
 		if (string != null) {
 			return string;
 		}
 		return "15";
 	}
-	//bugzilla 2286 account lock after 3 failed logins
+
+	// bugzilla 2286 account lock after 3 failed logins
 	public String getLoginUserFailAttemptCount() {
 		String string = properties.getProperty("login.fail.attempt.count");
 		if (string != null) {
@@ -826,15 +859,18 @@ public class SystemConfiguration {
 		}
 		return "3";
 	}
-	//bugzilla 2286 account unlock after 10 minutes
+
+	// bugzilla 2286 account unlock after 10 minutes
 	public String getLoginUserAccountUnlockMinute() {
-		String string = properties.getProperty("login.user.account.unlock.minute");
+		String string = properties
+				.getProperty("login.user.account.unlock.minute");
 		if (string != null) {
 			return string;
 		}
 		return "10";
 	}
-	//User Test Section
+
+	// User Test Section
 	public String getEnableUserTestSection() {
 		String string = properties.getProperty("enable.user.test.section");
 		if (string != null) {
@@ -843,73 +879,71 @@ public class SystemConfiguration {
 		return "Y";
 	}
 
-	public String getAnalysisDefaultRevision()
-	{
+	public String getAnalysisDefaultRevision() {
 		String def = properties.getProperty("analysis.default.revision");
-		if (def != null)
-		{
+		if (def != null) {
 			return def;
 		}
 		return "0";
 	}
 
-	//Encrypted PDF Path
+	// Encrypted PDF Path
 	public String getEncryptedPdfPath() {
 		String string = properties.getProperty("encrypted.pdf.path");
-        if (string != null) {
-            return string;
-        }
+		if (string != null) {
+			return string;
+		}
 		return "/export/project/phl/scans";
-    }
+	}
 
-	//Allow to view the encrypted pdf
+	// Allow to view the encrypted pdf
 	public String getEnabledSamplePdf() {
 		String string = properties.getProperty("enable.sample.pdf");
 		if (string != null) {
 			return string;
-	}
+		}
 		return "Y";
 	}
 
-	//bugzilla 2528
+	// bugzilla 2528
 	public String getNewbornTestPanelName() {
 		String string = properties.getProperty("newborn.testPanelName");
 		if (string != null) {
 			return string;
 		}
 		return "NBS-Panel";
-    }
+	}
+
 	public String getNewbornTypeOfSample() {
 		String string = properties.getProperty("newborn.typeOfSample");
 		if (string != null) {
 			return string;
 		}
 		return "DRIED BLOOD SPOT CARD";
-    }
+	}
 
-	//bugzilla 2529, 2530
+	// bugzilla 2529, 2530
 	public String getNewbornDomain() {
 		String string = properties.getProperty("domain.newborn");
 		if (string != null) {
 			return string;
 		}
 		return "N";
-    }
+	}
 
-
-	//for testing only to inject values
-	public void setSiteCode( String siteCode){
+	// for testing only to inject values
+	public void setSiteCode(String siteCode) {
 		properties.setProperty("sitecode", siteCode);
 	}
 
 	public String getProgramCodes() {
 		String codes = properties.getProperty("programcodes");
 
-        return (codes == null ? "" : codes);
+		return (codes == null ? "" : codes);
 	}
 
-	//for testing only to inject values
-	public void setProgramCodes( String programCodes){
+	// for testing only to inject values
+	public void setProgramCodes(String programCodes) {
 		properties.setProperty("programcodes", programCodes);
 	}
 
@@ -921,15 +955,18 @@ public class SystemConfiguration {
 		return "M";
 	}
 
-    //we are letting the date locale differ from the default locale. Not a good thing
+	// we are letting the date locale differ from the default locale. Not a good
+	// thing
 	public Locale getDateLocale() {
-		String localeString = ConfigurationProperties.getInstance().getPropertyValue(Property.DEFAULT_DATE_LOCALE);
+		String localeString = ConfigurationProperties.getInstance()
+				.getPropertyValue(Property.DEFAULT_DATE_LOCALE);
 		Locale locale = Locale.US;
 
 		if (!GenericValidator.isBlankOrNull(localeString)) {
 			String[] splitLocale = localeString.split("-");
 
-			if( splitLocale.length == 1){ //there is variation around separators
+			if (splitLocale.length == 1) { // there is variation around
+											// separators
 				splitLocale = localeString.split("_");
 			}
 
@@ -943,7 +980,8 @@ public class SystemConfiguration {
 				break;
 			}
 			case 3: {
-				locale = new Locale(splitLocale[0], splitLocale[1], splitLocale[2]);
+				locale = new Locale(splitLocale[0], splitLocale[1],
+						splitLocale[2]);
 				break;
 			}
 			default: // no-op
@@ -952,44 +990,259 @@ public class SystemConfiguration {
 		return locale;
 	}
 
-	public String getPatternForDateLocale(){
-		DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT, getDateLocale());
+	public String getPatternForDateLocale() {
+		DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT,
+				getDateLocale());
 		// yyyy/mm/dd
 		Date date = Date.valueOf("2000-01-02");
 		String pattern = dateFormat.format(date);
 		pattern = pattern.replaceFirst("01", "MM");
 		pattern = pattern.replaceFirst("02", "DD");
 		pattern = pattern.replaceFirst("00", "YYYY");
+		// these next two are needed to support 'en-US' locale which returns a
+		// pattern of 'M/d/yy' (non zero-padded single digits for month and day)
+		pattern = pattern.replaceFirst("1", "MM");
+		pattern = pattern.replaceFirst("2", "DD");
 		return pattern;
 	}
 
 	public boolean errorsToScreen() {
 		String id = properties.getProperty("errors.to.screen");
-        return id == null ? false : Boolean.valueOf(id.trim());
+		return id == null ? false : Boolean.valueOf(id.trim());
 	}
 
-	public String getPermissionAgent(){
-		return properties.getProperty("permissions.agent", "USER").trim().toUpperCase();
+	public String getPermissionAgent() {
+		return properties.getProperty("permissions.agent", "USER").trim()
+				.toUpperCase();
 	}
 
 	public long getSearchTimeLimit() {
 		long limit = 20000L;
-		String timeLimit = properties.getProperty("patient.search.time.limit.ms");
-		if( !GenericValidator.isBlankOrNull(timeLimit)){
-			try{
+		String timeLimit = properties
+				.getProperty("patient.search.time.limit.ms");
+		if (!GenericValidator.isBlankOrNull(timeLimit)) {
+			try {
 				limit = Long.parseLong(timeLimit);
-			}catch( NumberFormatException nfe){
-				LogEvent.logError("SystemConfiguration","getSearchTimeLimit()","Invalid SystemConfiguration format for 'patient.search.time.limit.ms'.  Default used");
+			} catch (NumberFormatException nfe) {
+				LogEvent.logError(
+						"SystemConfiguration",
+						"getSearchTimeLimit()",
+						"Invalid SystemConfiguration format for 'patient.search.time.limit.ms'.  Default used");
 			}
 		}
 		return limit;
 	}
 
 	public boolean useTestPatientGUID() {
-		return "enable".equals(properties.getProperty("use.test.patient.guid", "disable"));
+		return "enable".equals(properties.getProperty("use.test.patient.guid",
+				"disable"));
 	}
 
-	public void setProperty( String property, String value){
+	/**
+	 * nhuql.gv Get all testid from config
+	 * 
+	 * @return
+	 */
+	public String getReportTestIds() {
+		return properties.getProperty("report.group.testid");
+	}
+
+	/**
+	 * Dung Get projectDengue
+	 * 
+	 * @return
+	 */
+	public String getprojectDengue() {
+		return properties.getProperty("report.group.project.dengue");
+	}
+
+	/**
+	 * nhuql.gv Get all procedure from config
+	 * 
+	 * @return
+	 */
+	public String getReportProcedures() {
+		return properties.getProperty("report.group.procedure");
+	}
+
+	public void setProperty(String property, String value) {
 		properties.setProperty(property, value);
 	}
+
+	public String getAllDefaultSampleLabel(String accessionNumber1,
+			String accessionNumber2, String accessionNumber3) {
+		// String subString = accessionNumber.substring(0,10);
+
+		String label = "^XA" + "^FO20,30^BCN,60,N,N,N^FD" + accessionNumber1
+				+ "^FS" + "^FO30,110^AB14,35^FD" + accessionNumber1 + "^FS"
+				+ "^FO375,30^BCN,60,N,N,N^FD" + accessionNumber2 + "^FS"
+				+ "^FO385,110^AB14,35^FD" + accessionNumber2 + "^FS"
+				+ "^FO730,30^BCN,60,N,N,N^FD" + accessionNumber3 + "^FS"
+				+ "^FO740,110^AB14,35^FD" + accessionNumber3 + "^FS" + "^XZ";
+		if (GenericValidator.isBlankOrNull(accessionNumber3)) {
+			label = "^XA" + "^FO20,30^BCN,60,N,N,N^FD" + accessionNumber1
+					+ "^FS" + "^FO30,110^AB14,35^FD" + accessionNumber1 + "^FS"
+					+ "^FO375,30^BCN,60,N,N,N^FD" + accessionNumber2 + "^FS"
+					+ "^FO385,110^AB14,35^FD" + accessionNumber2 + "^FS"
+					+ "^XZ";
+		}
+		if (GenericValidator.isBlankOrNull(accessionNumber2)) {
+			label = "^XA" + "^FO20,30^BCN,60,N,N,N^FD" + accessionNumber1
+					+ "^FS" + "^FO30,110^AB14,35^FD" + accessionNumber1 + "^FS"
+					+ "^XZ";
+		}
+
+		return label;
+	}
+
+	public String getTestOfJE() {
+		return properties.getProperty("report.je.testid");
+	}
+
+	public String getListTestOfJE() {
+		return properties.getProperty("report.je.list_of_test");
+	}
+
+	/**
+	 * nhuql.gv Get procedure of Test JE
+	 * 
+	 * @return
+	 */
+	public String getProcedureOfJE() {
+		return properties.getProperty("report.je.procedure");
+	}
+
+	/**
+	 * nhuql.gv Get testid of Test PCR
+	 * 
+	 * @return
+	 */
+	public String getTestIdOfPCR() {
+		return properties.getProperty("report.pcr.testid");
+	}
+
+	/**
+	 * nhuql.gv Get testid of Test PLVR
+	 * 
+	 * @return
+	 */
+	public String getTestIdOfPLVR() {
+		return properties.getProperty("report.plvr.testid");
+	}
+
+	/**
+	 * nhuql.gv Get procedure of PCR
+	 * 
+	 * @return
+	 */
+	public String getProcedureOfPCR() {
+		return properties.getProperty("report.pcr.procedure");
+	}
+
+	/**
+	 * nhuql.gv Get procedure of PLVR
+	 * 
+	 * @return
+	 */
+	public String getProcedureOfPLVR() {
+		return properties.getProperty("report.plvr.procedure");
+	}
+
+	/**
+	 * nhuql.gv Get value of footer for report DENGUE and JE
+	 * 
+	 * @return
+	 */
+	public String getLeftFooter() {
+		return properties.getProperty("report.denge.je.footer");
+	}
+
+	/**
+	 * nhuql.gv Get value of footer for report DENGUE and JE
+	 * 
+	 * @return
+	 */
+	public String getRightHeaders() {
+		return properties.getProperty("report.denge.je.header");
+	}
+
+	public String getInputTestResults() {
+		return properties.getProperty("dataexchange.etor.test.input.result");
+	}
+
+	public String getTranslatedTestResults() {
+		return properties
+				.getProperty("dataexchange.etor.test.translate.result");
+	}
+
+	/**
+	 * Haql Get testIds of All Isolation Tests from config
+	 * 
+	 * @return
+	 */
+	public String getIsolationTestIds() {
+		return properties.getProperty("report.group.isolationtestids");
+	}
+
+	/**
+	 * Haql Get testId of Realtime PCR Zika virus
+	 * 
+	 * @return
+	 */
+	public String getZikaPRCTestId() {
+		return properties.getProperty("report.zikaPCR.testid");
+	}
+
+	/**
+	 * Haql Get testIds of All PCR Tests from config
+	 * 
+	 * @return
+	 */
+	public String getPCRTestIds() {
+		return properties.getProperty("report.group.pcrtestids");
+	}
+
+	public String getReportPostgreSQLServerIp() {
+		return properties
+				.getProperty("openreports.postgresqlconnection.server.ip");
+	}
+
+	public String getReportPostgreSQLServerPort() {
+		return properties
+				.getProperty("openreports.postgresqlconnection.server.port");
+	}
+
+	public String getReportPostgreSQLServerName() {
+		return properties
+				.getProperty("openreports.postgresqlconnection.server.name");
+	}
+	public String getReportOrganizationText() {
+        return properties
+                .getProperty("openreports.text.organization");
+    }
+	
+	public String getReportParameterEmergency() {
+        return properties.getProperty("report.parameter.list.emergency");
+    }
+	
+	public String getReportParameterDoctor() {
+        return properties.getProperty("report.parameter.list.doctor");
+    }
+	
+	public String getDataExchangeSQLServerURL() {
+        return properties.getProperty("his.dataexchange.sqlserver.url");
+    }
+	
+	public String getDataExchangeSQLServerUser() {
+        return properties.getProperty("his.dataexchange.sqlserver.user");
+    }
+	
+	public String getDataExchangeSQLServerPassword() {
+        return properties.getProperty("his.dataexchange.sqlserver.password");
+    }
+	
+	public String getDataExchangeWSDLURL() {
+        return properties.getProperty("his.dataexchange.mirth.wsdl.location");
+    }
+	
 }

@@ -18,6 +18,7 @@ package us.mn.state.health.lims.common.provider.query;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.IdValuePair;
@@ -28,22 +29,27 @@ import us.mn.state.health.lims.panel.valueholder.Panel;
 import us.mn.state.health.lims.panelitem.dao.PanelItemDAO;
 import us.mn.state.health.lims.panelitem.daoimpl.PanelItemDAOImpl;
 import us.mn.state.health.lims.panelitem.valueholder.PanelItem;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
+import us.mn.state.health.lims.test.dao.TestDAO;
+import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
 import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
 import us.mn.state.health.lims.test.valueholder.Test;
 import us.mn.state.health.lims.testdictionary.daoimpl.TestDictionaryDAOImpl;
 import us.mn.state.health.lims.testdictionary.valueholder.TestDictionary;
 import us.mn.state.health.lims.typeofsample.dao.TypeOfSamplePanelDAO;
 import us.mn.state.health.lims.typeofsample.daoimpl.TypeOfSamplePanelDAOImpl;
-import us.mn.state.health.lims.common.services.TypeOfSampleService;
+import us.mn.state.health.lims.typeofsample.util.TypeOfSampleUtil;
 import us.mn.state.health.lims.typeofsample.valueholder.TypeOfSamplePanel;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.*;
 
 public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
+	private TestDAO testDAO = new TestDAOImpl();
 	private PanelDAO panelDAO = new PanelDAOImpl();
 	private static final String USER_TEST_SECTION_ID;
     private static final String VARIABLE_SAMPLE_TYPE_ID;
@@ -51,27 +57,41 @@ public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
 
 	static{
 		USER_TEST_SECTION_ID = new TestSectionDAOImpl().getTestSectionByName("user").getId();
-        VARIABLE_SAMPLE_TYPE_ID = TypeOfSampleService.getTypeOfSampleIdForLocalAbbreviation("Variable");
+        VARIABLE_SAMPLE_TYPE_ID = TypeOfSampleUtil.getTypeOfSampleIdForLocalAbbreviation( "Variable" );
 	}
 
-	@Override
+	@SuppressWarnings("unchecked")
+    @Override
 	public void processRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-
+	    Set<SystemUserSection> userSection =(Set<SystemUserSection>) request.getSession().getAttribute("userSection");
 		String sampleType = request.getParameter("sampleType");
         isVariableTypeOfSample =  VARIABLE_SAMPLE_TYPE_ID.equals( sampleType );
         StringBuilder xml = new StringBuilder();
 
-		String result = createSearchResultXML(sampleType, xml);
+		String result = createSearchResultXML(sampleType, xml,userSection);
 
 		ajaxServlet.sendData(xml.toString(), result, request, response);
 
 	}
 
-	private String createSearchResultXML(String sampleType, StringBuilder xml){
+	private String createSearchResultXML(String sampleType, StringBuilder xml,Set<SystemUserSection> userSection){
 
 		String success = VALID;
-
-		List<Test> tests = TypeOfSampleService.getActiveTestsBySampleTypeId(sampleType, true);
+		//Added by Dung 2016-07-25
+		//get all test lists of system user section
+		List<Integer> testIds=new ArrayList<Integer>();
+		for (SystemUserSection session : userSection) {
+            if(session.getHasView().equals("Y")){
+                List<Test> test=new ArrayList<Test>();
+                test=testDAO.getTestBySectionId(Integer.parseInt(session.getTestSection().getId()));
+                for (Test itest : test) {
+                    testIds.add(Integer.parseInt(itest.getId()));
+                }
+            }
+        }
+		List<Test> tests=new ArrayList<Test>();
+		
+		tests = TypeOfSampleUtil.getTestListBySampleTypeId(sampleType, true,testIds);
 
 		Collections.sort(tests, new Comparator<Test>(){
 			@Override
@@ -102,7 +122,6 @@ public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
         if( isVariableTypeOfSample){
             xml.append( "<variableSampleType/>" );
         }
-		XMLUtil.appendKeyValue("sampleTypeId", sampleType, xml);
 		addTests(tests, xml);
 
 		List<TypeOfSamplePanel> panelList = getPanelList(sampleType);
@@ -193,7 +212,7 @@ public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
 		Map<String, Integer> testNameOrderMap = new HashMap<String, Integer>();
 
 		for(int i = 0; i < tests.size(); i++){
-			testNameOrderMap.put(TestService.getUserLocalizedTestName( tests.get( i ) ), i);
+			testNameOrderMap.put(TestService.getUserLocalizedTestName( tests.get( i ) ), new Integer(i));
 		}
 
 		PanelItemDAO panelItemDAO = new PanelItemDAOImpl();
@@ -203,8 +222,10 @@ public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
 			if("Y".equals(panel.getIsActive())){
 				String matchTests = getTestIndexesForPanels(samplePanel.getPanelId(), testNameOrderMap, panelItemDAO);
 				if(!GenericValidator.isBlankOrNull(matchTests)){
-					int panelOrder = panelDAO.getPanelById(samplePanel.getPanelId()).getSortOrderInt();
-					selected.add(new PanelTestMap(samplePanel.getPanelId(), panelOrder, panel.getLocalizedName(), matchTests));
+					/*int panelOrder = panelDAO.getPanelById(samplePanel.getPanelId()).getSortOrderInt();
+					selected.add(new PanelTestMap(samplePanel.getPanelId(), panelOrder, panel.getPanelName(), matchTests));*/
+					String panelOrder = panelDAO.getPanelById(samplePanel.getPanelId()).getSortOrder();
+					selected.add(new PanelTestMap(samplePanel.getPanelId(), Integer.valueOf(panelOrder), panel.getPanelName(), matchTests));
 				}
 			}
 		}
@@ -236,11 +257,16 @@ public class SampleEntryTestsForTypeProvider extends BaseQueryProvider{
 	private String getDerivedNameFromPanel(PanelItem item){
 		//This cover the transition in the DB between the panel_item being linked by name
 		// to being linked by id
-		if(item.getTest() != null ){
-				return TestService.getUserLocalizedTestName( item.getTest() );
+		if(item.getTest() != null && item.getTest().getId() != null){
+			Test test = testDAO.getTestById(item.getTest().getId());
+			if(test != null){
+				return TestService.getUserLocalizedTestName( test );
+			}
 		}else{
 			return item.getTestName();
 		}
+
+		return null;
 	}
 
 	public class PanelTestMap{

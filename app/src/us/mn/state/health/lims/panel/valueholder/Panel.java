@@ -15,10 +15,7 @@
 */
 package us.mn.state.health.lims.panel.valueholder;
 
-import us.mn.state.health.lims.common.services.LocalizationService;
 import us.mn.state.health.lims.common.valueholder.EnumValueItemImpl;
-import us.mn.state.health.lims.common.valueholder.ValueHolder;
-import us.mn.state.health.lims.localization.valueholder.Localization;
 
 
 public class Panel extends EnumValueItemImpl {
@@ -28,10 +25,27 @@ public class Panel extends EnumValueItemImpl {
 	private String id;
 	private String panelName;
 	private String description;
-	private int sortOrderInt;
-    private ValueHolder localization = new ValueHolder();
+    private String nameKey;
+    private String sortOrder;
+	private String isActive;
 	
-	public Panel() {
+    public String getNameKey() {
+        return nameKey;
+    }
+
+    public void setNameKey(String nameKey) {
+        this.nameKey = nameKey;
+    }
+	
+	public String getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(String isActive) {
+        this.isActive = isActive;
+    }
+
+    public Panel() {
 		super();
 	}
 	
@@ -61,22 +75,15 @@ public class Panel extends EnumValueItemImpl {
 
 	@Override
 	protected String getDefaultLocalizedName() {
-		return LocalizationService.getLocalizedValueById(getLocalization().getId());
+		return panelName;
 	}
 
-	public int getSortOrderInt() {
-		return sortOrderInt;
+	public String getSortOrder() {
+		return sortOrder;
 	}
 
-	public void setSortOrderInt(int sortOrderInt) {
-		this.sortOrderInt = sortOrderInt;
+	public void setSortOrder(String sortOrder) {
+		this.sortOrder = sortOrder;
 	}
-
-    public Localization getLocalization() {
-        return (Localization)localization.getValue();
-    }
-
-    public void setLocalization(Localization localization) {
-        this.localization.setValue(localization);
-    }
+	
 }

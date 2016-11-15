@@ -56,7 +56,7 @@ public class DictionaryAutocompleteProvider extends BaseAutocompleteProvider {
 		
 		
 		DictionaryDAO dictDAO = new DictionaryDAOImpl();
-		List list = dictDAO.getDictionaryEntrysByCategoryAbbreviation(dictionaryEntry, dictionaryCategory);
+		List list = dictDAO.getDictionaryEntrysByCategory(dictionaryEntry, dictionaryCategory);
 		
 		
 		return list;

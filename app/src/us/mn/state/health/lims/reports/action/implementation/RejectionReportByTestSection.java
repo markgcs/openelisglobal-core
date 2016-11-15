@@ -28,6 +28,7 @@ import us.mn.state.health.lims.reports.action.implementation.reportBeans.Rejecti
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -92,4 +93,10 @@ public class RejectionReportByTestSection extends RejectionReport implements IRe
 
         injectPatientLineAndCopyToFinalList( rawResults );
     }
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

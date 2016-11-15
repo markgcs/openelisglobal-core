@@ -49,6 +49,12 @@
 
 <script type="text/javascript" language="JavaScript1.2">
 
+var searchedFlag = false;
+
+$jq(document).ready( function() {
+	$("searchAccessionID").value = <%=request.getParameter("accessionNumber")%> != null ? '<%=request.getParameter("accessionNumber")%>' : '';
+});
+
 function validateEntrySize( elementValue ){
 	$("retrieveTestsID").disabled = (elementValue.length == 0);
 }
@@ -64,7 +70,8 @@ function doShowTests(){
 }
 
 function /*void*/ handleEnterEvent(  ){
-	if( $("searchAccessionID").value.length > 0){
+	if( $("searchAccessionID").value.length > 0 && !searchedFlag){
+		searchedFlag = true;
 		doShowTests();
 	}
 	return false;
@@ -78,28 +85,134 @@ function /*void*/ handleEnterEvent(  ){
 <div id="PatientPage" class="colorFill" style="display:inline" >
 
 	<h2><bean:message key="sample.entry.search"/></h2>
-	<table width="40%">
+	<table width="100%" style="background-color: inherit;">
 	<tr >
-		<td width="50%" align="right" >
-			<%=StringUtil.getContextualMessageForKey("quick.entry.accession.number")%>
+		<td width="20%"></td>
+		<td width="20%" align="right" >
+			<%=StringUtil.getContextualMessageForKey("quick.entry.accession.number")%>:&nbsp;
 		</td>
-		<td width="50%">
+		<td width="5%">
 			<input name="searchAccession"
+					style="margin: auto;"
 			       size="20"
 			       id="searchAccessionID"
 			       maxlength="<%= Integer.toString(accessionNumberValidator.getMaxAccessionLength()) %>"
 			       onkeyup="validateEntrySize( this.value );"
 			       onblur="validateEntrySize( this.value );"
-			       class="text"
+			       class="text input-medium"
 			       type="text">
 		</td>
+		<td width="1%"></td>
+		<td width="14%">
+			<html:button styleClass="btn btn-default" property="retrieveTestsButton" styleId="retrieveTestsID"  onclick="doShowTests();" disabled="true" >
+			<%= StringUtil.getContextualMessageForKey("resultsentry.accession.search") %>
+			</html:button>
+		</td>
+		<td width="40%"></td>
 	</tr>
-
 	</table>
 	<br/>
-	<html:button property="retrieveTestsButton" styleId="retrieveTestsID"  onclick="doShowTests();" disabled="true" >
-		<%= StringUtil.getContextualMessageForKey("resultsentry.accession.search") %>
-	</html:button>
+		<logic:notEqual name="<%=formName %>" property="firstName" value="">
+		<table width="100%;">
+			<tr><th style="text-align: center; " colspan="9"><%= StringUtil.getContextualMessageForKey("sampletracking.patientInfo") %></th></tr>
+			<tr>
+				<td width= 5%></td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="patient.epiFullName"/>:&nbsp;
+				</td>
+				<td style="text-align: left; width= 20%;">
+					<b><bean:write name="<%=formName%>" property="firstName" /></b>
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<bean:message key="patient.birthDate"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%; font-weight: bold;">
+					<bean:write name="<%=formName%>" property="dob" />
+				</td>
+				<td style="text-align: left; width= 5%; ">
+					<bean:message key="patient.age"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%; font-weight: bold;"><bean:write name="<%=formName%>" property="age" /></td>
+				<td width= 15%;></td>
+			</tr>
+			<tr>
+				<td></td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="person.streetAddress"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 20%;">
+					<b><bean:write name="<%=formName%>" property="address" /></b>
+				</td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="patient.gender"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<logic:equal name="<%=formName %>" property="gender" value="M">
+						<b><%= StringUtil.getContextualMessageForKey("gender.male") %></b>
+					</logic:equal>
+					<logic:equal name="<%=formName %>" property="gender" value="F">
+						<b><%= StringUtil.getContextualMessageForKey("gender.female") %></b>
+					</logic:equal>
+					<logic:notEqual name="<%=formName %>" property="gender" value="M">
+						<logic:notEqual name="<%=formName %>" property="gender" value="F">
+							<logic:notEmpty name="<%=formName%>" property="firstName">
+								<b><%= StringUtil.getContextualMessageForKey("gender.unknown") %></b>
+							</logic:notEmpty>
+						</logic:notEqual>
+					</logic:notEqual>
+				</td>
+				<td style="text-align: left; ">
+					<bean:message key="patient.externalId"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<b><bean:write name="<%=formName%>" property="externalId" /></b>
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="person.department"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 20%; font-weight: bold;">
+					<b><bean:write name="<%=formName%>" property="department" /></b>
+				</td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="patient.patient.diagnosis"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<b><bean:write name="<%=formName%>" property="diagnosis" /></b>
+				</td>
+				<td style="text-align: left; width= 5%; ">
+					<bean:message key="patient.chartNumber"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<b><bean:write name="<%=formName%>" property="chartNumber" /></b>
+				</td>
+			</tr>
+			<tr>
+				<td></td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="label.jasper.submitter"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 20%; font-weight: bold;">
+					<b><bean:write name="<%=formName%>" property="organization" /></b>
+				</td>
+				<td style="text-align: left; width= 5%;">
+					<bean:message key="project.browse.title"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<b><bean:write name="<%=formName%>" property="projectName" /></b>
+				</td>
+				<td style="text-align: left; width= 5%; ">
+					<bean:message key="sample.receivedDate"/>&nbsp;:&nbsp;
+				</td>
+				<td style="text-align: left; width= 15%;">
+					<b><bean:write name="<%=formName%>" property="receivedDate" /></b>
+				</td>
+			</tr>
+		</table>
+		</logic:notEqual>
+	<br/>
 
 </div>
 

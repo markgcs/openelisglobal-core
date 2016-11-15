@@ -17,7 +17,9 @@
 package us.mn.state.health.lims.common.services;
 
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.formfields.FormFields;
+import us.mn.state.health.lims.common.formfields.FormFields.Field;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -26,14 +28,23 @@ import us.mn.state.health.lims.organization.dao.OrganizationDAO;
 import us.mn.state.health.lims.organization.daoimpl.OrganizationDAOImpl;
 import us.mn.state.health.lims.organization.valueholder.Organization;
 import us.mn.state.health.lims.person.valueholder.Person;
+import us.mn.state.health.lims.project.dao.ProjectDAO;
+import us.mn.state.health.lims.project.daoimpl.ProjectDAOImpl;
+import us.mn.state.health.lims.project.valueholder.Project;
 import us.mn.state.health.lims.requester.valueholder.SampleRequester;
 import us.mn.state.health.lims.sample.bean.SampleOrderItem;
 import us.mn.state.health.lims.sample.dao.SampleDAO;
 import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
 import us.mn.state.health.lims.sample.valueholder.Sample;
+import us.mn.state.health.lims.sampleproject.dao.SampleProjectDAO;
+import us.mn.state.health.lims.sampleproject.daoimpl.SampleProjectDAOImpl;
+import us.mn.state.health.lims.sampleproject.valueholder.SampleProject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static us.mn.state.health.lims.common.services.ObservationHistoryService.ObservationType;
 import static us.mn.state.health.lims.observationhistory.valueholder.ObservationHistory.ValueType;
@@ -43,8 +54,11 @@ import static us.mn.state.health.lims.observationhistory.valueholder.Observation
 public class SampleOrderService{
     private static final SampleDAO sampleDAO = new SampleDAOImpl();
     private static final OrganizationDAO orgDAO = new OrganizationDAOImpl();
+    private static final ProjectDAO projDAO = new ProjectDAOImpl();
+	private static final SampleProjectDAO sampleProjectDAO = new SampleProjectDAOImpl();
     private boolean needRequesterList = FormFields.getInstance().useField( FormFields.Field.RequesterSiteList );
     private boolean needPaymentOptions = ConfigurationProperties.getInstance().isPropertyValueEqual( ConfigurationProperties.Property.TRACK_PATIENT_PAYMENT, "true" );
+    private boolean needClinicalDeptOptions = FormFields.getInstance().useField( FormFields.Field.SAMPLE_ENTRY_PATIENT_CLINICAL_DEPT );
     private boolean needTestLocationCode = FormFields.getInstance().useField( FormFields.Field.TEST_LOCATION_CODE );
     private SampleOrderItem sampleOrder;
     private Sample sample;
@@ -85,6 +99,10 @@ public class SampleOrderService{
             orderItems.setPaymentOptions( DisplayListService.getList( DisplayListService.ListType.SAMPLE_PATIENT_PAYMENT_OPTIONS ) );
         }
 
+        if( needClinicalDeptOptions ){
+            orderItems.setClinicalDeptOptions( DisplayListService.getDictionaryListByCategory( "patientClinicalDept" ) );
+        }
+
         if( needTestLocationCode){
             orderItems.setTestLocationCodeList( DisplayListService.getList( DisplayListService.ListType.TEST_LOCATION_CODE) );
         }
@@ -119,6 +137,13 @@ public class SampleOrderService{
             sampleOrder.setTestLocationCode( ObservationHistoryService.getRawValueForSample( ObservationType.TEST_LOCATION_CODE, sample.getId() ) );
             sampleOrder.setOtherLocationCode( ObservationHistoryService.getValueForSample( ObservationType.TEST_LOCATION_CODE_OTHER, sample.getId() ) );
             sampleOrder.setBillingReferenceNumber( ObservationHistoryService.getValueForSample( ObservationType.BILLING_REFERENCE_NUMBER, sample.getId() ) );
+            sampleOrder.setOrderUrgency( ObservationHistoryService.getValueForSample( ObservationType.ORDER_URGENCY, sample.getId() ) );
+            sampleOrder.setPatientDiagnosis( ObservationHistoryService.getValueForSample( ObservationType.PATIENT_DIAGNOSIS, sample.getId() ) );
+            sampleOrder.setPatientBedNumber( ObservationHistoryService.getValueForSample( ObservationType.PATIENT_BED_NUMBER, sample.getId() ) );
+            sampleOrder.setPatientRoomNumber( ObservationHistoryService.getValueForSample( ObservationType.PATIENT_ROOM_NUMBER, sample.getId() ) );
+            sampleOrder.setClinicalDeptOptionSelection( ObservationHistoryService.getRawValueForSample( ObservationType.PATIENT_CLINICAL_DEPT_ID, sample.getId() ) );
+            sampleOrder.setPatientAgeValue( ObservationHistoryService.getValueForSample( ObservationType.PATIENT_AGE_VALUE, sample.getId() ) );
+            sampleOrder.setPatientAgeUnits( ObservationHistoryService.getValueForSample( ObservationType.PATIENT_AGE_UNITS, sample.getId() ) );
             sampleOrder.setProgram( ObservationHistoryService.getRawValueForSample( ObservationType.PROGRAM, sample.getId() ) );
 
             RequesterService requesterService = new RequesterService( sample.getId() );
@@ -130,8 +155,20 @@ public class SampleOrderService{
             sampleOrder.setReferringSiteId( requesterService.getReferringSiteId() );
             sampleOrder.setReferringSiteCode( requesterService.getReferringSiteCode() );
             sampleOrder.setReferringSiteName( requesterService.getReferringSiteName() );
+            if (FormFields.getInstance().useField(FormFields.Field.SUBMITTER_NUMBER) && requesterService.getOrganization() != null)
+            	sampleOrder.setSubmitterNumber( requesterService.getOrganization().getOrganizationLocalAbbreviation() );
 
+            if (FormFields.getInstance().useField(FormFields.Field.PROJECT_OR_NAME) ||
+            	FormFields.getInstance().useField(FormFields.Field.PROJECT2_OR_NAME))
+            	setSampleProjects();
+            //Dung add show ngay khoi benh
             sampleOrder.setReadOnly( readOnly );
+            if(sample.getOnsetOfDate()!=null){
+	            SimpleDateFormat simpleDateFormat=new SimpleDateFormat("dd/MM/yyyy");
+	            sampleOrder.setOnsetOfDate(simpleDateFormat.format(sample.getOnsetOfDate()));
+            }
+            
+            sampleOrder.setSpeciesName(ObservationHistoryService.getValueForSample(ObservationType.SPECIES_NAME, sample.getId()));
         }
 
         return sampleOrder;
@@ -183,6 +220,9 @@ public class SampleOrderService{
         createPersonProviderArtifacts( sampleOrder, currentUserId, artifacts, requesterService );
         createObservationHistoryArtifacts( sampleOrder, currentUserId, artifacts );
         createOrganizationProviderArtifacts( sampleOrder, currentUserId, artifacts, requesterService );
+        if (FormFields.getInstance().useField(FormFields.Field.PROJECT_OR_NAME) ||
+            FormFields.getInstance().useField(FormFields.Field.PROJECT2_OR_NAME))
+        	createSampleProjectArtifacts(sampleOrder, currentUserId, artifacts);
     }
 
     private void createPersonProviderArtifacts( SampleOrderItem sampleOrder, String currentUserId, SampleOrderPersistenceArtifacts artifacts, RequesterService requesterService ){
@@ -229,7 +269,18 @@ public class SampleOrderService{
         createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.REQUEST_DATE, sampleOrder.getRequestDate(), ValueType.LITERAL  );
         createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PROGRAM, sampleOrder.getProgram(), ValueType.DICTIONARY  );
         createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.BILLING_REFERENCE_NUMBER, sampleOrder.getBillingReferenceNumber(), ValueType.LITERAL);
-
+        
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.ORDER_URGENCY, sampleOrder.getOrderUrgency(), ValueType.LITERAL  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_DIAGNOSIS, sampleOrder.getPatientDiagnosis(), ValueType.LITERAL  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_BED_NUMBER, sampleOrder.getPatientBedNumber(), ValueType.LITERAL  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_ROOM_NUMBER, sampleOrder.getPatientRoomNumber(), ValueType.LITERAL  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_CLINICAL_DEPT_ID, sampleOrder.getClinicalDeptOptionSelection(), ValueType.DICTIONARY  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_AGE_VALUE, sampleOrder.getPatientAgeValue(), ValueType.LITERAL  );
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.PATIENT_AGE_UNITS, sampleOrder.getPatientAgeUnits(), ValueType.LITERAL  );
+        
+        //add to get observation for species
+        createOrUpdateObservation(  currentUserId, observations, patientId, ObservationType.SPECIES_NAME, sampleOrder.getSpeciesName(), ValueType.LITERAL  );
+        
         artifacts.setObservations( observations );
     }
 
@@ -283,16 +334,30 @@ public class SampleOrderService{
 
     private void handleNoExistingOrganizationRequester( SampleOrderItem sampleOrder, String currentUserId, SampleOrderPersistenceArtifacts artifacts ){
         SampleRequester orgRequester;
+        String submitterNumber = null;
+        
+        if (!GenericValidator.isBlankOrNull(sampleOrder.getSubmitterNumber()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getSubmitterNumber()))
+            submitterNumber = sampleOrder.getSubmitterNumber();
+        else if (!GenericValidator.isBlankOrNull(sampleOrder.getSubmitterNumberOther()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getSubmitterNumberOther()))
+            submitterNumber = sampleOrder.getSubmitterNumberOther();
+        
         if( GenericValidator.isBlankOrNull( sampleOrder.getReferringSiteId() ) &&
-            GenericValidator.isBlankOrNull( sampleOrder.getNewRequesterName() )){
+        	GenericValidator.isBlankOrNull( sampleOrder.getNewRequesterName() ) &&
+        	GenericValidator.isBlankOrNull( submitterNumber )){
             return;
         }
 
         orgRequester = new SampleRequester();
-        orgRequester.setRequesterId(Long.parseLong( sampleOrder.getReferringSiteId()) ); //may be overridden latter
+        if (!GenericValidator.isBlankOrNull( sampleOrder.getReferringSiteId()))
+	        orgRequester.setRequesterId(Long.parseLong( sampleOrder.getReferringSiteId()) ); //may be overridden latter
         orgRequester.setSampleId( Long.parseLong( sampleOrder.getSampleId() ) );
         orgRequester.setRequesterTypeId( RequesterService.Requester.ORGANIZATION.getId() );
         orgRequester.setSysUserId( currentUserId );
+        if (FormFields.getInstance().useField( Field.SUBMITTER_NUMBER ) && !GenericValidator.isBlankOrNull(submitterNumber)) {
+			Organization organization = new Organization();
+			organization.setOrganizationLocalAbbreviation(submitterNumber);
+			orgRequester.setRequesterId(Long.parseLong(orgDAO.getOrganizationByLocalAbbreviation(organization, true).getId()));
+        }
         artifacts.setSampleOrganizationRequester( orgRequester );
 
         //Either there is an existing org else a new org
@@ -317,8 +382,17 @@ public class SampleOrderService{
     }
 
     private void handleExistingOrganizationRequester( SampleOrderItem sampleOrder, String currentUserId, SampleOrderPersistenceArtifacts artifacts, SampleRequester orgRequester ){
-        if( GenericValidator.isBlankOrNull( sampleOrder.getReferringSiteId() ) &&
-                GenericValidator.isBlankOrNull( sampleOrder.getNewRequesterName() ) ){
+        String submitterNumber = null;
+        
+        if (!GenericValidator.isBlankOrNull(sampleOrder.getSubmitterNumber()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getSubmitterNumber()))
+            submitterNumber = sampleOrder.getSubmitterNumber();
+        else if (!GenericValidator.isBlankOrNull(sampleOrder.getSubmitterNumberOther()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getSubmitterNumberOther()))
+            submitterNumber = sampleOrder.getSubmitterNumberOther();
+        
+        if( (GenericValidator.isBlankOrNull( sampleOrder.getReferringSiteId() ) &&
+        		GenericValidator.isBlankOrNull( sampleOrder.getNewRequesterName() )) ||
+        		(FormFields.getInstance().useField(Field.SUBMITTER_NUMBER) &&
+        		 GenericValidator.isBlankOrNull( submitterNumber )) ){
             artifacts.setDeletableSampleOrganizationRequester( orgRequester );
             return;
         }
@@ -335,8 +409,20 @@ public class SampleOrderService{
             orgRequester.setSysUserId( currentUserId );
             artifacts.setSampleOrganizationRequester( orgRequester );
         }else{
-            org = orgDAO.getOrganizationById( String.valueOf( orgRequester.getRequesterId() ) );
-            if( String.valueOf( orgRequester.getRequesterId() ).equals( sampleOrder.getReferringSiteId() ) ){
+            // cannot use submitterNumber to replace organizationId when getting organization, they're different
+            org = orgDAO.getOrganizationBySubmitterNumber(submitterNumber);
+            if (FormFields.getInstance().useField(Field.SUBMITTER_NUMBER) && !GenericValidator.isBlankOrNull(submitterNumber)) {
+    			Organization organization = new Organization();
+    			organization.setOrganizationLocalAbbreviation(submitterNumber);
+            	if (!String.valueOf(submitterNumber).equals(orgDAO.getOrganizationByLocalAbbreviation(organization, true).getId()) &&
+            		org != null) {
+                    orgRequester.setRequesterId(orgDAO.getOrganizationByLocalAbbreviation(organization, true).getId());
+                    orgRequester.setSysUserId(currentUserId);
+                    artifacts.setSampleOrganizationRequester(orgRequester);
+            	}
+            	return;
+            }
+            if( String.valueOf( submitterNumber ).equals( sampleOrder.getReferringSiteId() ) ){
                 if( org == null ||
                         sampleOrder.getReferringSiteCode() == null ||
                         sampleOrder.getReferringSiteCode().equals( org.getCode() ) ){
@@ -362,6 +448,103 @@ public class SampleOrderService{
         }
     }
 
+    private void setSampleProjects() {
+		SampleProject sampleProject = new SampleProject();
+    	List<SampleProject> sampleProjects = sampleProjectDAO.getSampleProjectListBySampleId(sample.getId());
+
+		if (sampleProjects != null && sampleProjects.size() > 0) {
+			sampleProject = sampleProjects.get(0);
+			sampleOrder.setProjectIdOrName(sampleProject.getProject().getId());
+			if (sampleProjects.size() > 1) {
+				sampleProject = sampleProjects.get(1);
+				sampleOrder.setProject2IdOrName(sampleProject.getProject().getId());
+			}
+		}
+	}
+
+    private void createSampleProjectArtifacts(SampleOrderItem sampleOrder, String currentUserId, SampleOrderPersistenceArtifacts artifacts) {
+    	List<SampleProject> existingSampleProjects = sampleProjectDAO.getSampleProjectListBySampleId(sampleOrder.getSampleId());
+    	Map<String, SampleProject> existingProjectMap = new HashMap<String, SampleProject>();
+    	List<String> submittedProjectIds = new ArrayList<String>();
+    	List<String> updatableSampleProjectIds = new ArrayList<String>();
+    	List<SampleProject> newList = new ArrayList<SampleProject>();
+    	List<SampleProject> deleteList = new ArrayList<SampleProject>();
+
+		if (existingSampleProjects != null && existingSampleProjects.size() > 0) {
+			existingProjectMap.put(existingSampleProjects.get(0).getProject().getId(), existingSampleProjects.get(0));
+			if (existingSampleProjects.size() > 1)
+				existingProjectMap.put(existingSampleProjects.get(1).getProject().getId(), existingSampleProjects.get(1));
+		}
+
+		if (!GenericValidator.isBlankOrNull(sampleOrder.getProjectIdOrName()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getProjectIdOrName()))
+			submittedProjectIds.add(sampleOrder.getProjectIdOrName());
+		else if (!GenericValidator.isBlankOrNull(sampleOrder.getProjectIdOrNameOther()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getProjectIdOrNameOther()))
+			submittedProjectIds.add(sampleOrder.getProjectIdOrNameOther());
+
+		if (!GenericValidator.isBlankOrNull(sampleOrder.getProject2IdOrName()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getProject2IdOrName()))
+			submittedProjectIds.add(sampleOrder.getProject2IdOrName());
+		else if (!GenericValidator.isBlankOrNull(sampleOrder.getProject2IdOrNameOther()) && org.apache.commons.lang.StringUtils.isNumeric(sampleOrder.getProject2IdOrNameOther()))
+			submittedProjectIds.add(sampleOrder.getProject2IdOrNameOther());
+
+		for (String id : existingProjectMap.keySet()) {
+			if (!submittedProjectIds.contains(id))
+				updatableSampleProjectIds.add(existingProjectMap.get(id).getId());
+		}
+
+		for (String id : submittedProjectIds) {
+			if (!existingProjectMap.keySet().contains(id)) {
+				if (updatableSampleProjectIds.size() > 0) {
+					newList.add(updateSampleProjectWithProjectId(updatableSampleProjectIds.get(0), id, currentUserId));
+					updatableSampleProjectIds.remove(0);
+				} else {
+					newList.add(newSampleProjectWithProjectId(id, sampleOrder.getSampleId(), currentUserId));
+				}
+			}
+		}
+
+		for (String id : updatableSampleProjectIds) {
+			for (String projId : existingProjectMap.keySet()) {
+				if (existingProjectMap.get(projId).getId().equals(id))
+					deleteList.add(existingProjectMap.get(projId));
+			}
+		}
+
+		if (deleteList.size() > 0)
+			artifacts.setDeletableSampleProjects(deleteList.toArray(new SampleProject[deleteList.size()]));
+		if (newList.size() > 0)
+			artifacts.setSampleProjects(newList.toArray(new SampleProject[newList.size()]));		
+    }
+
+    private SampleProject updateSampleProjectWithProjectId(String sampProjId, String projId, String currentUserId) {
+    	SampleProjectDAO sampProjDAO = new SampleProjectDAOImpl();
+		Project project = new Project();
+		project.setId(projId);
+		projDAO.getData(project);
+
+		SampleProject sampleProject = new SampleProject();
+		sampleProject.setId(sampProjId);
+		sampProjDAO.getData(sampleProject);
+		sampleProject.setProject(project);
+		sampleProject.setSysUserId(currentUserId);
+		return sampleProject;
+    }
+
+    private SampleProject newSampleProjectWithProjectId(String id, String sampId, String currentUserId) {
+		Project project = new Project();
+		project.setId(id);
+		projDAO.getData(project);
+
+		Sample newSample = new Sample();
+		newSample.setId(sampId);
+		sampleDAO.getData(newSample);
+
+		SampleProject sampleProject = new SampleProject();
+		sampleProject.setProject(project);
+		sampleProject.setSample(newSample);
+		sampleProject.setSysUserId(currentUserId);
+		return sampleProject;
+    }
+
 
     public class SampleOrderPersistenceArtifacts{
         private Sample sample;
@@ -371,6 +554,8 @@ public class SampleOrderService{
         private List<ObservationHistory> observations = new ArrayList<ObservationHistory>();
         private SampleRequester sampleOrganizationRequester;
         private SampleRequester samplePersonRequester;
+        private SampleProject[] deletableSampleProjects = null;
+        private SampleProject[] sampleProjects = null;
 
         public Sample getSample(){
             return sample;
@@ -427,6 +612,36 @@ public class SampleOrderService{
 
         public void setSamplePersonRequester( SampleRequester samplePersonRequester ){
             this.samplePersonRequester = samplePersonRequester;
+        }
+
+        public SampleProject[] getDeletableSampleProjects() {
+        	if (this.deletableSampleProjects == null)
+        		return new SampleProject[0];
+        	else {
+        		SampleProject[] copy = new SampleProject[this.deletableSampleProjects.length];
+        		System.arraycopy(this.deletableSampleProjects, 0, copy, 0, copy.length);
+        		return copy;
+        	}
+        }
+
+        public void setDeletableSampleProjects(SampleProject[] deletableSampleProjects) {
+        	this.deletableSampleProjects = new SampleProject[deletableSampleProjects.length];
+        	System.arraycopy(deletableSampleProjects, 0, this.deletableSampleProjects, 0, deletableSampleProjects.length);
+        }
+
+        public SampleProject[] getSampleProjects() {
+        	if (this.sampleProjects == null)
+        		return new SampleProject[0];
+        	else {
+        		SampleProject[] copy = new SampleProject[this.sampleProjects.length];
+        		System.arraycopy(this.sampleProjects, 0, copy, 0, copy.length);
+        		return copy;
+        	}
+        }
+
+        public void setSampleProjects(SampleProject[] sampleProjects) {
+        	this.sampleProjects = new SampleProject[sampleProjects.length];
+        	System.arraycopy(sampleProjects, 0, this.sampleProjects, 0, sampleProjects.length);
         }
     }
 }

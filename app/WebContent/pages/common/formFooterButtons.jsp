@@ -155,7 +155,7 @@ if( typeof(showSuccessMessage) != 'undefined' ){
 	<tbody valign="middle">
 		<tr>
 	      	<td>
-  			<html:button onclick="if(checkClicked())
+  			<html:button styleClass="btn btn-default" onclick="if(checkClicked())
 							 {
 							 	return false;
 							 }
@@ -170,7 +170,7 @@ if( typeof(showSuccessMessage) != 'undefined' ){
 
 		<td>&nbsp;</td>
 		<td>
-  			<html:button onclick="setAction(window.document.forms[0], 'Cancel', 'no', '');"  property="cancel" >
+  			<html:button styleClass="btn btn-default" onclick="setAction(window.document.forms[0], 'Cancel', 'no', '');"  property="cancel" >
   			   <%--AIS - bugzilla 1860--%>
   			   <bean:message key="label.button.exit"/>
   			</html:button>
@@ -182,13 +182,13 @@ if( typeof(showSuccessMessage) != 'undefined' ){
    		<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
   		<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 	    <td>
-  			<html:button onclick="previousAction(window.document.forms[0], '');" property="previous" disabled="<%=Boolean.valueOf(previousDisabled).booleanValue()%>">
+  			<html:button styleClass="btn btn-default" onclick="previousAction(window.document.forms[0], '');" property="previous" disabled="<%=Boolean.valueOf(previousDisabled).booleanValue()%>">
   			   <bean:message key="label.button.previous"/>
   			</html:button>
 	    </td>
      	<td>&nbsp;</td>
 	    <td>
-  			<html:button onclick="nextAction(window.document.forms[0], '');"  property="next" disabled="<%=Boolean.valueOf(nextDisabled).booleanValue()%>">
+  			<html:button styleClass="btn btn-default" onclick="nextAction(window.document.forms[0], '');"  property="next" disabled="<%=Boolean.valueOf(nextDisabled).booleanValue()%>">
   			   <bean:message key="label.button.next"/>
   			</html:button>
 	    </td>

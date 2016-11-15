@@ -103,6 +103,32 @@ public class SampleItemDAOImpl extends BaseDAOImpl implements SampleItemDAO {
 
 		return true;
 	}
+	@Override
+	public String insertDataWS(SampleItem sampleItem) throws LIMSRuntimeException {
+		String id =null;
+		if( sampleItem == null){
+			return null;
+		}
+
+		try {
+			 id = (String)HibernateUtil.getSession().save(sampleItem);
+			sampleItem.setId(id);
+			//comment because error when save
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = sampleItem.getSysUserId();
+			String tableName = "SAMPLE_ITEM";
+			auditDAO.saveNewHistory(sampleItem,sysUserId,tableName);
+
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+
+		} catch (Exception e) {
+			LogEvent.logError("SampleItemDAOImpl","insertData()",e.toString());
+			throw new LIMSRuntimeException("Error in SampleItem insertData()", e);
+		}
+
+		return id;
+	}
 
 	public void updateData(SampleItem sampleItem) throws LIMSRuntimeException {
 
@@ -312,7 +338,6 @@ public class SampleItemDAOImpl extends BaseDAOImpl implements SampleItemDAO {
             throw new LIMSRuntimeException("Error in SampleItem getSampleItemsBySampleId()", he);
         }
    }
-
 	@Override
 	public List<SampleItem> getSampleItemsBySampleIdAndStatus(String id, Set<Integer> includedStatusList) throws LIMSRuntimeException {
 		if( includedStatusList.isEmpty()){
@@ -336,5 +361,35 @@ public class SampleItemDAOImpl extends BaseDAOImpl implements SampleItemDAO {
 
 		return null;
 	}
+	
+	   /**
+	 * Add by Dung 2016.06.28
+	 * The method get a sample item by status not in status is cancel of sample item and sort by sortOrder
+	 * Parameter 1: The sample ID
+	 * Parameter 2: Status of the sample item
+	 */
+	@Override
+	    public SampleItem getSampleItemsBySampleIdAndStatusId(String id,Integer includedStatusList) throws LIMSRuntimeException {
+	        if( includedStatusList==null){
+	            return null;
+	        }
+	        
+	        try{
+	            String sql = "from SampleItem sampleItem where sampleItem.sample.id = :sampleId and sampleItem.statusId not in ( :statusIds ) order by sampleItem.sortOrder DESC LIMIT 1";
+	            Query query = HibernateUtil.getSession().createQuery(sql);
+	            query.setInteger("sampleId", Integer.parseInt(id));
+	            query.setInteger("statusIds", includedStatusList);
+	            SampleItem sampleItem = (SampleItem) query.uniqueResult();
+	            closeSession();
+
+	            return sampleItem;
+
+	        }catch(HibernateException he){
+	            handleException(he, "getSampleItemsBySampleIdAndStatus");
+	            he.printStackTrace();
+	        }
+
+	        return null;
+	    }
 
 }

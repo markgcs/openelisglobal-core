@@ -17,20 +17,48 @@
  */
 package us.mn.state.health.lims.result.action;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
-import org.apache.struts.action.*;
+import org.apache.struts.action.ActionForm;
+import org.apache.struts.action.ActionForward;
+import org.apache.struts.action.ActionMapping;
+import org.apache.struts.action.ActionMessages;
+import org.apache.struts.action.DynaActionForm;
+
 import us.mn.state.health.lims.common.action.BaseAction;
+import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.services.DisplayListService;
+import us.mn.state.health.lims.common.services.DisplayListService.ListType;
+import us.mn.state.health.lims.common.services.IPatientService;
+import us.mn.state.health.lims.common.services.PatientService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
+import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.validator.ActionError;
+import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
+import us.mn.state.health.lims.dictionary.daoimpl.DictionaryDAOImpl;
 import us.mn.state.health.lims.inventory.action.InventoryUtility;
 import us.mn.state.health.lims.inventory.form.InventoryKitItem;
 import us.mn.state.health.lims.login.dao.UserModuleDAO;
 import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
+import us.mn.state.health.lims.observationhistory.dao.ObservationHistoryDAO;
+import us.mn.state.health.lims.observationhistory.daoimpl.ObservationHistoryDAOImpl;
+import us.mn.state.health.lims.observationhistory.valueholder.ObservationHistory;
+import us.mn.state.health.lims.organization.dao.OrganizationDAO;
+import us.mn.state.health.lims.organization.daoimpl.OrganizationDAOImpl;
 import us.mn.state.health.lims.patient.valueholder.Patient;
+import us.mn.state.health.lims.requester.dao.SampleRequesterDAO;
+import us.mn.state.health.lims.requester.daoimpl.SampleRequesterDAOImpl;
+import us.mn.state.health.lims.requester.valueholder.SampleRequester;
 import us.mn.state.health.lims.result.action.util.ResultsLoadUtility;
 import us.mn.state.health.lims.result.action.util.ResultsPaging;
 import us.mn.state.health.lims.role.daoimpl.RoleDAOImpl;
@@ -40,15 +68,12 @@ import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.samplehuman.dao.SampleHumanDAO;
 import us.mn.state.health.lims.samplehuman.daoimpl.SampleHumanDAOImpl;
+import us.mn.state.health.lims.sampleproject.dao.SampleProjectDAO;
+import us.mn.state.health.lims.sampleproject.daoimpl.SampleProjectDAOImpl;
+import us.mn.state.health.lims.sampleproject.valueholder.SampleProject;
 import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.userrole.dao.UserRoleDAO;
 import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class AccessionResultsAction extends BaseAction {
 
@@ -71,7 +96,6 @@ public class AccessionResultsAction extends BaseAction {
 			HttpServletResponse response) throws Exception {
 
 		String forward = FWD_SUCCESS;
-
 		request.getSession().setAttribute(SAVE_DISABLED, TRUE);
 
 		DynaActionForm dynaForm = (DynaActionForm) form;
@@ -88,6 +112,7 @@ public class AccessionResultsAction extends BaseAction {
 			if (!GenericValidator.isBlankOrNull(accessionNumber)) {
 				ResultsLoadUtility resultsUtility = new ResultsLoadUtility(currentUserId);
 				//This is for Haiti_LNSP if it gets more complicated use the status set stuff
+				resultsUtility.addExcludedAnalysisStatus(AnalysisStatus.ReferredIn);
 				resultsUtility.addExcludedAnalysisStatus(AnalysisStatus.Canceled);
 
 				resultsUtility.setLockCurrentResults(modifyResultsRoleBased() && userNotInRole(request));
@@ -102,30 +127,114 @@ public class AccessionResultsAction extends BaseAction {
 
 					return mapping.findForward(FWD_FAIL);
 				}
-
 				PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.TRUE);
 
 				getSample();
 
 				if (!GenericValidator.isBlankOrNull(sample.getId())) {
+					PropertyUtils.setProperty(dynaForm, "receivedDate", sample.getReceivedDateForDisplay());
 					Patient patient = getPatient();
+					// Get patient information
+					IPatientService patientService = new PatientService(patient);
+					
+			        PropertyUtils.setProperty(dynaForm, "firstName", patientService.getLastFirstName());
+					PropertyUtils.setProperty(dynaForm, "dob", patientService.getDOB());
+					PropertyUtils.setProperty(dynaForm, "gender", patientService.getGender());
+					PropertyUtils.setProperty(dynaForm, "externalId", patient.getExternalId());
+					PropertyUtils.setProperty(dynaForm, "chartNumber", patient.getChartNumber());
+					
+					// Get observation history information
+					ObservationHistoryDAO observationDAO = new ObservationHistoryDAOImpl();
+					List<ObservationHistory> obList = observationDAO.getAll(patient, sample);
+					String ageUnit = "";
+					String age = "";
+					String department = "";
+					for (ObservationHistory observationHistory : obList) {
+						if (observationHistory.getObservationHistoryTypeId().equals(IActionConstants.OBSERVATION_TYPE_DEPARTMENT)) {
+							DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
+							if (!(StringUtil.isNullorNill(observationHistory.getValue())) && StringUtil.isInteger(observationHistory.getValue())) {
+								department = dictionaryDAO.getDataForId(observationHistory.getValue()).getDictEntry();
+							}
+							continue;
+						}
+						if (observationHistory.getObservationHistoryTypeId().equals(IActionConstants.OBSERVATION_TYPE_AGE_VALUE)) {
+							age = observationHistory.getValue();
+							continue;
+						}
+						if (observationHistory.getObservationHistoryTypeId().equals(IActionConstants.OBSERVATION_TYPE_AGE_UNIT)) {
+							ageUnit = observationHistory.getValue();
+							continue;
+						}
+						if (observationHistory.getObservationHistoryTypeId().equals(IActionConstants.OBSERVATION_TYPE_DIAGNOSIS)) {
+							PropertyUtils.setProperty(dynaForm, "diagnosis", observationHistory.getValue());
+						}
+					}
+					// If observation history does not have age value
+					// Get age value from person
+					if (!ageUnit.equals("") && !ageUnit.equals(StringUtil.getMessageForKey( "patient.ageUnit.year" ))) {
+						age += " " + ageUnit;
+					}
+					
+					if (department != null) {
+						if (department.equals("")) {
+							PropertyUtils.setProperty(dynaForm, "department", StringUtil.getMessageForKey( "department.unknown" ));
+						} else {
+							PropertyUtils.setProperty(dynaForm, "department", department );
+						}
+					} else {
+						PropertyUtils.setProperty(dynaForm, "department", StringUtil.getMessageForKey( "department.unknown" ));
+					}
+					PropertyUtils.setProperty(dynaForm, "age", age);
+					
+					// Get address information
+					
+					HashMap<String, String> addressList = (HashMap<String, String>) patientService.getAddressComponents();
+					String street = StringUtil.isNullorNill(addressList.get("Street")) ? "" : addressList.get("Street") + " ";
+					String ward = StringUtil.isNullorNill(addressList.get("ward")) ? "" : addressList.get("ward") + " ";
+					String district = StringUtil.isNullorNill(addressList.get("district")) ? "" : addressList.get("district") + " ";
+					String city = StringUtil.isNullorNill(addressList.get("City")) ? "" : addressList.get("City");
+					String address = street + ward + district + city;
+					PropertyUtils.setProperty(dynaForm, "address", address);
+					
+					// Get requester information
+					SampleRequesterDAO sampleRequesterDAO = new SampleRequesterDAOImpl();
+					OrganizationDAO organizationDAO = new OrganizationDAOImpl();
+					String organization = "";
+					List<SampleRequester> requesters = sampleRequesterDAO.getRequestersForSampleId(sample.getId());
+					for (SampleRequester sampleRequester : requesters) {
+						if (sampleRequester.getRequesterTypeId() == 1) {
+							organization = organizationDAO.getOrganizationById((String) String.valueOf(sampleRequester.getRequesterId())).getOrganizationName();
+							break;
+						}
+					}
+					PropertyUtils.setProperty(dynaForm, "organization", organization);
+					
+					// Get project information
+					SampleProjectDAO sampleProjectDAO = new SampleProjectDAOImpl();
+					SampleProject sampleProject = sampleProjectDAO.getSampleProjectBySampleId(sample.getId());
+					if (sampleProject != null) {
+						PropertyUtils.setProperty(dynaForm, "projectName", sampleProject.getProject().getProjectName());
+					}
+					
+					
 					resultsUtility.addIdentifingPatientInfo(patient, dynaForm);
-
-					List<TestResultItem> results = resultsUtility.getGroupedTestsForSample(sample, patient);
-
+					List<TestResultItem> results = resultsUtility.getGroupedTestsForSample(sample, patient, getUserSection());
+					
 					if (resultsUtility.inventoryNeeded()) {
 						addInventory(dynaForm);
 						PropertyUtils.setProperty(dynaForm, "displayTestKit", true);
 					} else {
 						addEmptyInventoryList(dynaForm);
 					}
-
+					
+					// load testSectionsByName for drop down
+		     		PropertyUtils.setProperty(dynaForm, "testSectionsByName", DisplayListService.getList(ListType.TEST_SECTION_BY_NAME));
 					paging.setDatabaseResults(request, dynaForm, results);
 				} else {
 					setEmptyResults(dynaForm);
 				}
 			} else {
-				PropertyUtils.setProperty(dynaForm, "testResult", new ArrayList<TestResultItem>());
+				setEmptyResults(dynaForm);
 				PropertyUtils.setProperty(dynaForm, "searchFinished", Boolean.FALSE);
 			}
 		} else {
@@ -154,6 +263,10 @@ public class AccessionResultsAction extends BaseAction {
 	private void setEmptyResults(DynaActionForm dynaForm) throws IllegalAccessException, InvocationTargetException,
 			NoSuchMethodException {
 		PropertyUtils.setProperty(dynaForm, "testResult", new ArrayList<TestResultItem>());
+		PropertyUtils.setProperty(dynaForm, "firstName", "");
+		PropertyUtils.setProperty(dynaForm, "dob", "");
+		PropertyUtils.setProperty(dynaForm, "gender", "");
+		PropertyUtils.setProperty(dynaForm, "externalId", "");
 		PropertyUtils.setProperty(dynaForm, "displayTestKit", false);
 		addEmptyInventoryList(dynaForm);
 	}
@@ -177,6 +290,11 @@ public class AccessionResultsAction extends BaseAction {
 		if (sample == null) {
 			ActionError error = new ActionError("sample.edit.sample.notFound", accessionNumber, null, null);
 			errors.add(ActionMessages.GLOBAL_MESSAGE, error);
+		}
+		//added by Dung 2016-07-22 for user session not exists in the system( table system_user_section)
+		if(getUserSection()==null){
+		    ActionError error = new ActionError("sample.edit.user.session", currentUserId, null, null);
+		    errors.add(ActionMessages.GLOBAL_MESSAGE,error);
 		}
 
 		return errors;

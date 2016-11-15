@@ -3,6 +3,7 @@
 	import="java.util.Date,
 	java.util.Hashtable,
 	us.mn.state.health.lims.systemuser.valueholder.SystemUser,
+	us.mn.state.health.lims.project.valueholder.Project,
 	us.mn.state.health.lims.common.action.IActionConstants" %>
 
 <%@ taglib uri="/tags/struts-bean" prefix="bean" %>
@@ -19,24 +20,24 @@
 	     <bean:message key="label.form.select"/>
 	   </th>
 	   <%--bugzilla 2438--%>
-	   <th>
+	 <%--   <th>
 	      <bean:message key="project.localAbbreviation"/>
-	   </th>
+	   </th> --%>
 	   <th>
 	   	  <bean:message key="project.projectName"/>
 	   </th>
 	   <th>
 	   	  <bean:message key="project.desc.short"/>
 	   </th>
-	   <th>
+	  <%--  <th>
 	   	  <bean:message key="project.startedDate"/>
-	   </th>
+	   </th> --%>
 	   <th>
 	      <bean:message key="project.owner"/>
 	   </th>
-	   <th>
+	  <%--  <th>
 	   	  <bean:message key="project.external.reference"/>
-	   </th>
+	   </th> --%>
 	   <th>
 	   	  <bean:message key="project.program.programName"/>
 	   </th>
@@ -49,15 +50,15 @@
 	<bean:define id="projID" name="proj" property="id"/>
 	  <tr>
 	   <td class="textcontent">
-	      <html:multibox name="<%=formName%>" property="selectedIDs">
+	      <html:multibox name="<%=formName%>" property="selectedIDs" onclick="output()">
 	         <bean:write name="projID" />
 	      </html:multibox>
      
    	   </td>
    	   <%--bugzilla 2438--%>
-	   <td class="textcontent">
+	<%--    <td class="textcontent">
 	      <bean:write name="proj" property="localAbbreviation"/>
-	   </td>
+	   </td> --%>
 	   <td class="textcontent">
 	   	  <bean:write name="proj" property="projectName"/>
 	   </td>
@@ -69,9 +70,9 @@
 	   	   &nbsp;
 	   	  </logic:empty>
 	   </td>
-	   <td class="textcontent">
+	  <%--  <td class="textcontent">
 	   	  <bean:write name="proj" property="startedDateForDisplay"/>
-	   </td>
+	   </td> --%>
 	   <td class="textcontent">
 	      <%--bean:write name="proj" property="sysUserId"/--%>
 	      <%--bean:write name="proj" property="sysUserName"/--%>
@@ -80,16 +81,16 @@
 	      </logic:notEmpty>
 	      &nbsp;
 	   </td>
-	   <td class="textcontent">
+	<%--     <td class="textcontent">
 	    <logic:notEmpty name="proj" property="referenceTo">
 	   	  <bean:write name="proj" property="referenceTo"/>
 	   	</logic:notEmpty>
 	   	<logic:empty name="proj" property="referenceTo">
 	   	  &nbsp;
 	   	</logic:empty>
-	   </td>
+	   </td>  --%>
 	   <td class="textcontent">
-	   	  <bean:write name="proj" property="programCode"/>
+	   	  <bean:write name="proj" property="programName"/>
 	   	  &nbsp;
 	   </td>
 	   <td class="textcontent">

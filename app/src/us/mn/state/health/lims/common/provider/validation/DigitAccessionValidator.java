@@ -17,12 +17,15 @@
  */
 package us.mn.state.health.lims.common.provider.validation;
 
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
 import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.common.util.SystemConfiguration;
+import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.sample.dao.SampleDAO;
 import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
-
-import java.util.HashSet;
-import java.util.Set;
 
 public class DigitAccessionValidator implements IAccessionNumberValidator {
 
@@ -32,15 +35,16 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 	private static final boolean NEED_PROGRAM_CODE = false;
 	private static Set<String> REQUESTED_NUMBERS = new HashSet<String>();
 	private String format;
-	
-	public DigitAccessionValidator( int length){
+
+	public DigitAccessionValidator(int length) {
 		format = "%0" + String.valueOf(length) + "d";
 		incrementStartingValue = String.format(format, 1);
-		String upper = incrementStartingValue.replace("0", "9").replace("1", "9");
+		String upper = incrementStartingValue.replace("0", "9").replace("1",
+				"9");
 		upperIncRange = Integer.parseInt(upper);
 		maxLength = length;
 	}
-	
+
 	public boolean needProgramCode() {
 		return NEED_PROGRAM_CODE;
 	}
@@ -49,7 +53,8 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 		return incrementStartingValue;
 	}
 
-	public String incrementAccessionNumber(String currentHighAccessionNumber) throws IllegalStateException{
+	public String incrementAccessionNumber(String currentHighAccessionNumber)
+			throws IllegalStateException {
 
 		int increment = Integer.parseInt(currentHighAccessionNumber);
 
@@ -62,7 +67,8 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 		return String.format(format, increment);
 	}
 
-	public ValidationResults validFormat(String accessionNumber, boolean checkDate) {
+	public ValidationResults validFormat(String accessionNumber,
+			boolean checkDate) {
 
 		if (accessionNumber.length() != maxLength) {
 			return ValidationResults.LENGTH_FAIL;
@@ -78,36 +84,68 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 	}
 
 	public String getInvalidMessage(ValidationResults results) {
+		String configLocale = SystemConfiguration.getInstance()
+				.getDefaultLocale().toString();
+		Locale locale = new Locale(configLocale);
+
 		switch (results) {
-			case LENGTH_FAIL:
-				return StringUtil.getMessageForKey("sample.entry.invalid.accession.number.length");
-			case USED_FAIL:
-				return StringUtil.getMessageForKey("sample.entry.invalid.accession.number.suggestion") + " " + getNextAvailableAccessionNumber(null);
-			case FORMAT_FAIL:
-				return getInvalidFormatMessage(results);
-			default:
-				return StringUtil.getMessageForKey("sample.entry.invalid.accession.number");
+		case LENGTH_FAIL:
+			return ResourceLocator
+					.getInstance()
+					.getMessageResources()
+					.getMessage(locale,
+							"sample.entry.invalid.accession.number.length");
+		case USED_FAIL:
+			return ResourceLocator
+					.getInstance()
+					.getMessageResources()
+					.getMessage(locale,
+							"sample.entry.invalid.accession.number.used");
+		case PROGRAM_FAIL:
+			return ResourceLocator
+					.getInstance()
+					.getMessageResources()
+					.getMessage(locale,
+							"sample.entry.invalid.accession.number.program");
+		case FORMAT_FAIL:
+			return ResourceLocator
+					.getInstance()
+					.getMessageResources()
+					.getMessage(locale,
+							"sample.entry.invalid.accession.number.format");
+		default:
+			return ResourceLocator
+					.getInstance()
+					.getMessageResources()
+					.getMessage(locale, "sample.entry.invalid.accession.number");
+
 		}
+
 	}
 
-    @Override
-    public String getInvalidFormatMessage( ValidationResults results ){
-        return StringUtil.getMessageForKey("sample.entry.invalid.accession.number.format.corrected", getFormatPattern(), getFormatExample());
-    }
+	@Override
+	public String getInvalidFormatMessage(ValidationResults results) {
+		return StringUtil.getMessageForKey(
+				"sample.entry.invalid.accession.number.format.corrected",
+				getFormatPattern(), getFormatExample());
+	}
 
-    private String getFormatPattern(){
-        return "#######";
-    }
+	private String getFormatPattern() {
+		return "#######";
+	}
 
-    private String getFormatExample(){
-        return "0000012";
-    }
-    public String getNextAvailableAccessionNumber(String prefix)throws IllegalStateException {
-		String nextAccessionNumber;
+	private String getFormatExample() {
+		return "0000012";
+	}
+
+	public String getNextAvailableAccessionNumber(String prefix)
+			throws IllegalStateException {
+		String nextAccessionNumber = null;
 
 		SampleDAO accessionNumberDAO = new SampleDAOImpl();
 
-		String curLargestAccessionNumber = accessionNumberDAO.getLargestAccessionNumber();
+		String curLargestAccessionNumber = accessionNumberDAO
+				.getLargestAccessionNumber();
 
 		if (curLargestAccessionNumber == null) {
 			nextAccessionNumber = incrementStartingValue;
@@ -129,20 +167,23 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 	}
 
 	// recordType parameter is not used in this case
-	public boolean accessionNumberIsUsed(String accessionNumber, String recordType) {
+	public boolean accessionNumberIsUsed(String accessionNumber,
+			String recordType) {
 
 		SampleDAO sampleDAO = new SampleDAOImpl();
 
 		return sampleDAO.getSampleByAccessionNumber(accessionNumber) != null;
 	}
 
-	public ValidationResults checkAccessionNumberValidity(String accessionNumber, String recordType, String isRequired,
+	public ValidationResults checkAccessionNumberValidity(
+			String accessionNumber, String recordType, String isRequired,
 			String projectFormName) {
 
 		ValidationResults results = validFormat(accessionNumber, false);
 		// TODO refactor accessionNumberIsUsed into two methods so the null
 		// isn't needed. (Its only used for program accession number)
-		if (results == ValidationResults.SUCCESS && accessionNumberIsUsed(accessionNumber, null)) {
+		if (results == ValidationResults.SUCCESS
+				&& accessionNumberIsUsed(accessionNumber, null)) {
 			results = ValidationResults.USED_FAIL;
 		}
 
@@ -159,8 +200,16 @@ public class DigitAccessionValidator implements IAccessionNumberValidator {
 		return maxLength;
 	}
 
-    @Override
-    public String getPrefix(){
-        return null;   //no fixed prefix
-    }
+	@Override
+	public String getPrefix() {
+		return null; // no fixed prefix
+	}
+
+	@Override
+	public boolean accessionNumberNotInTheSystem(String accessionNumber,
+			String recordType) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }

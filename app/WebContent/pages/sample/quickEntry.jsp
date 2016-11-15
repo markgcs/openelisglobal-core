@@ -1,940 +1,1630 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" %>
-<%@ page import="us.mn.state.health.lims.common.action.IActionConstants" %>
-<%@ page import="us.mn.state.health.lims.common.util.SystemConfiguration" %>   
-
-<%@ page import="java.util.Calendar"  %>
-<%@ page import="us.mn.state.health.lims.common.util.DateUtil" %>
+<%@ page import="us.mn.state.health.lims.common.formfields.FormFields.Field,
+				 us.mn.state.health.lims.common.action.IActionConstants,
+			     us.mn.state.health.lims.common.provider.validation.AccessionNumberValidatorFactory,
+			     us.mn.state.health.lims.common.provider.validation.IAccessionNumberValidator,
+			     us.mn.state.health.lims.common.formfields.FormFields,
+                 us.mn.state.health.lims.common.util.Versioning,
+			     us.mn.state.health.lims.common.util.StringUtil,
+			     us.mn.state.health.lims.common.util.IdValuePair,
+                 us.mn.state.health.lims.sample.util.AccessionNumberUtil,
+                 us.mn.state.health.lims.common.util.DateUtil,
+			     java.util.Calendar,
+			     java.util.List"  %>
 
 <%@ taglib uri="/tags/struts-bean"		prefix="bean" %>
 <%@ taglib uri="/tags/struts-html"		prefix="html" %>
 <%@ taglib uri="/tags/struts-logic"		prefix="logic" %>
 <%@ taglib uri="/tags/labdev-view"		prefix="app" %>
+<%@ taglib uri="/tags/struts-tiles"     prefix="tiles" %>
 <%@ taglib uri="/tags/sourceforge-ajax" prefix="ajax"%>
 
 <bean:define id="formName"		value='<%= (String)request.getAttribute(IActionConstants.FORM_NAME) %>' />
-<bean:define id="idSeparator"	value='<%= SystemConfiguration.getInstance().getDefaultIdSeparator() %>' />
-<%--bugzilla 1387 --%>
 <bean:define id="genericDomain" value='' />
+<bean:define id="entryDate" name="<%=formName%>" property="currentDate" />
 
-<%--bugzilla 1510 add styleId for compatibility in firefox and for use of firebug debugger--%>
-<%--bugzilla 1813 add batch QE functionality--%>
-<%--bugzilla 1979 using SampleStatusValidationProvider to validate batch range status--%>
-<bean:define id="expectedStatus" value='<%= SystemConfiguration.getInstance().getSampleStatusLabelPrinted() %>' />
-<%--bugzilla 2528 get newborn sample type--%>
-<bean:define id="newbornSampleType" value='<%= SystemConfiguration.getInstance().getNewbornTypeOfSample() %>' />
+<%!
+	String basePath = "";
+	IAccessionNumberValidator accessionNumberValidator;
+    boolean useModalSampleEntry = false;
+	boolean useSingleNameField = false;
+	boolean useClientReference = false;
+	boolean useDoctorName = false;
+	boolean useAge = true;
+	boolean useAgeUnit = true;
+	boolean useBirthDate = true;
+	boolean useGender = true;
+	boolean useDepartment = false; // turn from "true" to "false" to hide Department on Batch Entry Screen
+	boolean useStreetAddress = true;
+	boolean useWard = true;
+	boolean useCity = true;
+	boolean useDistrict = true;
+	boolean useDiagnosis = true;
+	boolean useExternalId = true;
+	boolean useChartNumber = true;
+	boolean usePatientType = true;
+	boolean useIllnessDate = true;
+	boolean useCollectionDate = true;
+	boolean useCollectionTime = true;
+	boolean labNoUsedIfSpecimens = false;
+%>
+<%
+	String path = request.getContextPath();
+	basePath = request.getScheme() + "://" + request.getServerName() + ":"	+ request.getServerPort() + path + "/";
+	accessionNumberValidator = new AccessionNumberValidatorFactory().getValidator();
+	useModalSampleEntry = FormFields.getInstance().useField( Field.SAMPLE_ENTRY_MODAL_VERSION );
+	useSingleNameField = FormFields.getInstance().useField(Field.SINGLE_NAME_FIELD);
+	labNoUsedIfSpecimens = FormFields.getInstance().useField(
+			Field.LAB_NUMBER_USED_ONLY_IF_SPECIMENS);
+%>
+
+<link rel="stylesheet" href="css/jquery_ui/jquery.ui.all.css?ver=<%= Versioning.getBuildNumber() %>">
+<link rel="stylesheet" href="css/customAutocomplete.css?ver=<%= Versioning.getBuildNumber() %>">
+
+<script type="text/javascript" src="<%=basePath%>scripts/utilities.js?ver=<%= Versioning.getBuildNumber() %>" ></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.core.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.widget.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.button.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.position.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.autocomplete.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/jquery.selectlist.dev.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/customAutocomplete.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="scripts/cityDistrictMap.js?ver=<%=Versioning.getBuildNumber()%>"></script>
 
 <%
-// bugzilla 2151
-String saveDisabled = (String)request.getAttribute(IActionConstants.SAVE_DISABLED);
-String addDisabled = (String)request.getAttribute(IActionConstants.ADD_DISABLED);
-String lbLoadMessage = "";
-
 //AIS - bugzilla 1463
 Calendar cal = Calendar.getInstance();
 int currentYear = cal.get(Calendar.YEAR);
 
 //bugzilla 1979 (lightbox for 2 confirm continue messages)
 java.util.Locale locale = (java.util.Locale)request.getSession().getAttribute(org.apache.struts.Globals.LOCALE_KEY);
-lbLoadMessage =
-					us.mn.state.health.lims.common.util.resources.ResourceLocator.getInstance().getMessageResources().getMessage(
-					locale,
-                    "common.loading.message");
+String clinicNA = us.mn.state.health.lims.common.util.resources.ResourceLocator.getInstance().getMessageResources().getMessage(
+				  locale, "quick.entry.clinic.name.not.found");
 %>
 
 <%--AIS - bugzilla 1463--%>
-<input id="currYear" name="currYear" type="hidden" value=<%=currentYear%> />
+<input id="currYear" name="currYear" type="hidden" value="<%=currentYear%>" />
 
-<script language="JavaScript1.2">
-//bugzilla 1979
-var lBox;
-var formFieldArray = new Array('accessionNumber', 
-                               'accessionNumber2',
-                               'receivedDateForDisplay',
-                               'typeOfSampleDesc',
-                               'sourceOfSampleDesc',
-                               'sourceOther'
-                               );
-var formFieldsValidArray = new Array(true, 
-                                     true,
-									 true, 
-									 true, 
-									 true,
-                                     true);
-var formFieldsRequiredArray = new Array(true,
-                                        false,
-										true, 
-										true, 
-										false, //AIS - bugzilla 1396
-                                        false);
+<script type="text/javascript">
+var validAccessions = new Array();
+var tempAccessions = new Array();
+var invalidElements = new Array();
+var requiredFields = new Array("accessionNumber", "receivedDateForDisplay", "submitterNumber");// Dung add vailidate field
+var usePatientInfoModal = true; // turn off popup for put some patient information
+var useSampleRejection = false; // Hard-code value since we never want rejection fields displayed in batch entry
+var zplData = "";
+var originalDistrictList = null;
+
 //bugzilla 1397 renamed to prePageOnLoad so this is called before actionError pops up errors					
 function prePageOnLoad()
 {
     var accessionNumber = $("accessionNumber");
     accessionNumber.focus();
+    $("receivedDateForDisplay").value = '<%=entryDate%>';
+    // generate first sample row, if using modal version
+    if (<%=useModalSampleEntry%> && $("samplesAddedTable").rows.length == 1) {
+    	addEmptySampleRow("notDirty");
+   		$jq("#addSampleButton").attr("disabled", false);
+    }
 
-    
-    
-    //AIS - bugzilla 1397 - Start
-    if (getSelectedTestIds() && getSelectedTestIds() != '')
-	{		
-		var thisForm = document.forms[0];
-		//then load both lists from parentform
-		var idObj = getSelectedTestIds();
-		
-		var idObjN = getSelectedTestNames();	
-		
-		var listOfIds = idObj.value; 
-		var listOfNames = idObjN.value; 		
-		  
-		var slIdArr = new Array();
-		var slIdArrN = new Array();
-		
-		//trim leading ;
-		if (listOfIds.indexOf(';') == 0) 
-		{
-			listOfIds = listOfIds.substring(1);
-			listOfNames = listOfNames.substring(1);
-		}
-		
-		slIdArr = listOfIds.split(';');		
-		slIdArrN = listOfNames.split(';');    
-
-		thisForm.assignedTests.options.length = 0;
-		
-		if (slIdArr && slIdArr.length > 0 && slIdArr[0] != '') 
-		{
-		
-			for (var i =0; i< slIdArr.length; i++) 
-			{
- 				thisForm.assignedTests.options[i] = new Option(slIdArrN[i], slIdArr[i]);
-			}
-         
-		    if (thisForm.assignedTests.options.length > 0)
-		    {
-		    	thisForm.assignedTests.size = thisForm.assignedTests.options.length;
-		    	thisForm.assignedTests.visibility = 'visible';
-		    }
-		    else
-		    {
-		    	thisForm.assignedTests.size = 0;
-		    	thisForm.assignedTests.visibility = 'none';
-		    }			
-		}  
-	}      
-    //AIS - bugzilla 1397 - End
+    setSave();
 }
 
-// Get array index for a particular field on form
-function getFieldIndex(field)
-{
-	var i;
-	for (i = 0; i < formFieldArray.length; i++)
-	{
-		if (formFieldArray[i] == field) 
-		{
-			break;
-		}
-	}
-	return i;
-}
-
-// returns true or false 
 function isFieldValid(fieldname)
 {
-	var i;
-	for (i = 0; i < formFieldArray.length; i++) 
-	{
-		if (formFieldArray[i] == fieldname) 
-		{
-			break;
-		}
-	}
-	return formFieldsValidArray[i];
-}
-
-// returns true or false 
-function isFieldRequired(field)
-{
-	var i;
-	for (i = 0; i < formFieldArray.length; i++) 
-	{
-		if (formFieldArray[i] == field) 
-		{
-			break;
-		}
-	}
-	return formFieldsRequiredArray[i];
+    return $jq.inArray(fieldname, invalidElements) == -1;
 }
 
 function setFieldInvalid(field)
 {
-	var index = getFieldIndex(field);
-	formFieldsValidArray[index] = false;
+    if( $jq.inArray(field, invalidElements) == -1 )
+    {
+        invalidElements.push(field);
+    }
 }
 
-function setFieldValid(field) 
+function setFieldValid(field)
 {
-	var index = getFieldIndex(field);
-	formFieldsValidArray[index] = true;
+    var removeIndex = $jq.inArray(field, invalidElements);
+    if( removeIndex != -1 )
+    {
+    	invalidElements.splice(removeIndex, 1);
+    }
 }
 
-//disable or enable save button based on validity of fields - if disabling save focus cursor on first field in error
-function setSave() 
-{
-	//disable or enable save button based on validity of fields
-	var obj = document.forms[0].save; 
-	obj.disabled = false;
-	for (var i = 0; i < formFieldsValidArray.length; i++) 
-	{
-    	if (formFieldsValidArray[i] == false) 
-    	{
-			obj.disabled = true;
-			break;
-		}
+//disable or enable save button based on validity of fields
+function setSave() {
+	
+	var validToSave = isSaveEnabled() && requiredFieldsValid() && sampleAddValid(true);
+	//disable or enable save button based on validity/visibility of fields
+    if($("saveButtonId") != null) {
+		$("saveButtonId").disabled = !validToSave;
 	}
-	<%--bugzilla 2151 --%>
-	<%
-	    if ( Boolean.valueOf(saveDisabled).booleanValue() ) { %>
-	        obj.disabled = true;
-    <% } %>	        
-	    
+
+	<% if (useModalSampleEntry) { %>
+	//disable or enable print button based on validity/visibility of fields
+	$('printButton').disabled = !isPrintEnabled();
+	<% } %>
+}
+
+function /*bool*/ requiredFieldsValid(){
+    for(var i = 0; i < requiredFields.length; ++i){
+        // check if required field exists
+        if (!$jq('#' + requiredFields[i]).length)
+        	return false;
+        if ($jq('#' + requiredFields[i]).is(':input')) {
+    		// check for empty input values
+        	if ($jq.trim($jq('#' + requiredFields[i]).val()).length === 0)
+            	return false;
+        } else {
+			// check for empty spans/divs
+			if ($jq.trim($jq('#' + requiredFields[i]).text()).length === 0)
+				return false;
+		}
+    }
+    return true;
 }
 
 function isSaveEnabled() 
 {
-	var enabled = true;
-	for (var i = 0; i < formFieldsValidArray.length; i++) 
-	{
-    	if (formFieldsValidArray[i] == false) 
-    	{
-			enabled = false;
-			break;
-		}
-	}
-	return enabled;
+    return invalidElements.length == 0;
 }
 
-// This is for the ADD TEST functionality
-function addTestPopup(form) 
+function  /*void*/ savePage()
 {
-	var context = '<%= request.getContextPath() %>';
-	var server = '<%= request.getServerName() %>';
-	var port = '<%= request.getServerPort() %>';
-	var scheme = '<%= request.getScheme() %>';	
-	var hostStr = scheme + "://" + server;
-	if (port != 80 && port != 443)
-	{
-		hostStr = hostStr + ":" + port;
-	}
-	hostStr = hostStr + context;
-
-	// Get the sessionID
-	var sessionid = '';
-	var sessionIndex = form.action.indexOf(';');
-	if (sessionIndex >= 0)
-	{
-		var queryIndex = form.action.indexOf('?');
-		var length = form.action.length;
-		if (queryIndex > sessionIndex) 
-		{
-			length = queryIndex;
+	<% if (!useModalSampleEntry) { %>
+	loadSamples();
+	<% } else { %>
+	loadXml(); //in sampleAddModal tile
+	<% } %>
+	fillAccessionList();
+  
+	// Clear any forced placeholder values before form submission
+	$jq('input[placeholder]').each(function() {
+		var input = $jq(this);
+    	if (input.val() == input.attr('placeholder')) {
+			input.val('');
 		}
-		sessionid = form.action.substring(sessionIndex,length);
-	}
-	var href = context+"/QuickEntryAddTestPopup.do"+sessionid;
-	//alert("href "+ href);	
-	createPopup(href, 880, 500);
+	});
+
+	window.onbeforeunload = null; // Added to flag that formWarning alert isn't needed.
+	var form = window.document.forms[0];
+	form.action = "QuickEntrySave.do";
+	form.submit();
 }
 
-//This is for the ADD TEST functionality
-function setAddTestResults(addTestForm)
-{
-	var popupPickListOptions = addTestForm.PickList.options;
-	var thisForm = document.forms[0];
-    //initialize
-    document.forms[0].selectedTestIds.value = '';
-    //AIS - bugzilla 1397    
-    document.forms[0].selectedTestNames.value = '';
+function  /*void*/ processValidateEntryDateSuccess(xhr){
+
+    //alert(xhr.responseText);
+	var message = xhr.responseXML.getElementsByTagName("message").item(0).firstChild.nodeValue;
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0).firstChild.nodeValue;
+
+	var isValid = message == "<%=IActionConstants.VALID%>";
+
+	//utilities.js
+	selectFieldErrorDisplay( isValid, $(formField));
+	setSampleFieldValidity( isValid, formField );
+	setSave();
+	setPatientModalSave();
+	
+	if( message == '<%=IActionConstants.INVALID_TO_LARGE%>' ){
+		alert( "<bean:message key="error.date.inFuture"/>" );
+	}else if( message == '<%=IActionConstants.INVALID_TO_SMALL%>' ){
+		alert( "<bean:message key="error.date.inPast"/>" );
+	}
+	
+	var dateChecker = ($(formField).id).indexOf('_');
+    if (dateChecker > -1) {
+    	var datePrefix = ($(formField).id).split('_')[0];
+    	if (datePrefix == "patientIllnessDate" || datePrefix == "patientCollectionDate") {
+        	calculateDayDifference($(formField));
+    	}
+    }
+	/*
+	Comment the following code because if entered invalid date, it will set focus on error field.
+	It leads to display error message many time when clicking mouse within the screen
+	*/
+	//if (!isValid) $(formField).focus();
+}
+
+function /*void*/ calculateDayDifference(dateField) {
+	var onSetDate = null;
+	var datePrefix = dateField.id.split("_")[0];
+	if (datePrefix == "patientIllnessDate") {
+		if (dateField != null && dateField.value) {
+			var onSetDateSplit = dateField.value.split("/");
+			onSetDate = new Date(onSetDateSplit[1] + "/" + onSetDateSplit[0] + "/" + onSetDateSplit[2]);
+		}
+	}
+	
+	if (onSetDate == null) {
+		$jq("input[id^='patientCollectionDate_']").each(function(){
+			var onsetDateField = $("patientIllnessDate_" + this.id.split("_")[1]);
+			var onSetDateSplit = onsetDateField.value.split("/");
+			onSetDate = new Date(onSetDateSplit[1] + "/" + onSetDateSplit[0] + "/" + onSetDateSplit[2]);
+			displayDayDifference(this, onSetDate, this);
+	    });
+	} else {
+		var collDateField = $("patientCollectionDate_" + dateField.id.split("_")[1]);
+		displayDayDifference(collDateField, onSetDate, dateField);
+	}
+}
+
+function /*void*/ displayDayDifference(collectionDateField, onSetDate, modifiedField) {
+	if ( (collectionDateField != null && collectionDateField.value) && 
+			(onSetDate != null && onSetDate) && modifiedField != null ) {
+		var rowNum = collectionDateField.id.split("_")[1];
+		var collDateSplit = collectionDateField.value.split("/");
+		var collectionDate = new Date(collDateSplit[1] + "/" + collDateSplit[0] + "/" + collDateSplit[2]);
+		
+		if (collectionDate.getTime() >= onSetDate.getTime()) {
+			var timeDiff = Math.abs(collectionDate.getTime() - onSetDate.getTime());
+			var diffDays = Math.ceil(timeDiff / (	1000 * 3600 * 24)); 
+			$("dayDifference_" + rowNum).value = diffDays + 1;
+			var onsetDateField = $("patientIllnessDate_" + collectionDateField.id.split("_")[1]);
+			selectFieldErrorDisplay(true, onsetDateField);
+			selectFieldErrorDisplay(true, collectionDateField);
+	        setSampleFieldValidity(true, onsetDateField.id);
+	        setSampleFieldValidity(true, collectionDateField.id);
+	        setSave();
+			setPatientModalSave();
+			
+		} else {
+			$("dayDifference_" + rowNum).value = "";
+	        alert( '<bean:message key="day.difference.error.message"/>' );
+	        selectFieldErrorDisplay(false, modifiedField);
+	        setSampleFieldValidity(false, modifiedField.id);
+	        setSave();
+			setPatientModalSave();
+		}
+	}	
+}
+
+function checkValidEntryDate(date, dateRange, blankAllowed) {
+	var isNumeric = true;
+	if(date.value.indexOf("/") > 0 && date.value.length <= 6){
+		var dateSplit = date.value.split("/");
+		var newDate = new Date(dateSplit[1] + "/" + dateSplit[0]);
+		if(newDate != "Invalid Date"){
+			var yyyy = new Date().getFullYear();
+			var mm = (newDate.getMonth()+1).toString(); // getMonth() is zero-based
+			var dd  = newDate.getDate().toString();
+			date.value = (dd[1]?dd:"0"+dd[0]) + "/" + (mm[1]?mm:"0"+mm[0]) + "/" + yyyy;
+		}
+	}
+
+    if((!date.value || date.value == "") && !blankAllowed){
+        isNumeric = false;
+    } else if ((!date.value || date.value == "") && blankAllowed) {
+    	selectFieldErrorDisplay( true, $(date.id));
+        setSampleFieldValidity( true, date.id );
+        setSave();
+        return;
+    }
     
-    thisForm.assignedTests.options.length = 0;
-    for (var i = 0; i < popupPickListOptions.length; i++) 
-    { 
-         document.forms[0].selectedTestIds.value += '<%=idSeparator%>';
-         document.forms[0].selectedTestIds.value += popupPickListOptions[i].value;
-         
-		//AIS - bugzilla 1397
-         document.forms[0].selectedTestNames.value += '<%=idSeparator%>';
-         document.forms[0].selectedTestNames.value += popupPickListOptions[i].text;         
-         
-         thisForm.assignedTests.options[i] = new Option(popupPickListOptions[i].text, popupPickListOptions[i].value);
-         //bugzilla 1856
-         thisForm.assignedTests.options[i].sortFieldA = popupPickListOptions[i].sortFieldA;
-         thisForm.assignedTests.options[i].sortFieldB = popupPickListOptions[i].sortFieldB;
+    if( !dateRange || dateRange == ""){
+        dateRange = 'past';
     }
-    if (thisForm.assignedTests.options.length > 0)
-    {
-    	thisForm.assignedTests.size = thisForm.assignedTests.options.length;
-    	thisForm.assignedTests.visibility = 'visible';
-    }
-    else
-    {
-    	thisForm.assignedTests.size = 0;
-    	thisForm.assignedTests.visibility = 'none';
-    }
-    //alert("selectedTestIds:"+selectedTestIds);
-    //clear this so that we can add more tests (button is enabled again)
-    //clearAddTestClicked();
     
-    //bugzilla 1856
-    sortOrder = 'sortFieldB';
-    sort('assignedTests', null, false);
+	// Added by Mark 2016.06.29 11:31AM
+    // Check if date value is numeric
+    try {
+    var dateSplit = date.value.split("/");
+    if (isNotaNumber(dateSplit[0]) || isNotaNumber(dateSplit[1]) || isNotaNumber(dateSplit[2]) || !isNumeric) {
+    	selectFieldErrorDisplay( false, $(date.id));
+        setSampleFieldValidity( false, date.id );
+        setSave();
+		setPatientModalSave();
+        return;
+        
+    } else {
+        //ajax call from utilites.js
+    	isValidDate( date.value, processValidateEntryDateSuccess, date.id, dateRange );
+    }
+    }catch(Exception){
+    	selectFieldErrorDisplay( false, $(date.id));
+        setSampleFieldValidity( false, date.id );
+        setSave();
+		setPatientModalSave();
+        return;
+    }
+    // End of Modification
 }
 
-function getSelectedTestIds()
-{
-  return document.forms[0].selectedTestIds;
-}
-
-//AIS - bugzilla 1397 
-function getSelectedTestNames()
-{
-  return document.forms[0].selectedTestNames;
-}
-
-//END This is for the ADD TEST functionality
-
-
-function submitTheForm(form)
-{
-	//alert("in submitTheForm: before setAction");
-	setAction(form, 'Update', 'yes', '?ID=');
-	//alert("in submitTheForm: after setAction");
-}
-
-
-function doFocus(field, nextField)
-{
-	var fieldMessage = field + 'Message';
-	var mdiv = $(fieldMessage);
-	var focusField = $(field);
-	focusField.focus();
-	//clear out badmessage that occurs on onblur before selection is made in Ajax drop down (this is a premature badmessage)
-	if (mdiv.className == "badmessage") 
-	{
-		mdiv.className = "blank";
-		setFieldValid(field);
-		//focus on next field
-		var nextF = $(nextField);
-		nextF.focus();
-	} 
-}
-
-function accessionNumberFocus()
-{
-	var field = 'accessionNumber';
-	nextField = 'receivedDateForDisplay';
-	doFocus(field, nextField);
-}
-
-function receivedDateFocus()
-{
-	var field = 'receivedDateForDisplay';
-	nextField = 'typeOfSampleDesc';
-	doFocus(field, nextField);
-}
-
-function sampleTypeFocus()
-{
-	var field = 'typeOfSampleDesc';
-	nextField = 'sourceOfSampleDesc';
-	doFocus(field, nextField);
-}
-
-function sampleSourceFocus()
-{ 
-	var field = 'sourceOfSampleDesc';
-	nextField = 'sourceOther';
-	doFocus(field, nextField);
-}
-
-//bugzilla 1778
-function sourceOtherFocus()
-{ 
-	var field = 'sourceOther';
-	nextField = 'accessionNumber';
-	doFocus(field, nextField);
-}
-
-//bugzilla 1494 removed validations that can be done through validation.xml
-function validateForm(form)
-{
-    var validated = validateQuickEntryForm(form);
-	return validated;
-}
-
-//This is for validating individual fields: accession #, received date, sample type, sample source
-function setMessage(message, field) 
-{
-    //alert("I am in in setMessage - reg. validation - with message and field " + message + " " + field);
-	var fieldMessage = field + "Message";
-	var mdiv = $(fieldMessage);
-	idField = $(field);
-     
-	if (message == "invalid") 
-	{
-		//some fields are not required
-		//AIS - bugzilla 1463
-		if (idField.value == "" && !isFieldRequired(field) && (idField.name != 'accessionNumber')) 
-		{
-			mdiv.className = "blank";
+function /*boolean*/ isNotaNumber(str) {
+	var regex = /^[a-zA-Z]+$/;
+	// loop through every character
+	for(var i=0; i < str.length; i++) {
+		// check if the i-th character is not a number
+		if(isNaN(str[i]) || regex.test(str)) {
+			return true;
 		}
-		else
-		{
-			mdiv.className = "badmessage";
-			setFieldInvalid(field);
+	}
+	// if the loop has finished and no letters have been found, return false
+	return false;
+}
+
+function checkValidEntryTime(time)
+{
+	if(!time.value || time.value == ""){
+		selectFieldErrorDisplay( true, time);
+		setSampleFieldValidity( true, time.id );
+		setSave();
+		return;
+	}
+
+	var isValid = /^([01]?\d|2[0-3]):[0-5]\d$/.test(time.value);
+	selectFieldErrorDisplay( isValid, time);
+	setSampleFieldValidity( isValid, time.id );
+	setSave();
+}
+
+function checkValidEntryAge(age)
+{
+    if(!age.value || age.value == ""){
+		selectFieldErrorDisplay( true, age);
+		setSampleFieldValidity( true, age.id );
+		setSave();
+		setPatientModalSave();
+		return;
+	}
+
+	var isValid = /^\s*([0-9]|[1-9][0-9]|1[0-4][0-9]|150|[1-2][0-9][0-9][0-9])\s*$/.test(age.value);
+	selectFieldErrorDisplay( isValid, age);
+	setSampleFieldValidity( isValid, age.id );
+	setSave();
+	setPatientModalSave();
+}
+
+ function processAccessionSuccess(xhr)
+{
+	//alert(xhr.responseText);
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0);
+	var message = xhr.responseXML.getElementsByTagName("message").item(0).firstChild.nodeValue;
+	var success = false;
+	var mg="";
+	
+	if (message == "valid" || message == "SAMPLE_NOT_FOUND"){
+		success = true;
+	}
+	
+	//Tien add
+	if (message == "valid" || message == "SAMPLE_NOT_IN_SYSTEM"){
+		success = false;
+		mg="<bean:message key="sample.entry.invalid.accession.number.not.in.system"/>";
+	}
+	// end Tien add
+	
+	var labElement = formField.firstChild.nodeValue;
+	selectFieldErrorDisplay( success, $(labElement));
+	if (success) setFieldValid(labElement);
+	else setFieldInvalid(labElement);
+
+	/* if( !success ){
+		alert( "<bean:message key="sample.entry.invalid.accession.number"/>" );
+		$(labElement).focus();
+		updateAccessionCount();
+	}
+	 */
+	// Tien add
+    if (!success) {
+    	//check accession number is already use in the system or just created
+    	<%if (!labNoUsedIfSpecimens) {%>
+        alert(message.firstChild.nodeValue);
+		<%} else {%>
+		if(mg!=""){
+			// if mg is not null, it means the accession number is not in the system, alert.
+			 alert(mg);
+	         $(labElement).focus();
+	         updateAccessionCount();
+		}else{
+			//accession number is already used, or wrong format
+			  alert( "<bean:message key="sample.entry.invalid.accession.number"/>" );
+	          $(labElement).focus();
+	          updateAccessionCount();
 		}
- 	}
+
+		<%}%>
+		
+    }
+	// end Tien add 
+	
+	if (labElement == "accessionNumber") validateAccessionNumber2($('accessionNumber2'));
+	if (labElement == "accessionNumber2") validateAccessionRange(); 
+ 
+	setSave();
+} 
+
+function checkAccessionNumber( accessionNumber )
+{
+	//check if empty
+	if ( !fieldIsEmptyById( accessionNumber.id ) )
+	{
+		validateAccessionNumberOnServer(true, false, accessionNumber.id, accessionNumber.value, processAccessionSuccess, processFailure );
+	}
 	else
 	{
-		mdiv.className = "blank";
-		setFieldValid(field);
-		//this is to correct case according to a value found in database
-		
-		//AIS - bugzilla 1395	
-		if ( field != "accessionNumber" && field != "accessionNumber2") {
-		     //bugzilla 1465
-             if (idField.name == 'sourceOfSampleDesc') {
-                idField = $("sourceOfSampleId");
-                idField.value = message.substring(5);
-             } else if (idField.name == 'typeOfSampleDesc') {
-                idField = $("typeOfSampleId");
-                idField.value = message.substring(5);
-             } else {
-                idField.value = message.substring(5);
-             }
-       }		
+		if (accessionNumber.name != 'accessionNumber2') {
+			selectFieldErrorDisplay(false, accessionNumber);
+			setFieldInvalid(accessionNumber.id);
+			alert("<bean:message key="quick.entry.accession.number.required"/>");
+			accessionRangeErrorMessage(false);
+			accessionNumber.focus();
+		} else {
+			if (fieldIsEmptyById(accessionNumber.id)) {
+				selectFieldErrorDisplay(true, accessionNumber);
+				setFieldValid(accessionNumber.id);
+			} else {
+				selectFieldErrorDisplay(false, accessionNumber);
+				setFieldInvalid(accessionNumber.id);				
+			}
+		}
+	}
+	setSave();
+} 
+
+
+function validateAccessionRange() {
+	var a1 = $('accessionNumber').value;
+	var a2 = $('accessionNumber2').value;
+	validAccessions = [];
+	tempAccessions = [];
+
+	if (a1 != null && a1 != '' && isFieldValid('accessionNumber') && isFieldValid('accessionNumber2')) validAccessions.push(parseInt(a1));
+	if (a2 != null && a2 != '' && isFieldValid('accessionNumber') && isFieldValid('accessionNumber2')) {
+		if (a2 < a1) {
+			selectFieldErrorDisplay(false, $('accessionNumber2'));
+			setFieldInvalid('accessionNumber2');
+			alert( "<bean:message key="quick.entry.accession.number.bad.order"/>" );
+			$('accessionNumber2').focus();
+			validAccessions = [];
+		} else if (a2 > a1 && a1 != null && a1 != '') {
+			accessionRangeErrorMessage(false);
+			$jq(invalidElements).each(function(index, value){
+				if (value.substring(0, 14) == "tempAccession-")
+					setFieldValid(value);
+			});
+			var ind = 0;
+			for (var i = parseInt(a1) + 1; i < parseInt(a2); i++) {
+				tempAccessions[ind] = i;
+				validateAccessionNumberOnServer(true, false, 'tempAccession-' + ind, i, processAccessionRangeSuccess, processFailure );
+				ind++;
+			}
+			validAccessions.push(parseInt(a2));
+		}
+	}
+	updateAccessionCount();
+}
+
+function updateAccessionCount() {
+	if (validAccessions.length > 0) {
+		$('accessionTotal').innerHTML = '(' + validAccessions.length + ' <bean:message key="quick.entry.accession.number.total"/>)';
+		$('accessionTotal').style.display = 'inline';
+	} else {
+		$('accessionTotal').innerHTML = '&nbsp;';
+		$('accessionTotal').style.display = 'none';
 	}
 }
 
-function processFailure(xhr) {
-  //ajax call failed
+function accessionRangeErrorMessage(flag) {
+	if (flag) {
+		$("accessionRangeError").innerHTML = "<span style=\"font-size:.75em;color:red;\">&nbsp;<bean:message key="quick.entry.accession.range.error"/></span>";
+		$("accessionRangeError").style.display = 'inline';
+	} else {
+		$("accessionRangeError").innerHTML = '&nbsp;';
+		$("accessionRangeError").style.display = 'none';
+	}
 }
 
-function processSuccess(xhr) {
-  var message = xhr.responseXML.getElementsByTagName("message")[0];
-  var formfield = xhr.responseXML.getElementsByTagName("formfield")[0];
-  //alert("I am in parseMessage and this is message, formfield " + message + " " + formfield);
-  setMessage(message.childNodes[0].nodeValue, formfield.childNodes[0].nodeValue);
-  setSave();
+function processAccessionRangeSuccess(xhr)
+{
+	//alert(xhr.responseText);
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0);
+	var message = xhr.responseXML.getElementsByTagName("message").item(0);
+	var index = parseInt(formField.firstChild.nodeValue.substring(14));
+
+	if (message.firstChild.nodeValue == "valid" || message.firstChild.nodeValue == "SAMPLE_NOT_FOUND") {
+		validAccessions.push(parseInt(tempAccessions[index]));
+	} else {
+		alert( tempAccessions[index] + ": <bean:message key="sample.entry.invalid.accession.number.used"/>" );
+		setFieldInvalid("tempAccession-" + index.toString());
+		accessionRangeErrorMessage(true);
+	}
+	updateAccessionCount();
+	setSave();
 }
 
-//AIS - bugzilla 1463 Add modifications to this function
+function setSampleFieldValidity( valid, fieldId ){
+
+	if( valid )
+	{
+		setFieldValid(fieldId);
+	}
+	else
+	{
+		setFieldInvalid(fieldId);
+	}
+}
+
+function /*void*/ makeDirty(){
+	dirty=true;
+	if( typeof(showSuccessMessage) != 'undefinded' ){
+		showSuccessMessage(false); //refers to last save
+	}
+	// Adds warning when leaving page if content has been entered into makeDirty form fields
+	function formWarning(){ 
+    return "<bean:message key="banner.menu.dataLossWarning"/>";
+	}
+	window.onbeforeunload = formWarning;
+}
+
 function validateAccessionNumber(field) {
-	if((field.value.length < 10)){	
-	  var myMessage = "invalid";
-      //fix error in firefox - no AccessionNumber element
-	  var myField = field.name;		
-	  setMessage(myMessage, myField);		
-	  setSave();	
-	}else{	
-	  var Accession = field.value;
-	  var strCheck = '1234567890'; 
-	  var fieldMessage = field.name + "Message";
-	  //alert("fieldMessage "+ fieldMessage);
-	  var mdiv = $(fieldMessage);	  	  
-	  if (  
-		strCheck.indexOf(Accession.substring(1,2)) < 0 ||
-		strCheck.indexOf(Accession.substring(2,3)) < 0 ||
-		strCheck.indexOf(Accession.substring(3,4)) < 0 ||
-		strCheck.indexOf(Accession.substring(5,6)) < 0 ||
-		strCheck.indexOf(Accession.substring(6,7)) < 0 ||
-		strCheck.indexOf(Accession.substring(7,8)) < 0 ||
-		strCheck.indexOf(Accession.substring(9,10)) < 0  
-  		){  
-			mdiv.className = "badmessage";
-			setFieldInvalid(field.name);  
-		}else{			  
-	    	var cal = document.forms[0].currYear.value;	
-		 	if (Accession.substring(0,4) == cal ){	
-				mdiv.className = "blank";		      
-				setFieldValid(field);
-				setSave();     
-                new Ajax.Request (
-                                 'ajaxXML',  //url
-                                 {//options
-                                    method: 'get', //http method
-                                    parameters: 'provider=QuickEntryAccessionNumberValidationProvider&field=' + field.name + '&id=' + escape($F(field.name)),      //request parameters
-                                    //indicator: 'throbbing'
-                                    onSuccess:  processSuccess,
-                                    onFailure:  processFailure
-                                 }
-                              );
-      		}else{			          
-		      	mdiv.className = "badmessage";
-		  		setFieldInvalid(field.name);			          
-			}          
-		}		 			
-	}
-
+	makeDirty();
+	checkAccessionNumber(field);
 }
 
 function validateAccessionNumber2(field) {
-  //bugzilla 2263  
-  if (field.value.length == 0) {
-      setMessage("valid", field.name);
-      setSave();
-      return;
-  }  
-  //only validate if not blank (this is not a required field)
-	if ($F("accessionNumber2") != null && $F("accessionNumber2")!= '') {
+	makeDirty();
+	//only validate if not blank (this is not a required field)
+	if (field.value != null && field.value != '') {
 	  //if applicable check to make sure 2nd accessionNumber is > first
-	    if ($F("accessionNumber") == null || $F("accessionNumber") == '' || $F("accessionNumber2") <= $F("accessionNumber")) {
-	      setMessage("invalid", field.name);		
-	      setSave();
-	      return;	
+	    if ($F("accessionNumber") == null || $F("accessionNumber") == '' ||
+	    	field.value <= $F("accessionNumber")) {
+			selectFieldErrorDisplay(false, field);
+			setFieldInvalid(field.id);
+			alert( "<bean:message key="quick.entry.accession.number.bad.order"/>" );
+			field.focus();
+	      	setSave();
+	      	return;	
 	    }
-	
-	if((field.value.length < 10)){	
-	  var myMessage = "invalid";
-      //fix error in firefox - no AccessionNumber element
-	  var myField = field.name;		
-	  setMessage(myMessage, myField);		
-	  setSave();	
-	}else{	
-	  var Accession = field.value;
-	  var strCheck = '1234567890'; 
-	  var fieldMessage = field.name + "Message";
-	  //alert("fieldMessage "+ fieldMessage);
-	  var mdiv = $(fieldMessage);	  	  
-	  if (  
-		strCheck.indexOf(Accession.substring(1,2)) < 0 ||
-		strCheck.indexOf(Accession.substring(2,3)) < 0 ||
-		strCheck.indexOf(Accession.substring(3,4)) < 0 ||
-		strCheck.indexOf(Accession.substring(5,6)) < 0 ||
-		strCheck.indexOf(Accession.substring(6,7)) < 0 ||
-		strCheck.indexOf(Accession.substring(7,8)) < 0 ||
-		strCheck.indexOf(Accession.substring(9,10)) < 0  
-  		){  
-			mdiv.className = "badmessage";
-			setFieldInvalid(field.name);  
-		}else{			  
-	    	var cal = document.forms[0].currYear.value;	
-		 	if (Accession.substring(0,4) == cal ){	
-				mdiv.className = "blank";		      
-				setFieldValid(field);
-				setSave();     
-                new Ajax.Request (
-                                 'ajaxXML',  //url
-                                 {//options
-                                    method: 'get', //http method
-                                    parameters: 'provider=QuickEntryAccessionNumberValidationProvider&field=' + field.name + '&id=' + escape($F(field.name)),      //request parameters
-                                    //indicator: 'throbbing'
-                                    onSuccess:  processSuccess,
-                                    onFailure:  processFailure
-                                 }
-                              );
-      		}else{			          
-		      	mdiv.className = "badmessage";
-		  		setFieldInvalid(field.name);			          
-			}          
-		}		 			
-	}
-  }
-}
-
-function validateSampleType() {
-         new Ajax.Request (
-                          'ajaxXML',  //url
-                           {//options
-                             method: 'get', //http method
-                             parameters: 'provider=QuickEntrySampleTypeValidationProvider&field=typeOfSampleDesc&id=' + escape($F("typeOfSampleDesc")),      //request parameters
-                             //indicator: 'throbbing'
-                             onSuccess:  processSuccess,
-                             onFailure:  processFailure
-                           }
-                          );
-}
-
-function validateSampleSource() {
-	/*AIS - bugzilla 1396
-      Added if constraint-- to check if it is invalid, only when it is filled in
-    */
-    if ($F("sourceOfSampleDesc") != "" ) {
-         new Ajax.Request (
-                          'ajaxXML',  //url
-                           {//options
-                             method: 'get', //http method
-                             parameters: 'provider=QuickEntrySampleSourceValidationProvider&field=sourceOfSampleDesc&id=' + escape($F("sourceOfSampleDesc")),      //request parameters
-                             //indicator: 'throbbing'
-                             onSuccess:  processSuccess,
-                             onFailure:  processFailure
-                           }
-                          );
-    }
-}
-
-function myCheckDate(date, event, dateCheck, onblur) 
-{
-	var messageDiv = date.name + 'Message';
-	var mdiv = $(messageDiv);
-	var validDate = DateFormat(date,date.value,event,dateCheck,'1');
-	if (dateCheck) 
-	{ 
-		if (validDate) 
-		{
-			var validDate2 = lessThanCurrent(date);
-			if (validDate2) 
-			{
-				mdiv.className = "blank";
-				setFieldValid(date.name);
-			}
-			else
-			{
-				mdiv.className = "badmessage";
-				setFieldInvalid(date.name);
-			}
-		}
-		else
-		{
-			mdiv.className = "badmessage";
-			setFieldInvalid(date.name);
-		}
-		setSave();
+		checkAccessionNumber(field);
+	} else {
+		field.value = '';
+		selectFieldErrorDisplay(true, field);
+		setFieldValid(field.id);
+		accessionRangeErrorMessage(false);
+		validateAccessionRange();
+      	setSave();
 	}
 }
 
-function setMyCancelAction(form, action, validate, parameters) 
-{   
-	//first turn off any further validation
-	setAction(window.document.forms[0], 'Cancel', 'no', '');	
+function fillAccessionList() {
+	$("accessionList").value = validAccessions.sort().join(",");
 }
 
-
-//DIANE ADDING FUNCTIONS FOR bugzilla 1979
-//added this for 1895 to get loading message from MessageResource.properties
-function getLbLoadMessage() {
-  return '<%=lbLoadMessage%>';
-}
-
-
-//bugzilla 1979 made checkConfirmExit() for no tests added into a lightbox
-function checkConfirmExit(replaceLightBox)
-{
-   var selectedTestIds = getSelectedTestIds();
-   
-   //if tests have been selected go ahead and save without confirm exit window
-   if ( selectedTestIds.value != '') {
-      submitTheForm(window.document.forms[0]);
-   }
-   
-   //if no tests have been added and no errors otherwise on page -> go to confirm exit popup
-   if (( selectedTestIds.value == '') && isSaveEnabled() == true) {
-	 
- 	 //define customLightBox
- 	    var customLightBox = { 
-          
-	      loadInfo : function() { 
-	        var myAjax = new Ajax.Request(
-		    //bugzilla 1895 changed this from this.content (along with replacing initialize function)
-	        this.url,
-	        {method: 'post', parameters: '', onComplete: this.processInfo.bindAsEventListener(this)}
-	        );
-	      },
-       
-        // Display Ajax response
-        processInfo: function(response){
-            new Insertion.Before($('lbLoadMessage'), response.responseText);
- 	    	$('lightbox').className = "done";	
-	    	this.actions();			
-	    },
-	   
-	   insert: function(e){
-	     Element.remove($('lbContent'));
-	     var myAjax = new Ajax.Request(
-		 'pages/sample/quickEntryConfirmExitLightbox.jsp',
-		 {method: 'post', parameters: '', onComplete: this.processInfo.bindAsEventListener(this)}
-	     );
-        }
- 
-     };
-    //replaceLightBox is true if we are coming from a previous popup (lightbox)
-    if (replaceLightBox) {
-     //reuse existing lBox
-     var myLightBox = Object.extend(lBox, customLightBox);
-     myLightBox.insert();
-    } else {
-     lBox = new lightbox('pages/sample/quickEntryConfirmExitLightbox.jsp', '');    
-     var myLightBox = Object.extend(lBox, customLightBox);
-     myLightBox.activate();
-    }
-   
-   } else {
-     return false;
-   }
-    
-}
-
-//bugzilla 1979 - coming from checkConfirmContinueWithInvalidStatusInRange
-function saveItToLightBoxParentForm() {
-   //after checking sample statuses - now check whether tests have been assigned
-   checkConfirmExit(true);
-}
-
-function saveItToParentForm(form) {
- submitTheForm(form);
-}
-
-//bugzilla 1979 using lightbox
-function checkConfirmContinueWithInvalidStatusInRange(form) {
-     //bugzilla 1979 extend lightbox loadInfo function to do what we need for this page
-     var customLightBox = { 
-
- 	    loadInfo : function() { 
-	        var myAjax = new Ajax.Request(
-		    //bugzilla 1895 changed this from this.content (along with replacing initialize function)
-	        this.url,
-	        {method: 'post', parameters: '', onComplete: this.processInfo.bindAsEventListener(this)}
-	        );
-	      },
-       
-        // Display Ajax response
-        processInfo: function(response){
-            new Insertion.Before($('lbLoadMessage'), response.responseText);
- 	    	$('lightbox').className = "done";	
-	    	this.actions();			
-	    },
-	   
-	   insert: function(e){
-	     Element.remove($('lbContent'));
-	     var myAjax = new Ajax.Request(
-		 'pages/sample/quickEntryConfirmInvalidStatusInRangeLightbox.jsp',
-		 {method: 'post', parameters: '', onComplete: this.processInfo.bindAsEventListener(this)}
-	     );
-        }
- 
-      };
-
-     lBox = new lightbox('pages/sample/quickEntryConfirmInvalidStatusInRangeLightbox.jsp', '');    
-     var myLightBox = Object.extend(lBox, customLightBox);
-     myLightBox.className = 'lightbox';
-     myLightBox.activate();       
-
-}
-
-function processAjaxResultForSampleStatusInRange(xhr) {
-  var message = xhr.responseXML.getElementsByTagName("message")[0];
-  var formfield = xhr.responseXML.getElementsByTagName("formfield")[0];
-  //set hidden variable validSampleStatusInRange
-  var msg =  message.childNodes[0].nodeValue;
-  var fld =  formfield.childNodes[0].nodeValue;
-  //we can submit form now if the combination is valid
-  if (msg == "valid") {
-     checkConfirmExit(false);
-  } else {
-     checkConfirmContinueWithInvalidStatusInRange(window.document.forms[0]);
-  }
-}
-
-function checkValidSampleStatusInRange() {
-
-//only do this check if there is a valid 2nd accesion number (batch Quick Entry) 
-if ($F("accessionNumber2") != null && $F("accessionNumber2")!= '') {  
-   new Ajax.Request (
-            'ajaxXML',  //url
+function validateOrganizationLocalAbbreviation() {
+    new Ajax.Request (
+           'ajaxXML',  //url
              {//options
               method: 'get', //http method
-              parameters: 'provider=SampleStatusValidationProvider&field=accessionNumber&id=' + escape($F("accessionNumber")) + '&toId=' + escape($F("accessionNumber2")) +'&expectedStatus=' + escape(<%=expectedStatus%>),      //request parameters
+              parameters: 'provider=OrganizationLocalAbbreviationValidationProvider&form=' + document.forms[0].name +'&field=submitterNumber&id=' + encodeURIComponent($F("submitterNumber")),      //request parameters
               //indicator: 'throbbing'
-              onSuccess:  processAjaxResultForSampleStatusInRange,
+              onSuccess:  processValidateOrganizationLocalAbbreviationSuccess,
               onFailure:  processFailure
              }
-           );  
- } else {
-   checkConfirmExit(false);
- }
-
+          );
 }
-//end bugzilla 1979
 
-//bugzilla 2528
-function processSampleType() {
-    var sampleType = document.forms[0].typeOfSampleDesc.value;
-    if ( sampleType == '<%=newbornSampleType%>' )
-	    setAction(window.document.forms[0], 'PopulateNewbornTest', 'no', '');
-    
+function processValidateOrganizationLocalAbbreviationSuccess(xhr) {
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0).firstChild.nodeValue;
+	var message = xhr.responseXML.getElementsByTagName("message").item(0).firstChild.nodeValue;
+	var success = false;
+	var field = $('submitterNumber');
+
+	if (message.substring(0,5) == "valid"){
+		success = true;
+	}
+
+	if( !success){
+		$('clinicName').innerHTML = '<%=clinicNA%>';
+		$(field.id + 'Other').value = "";
+		selectFieldErrorDisplay(false, field);
+		setFieldInvalid(field.id); 	
+	} else {
+		$('clinicName').innerHTML = message.substring(5);
+		$(field.id + 'Other').value = message.substring(5);
+		 /* selectFieldErrorDisplay(true, field);
+		setFieldValid(field.id);  */
+		//add to check empty submitter: if it's empty, focus turn red on input field
+ 		if (field.value == '') {
+			selectFieldErrorDisplay(false, field);
+			setFieldInvalid(field.id);
+		} else {
+			selectFieldErrorDisplay(true, field);
+			setFieldValid(field.id);
+		} 
+		//end
+	}
+	setSave();
 }
-//end bugzilla 2528
 
+function setMyCancelAction(form, action, validate, parameters)
+{
+    //first turn off any further validation
+    setAction(window.document.forms[0], 'Cancel', 'no', '');
+}
+
+function validateProjectIdOrName(field) {
+	if ($F(field) == '' || $F(field) == null) {
+		selectFieldErrorDisplay(true, field);
+		setSampleFieldValidity(true, field.id);
+		$(field.id + 'Display').innerHTML = "";
+		$(field.id + 'Other').value = "";
+		setSave();
+ 	} else {
+ 		new Ajax.Request (
+           	'ajaxXML',  //url
+             	{//options
+              	method: 'get', //http method
+              	parameters: 'provider=ProjectIdOrNameValidationProvider&field=' + field.id + '&id=' + encodeURIComponent($F(field)),      //request parameters
+              	//indicator: 'throbbing'
+              	onSuccess:  processProjectIdOrNameSuccess,
+              	onFailure:  processFailure
+             	}
+          	);
+ 	}
+}
+
+function processProjectIdOrNameSuccess(xhr) {
+	var formField = xhr.responseXML.getElementsByTagName("formfield").item(0).firstChild.nodeValue;
+	var message = xhr.responseXML.getElementsByTagName("message").item(0).firstChild.nodeValue;
+	var success = false;
+
+	if (message.substring(0,5) == "valid"){
+		success = true;
+	}
+
+	selectFieldErrorDisplay( success, $(formField));
+	setSampleFieldValidity( success, formField );
+
+	if(success) {
+		$(formField + 'Display').innerHTML = message.substring(5);
+		$(formField + 'Other').value = message.substring(5);
+	} else {
+		$(formField + 'Display').innerHTML = "";
+		$(formField + 'Other').value = "";
+	}
+	setSave();
+}
+
+function processFailure(xhr) {
+  	//ajax call failed
+}
+
+function showHideSection(button, targetId){
+    if( button.value == "+" ){
+        showSection(button, targetId);
+    }else{
+        hideSection(button, targetId);
+    }
+}
+
+function showSection( button, targetId){
+    $jq("#" + targetId ).show();
+    button.value = "-";
+}
+
+function hideSection( button, targetId){
+    $jq("#" + targetId ).hide();
+    button.value = "+";
+}
+
+function setPatientModalSave() {
+	makeDirty();
+	var isValid = true;
+	//$jq("#patientInfo-save").attr("disabled", false);
+	$jq("[id^='patientDob_'],[id^='patientAge_'],[id^='patientIllnessDate_'],[id^='patientCollectionDate_'],[id^='patientCollectionTime_']").each(function() {
+		if (!isFieldValid ($jq(this).attr("id"))) {
+			//$jq("#patientInfo-save").attr("disabled", true);
+			isValid = false;
+		}
+	});
+	$jq("[id^='patientFirstName_'],[id^='patientGender_']").each(function() {
+		if (this.id.indexOf('patientTmpl') < 0 && !$jq(this).val().trim()) {
+			isValid = false;
+			return false;
+		}
+	});
+	$jq("#patientInfo-save").attr("disabled", !isValid);
+}
+
+function cancelPatientInfo() {
+	if ($jq("#modalPatientInfo").data("modalUpdated")) {
+		$jq("#confirm-modal .confirm-close").unbind("click").click(function() {
+			cancelConfirm($jq("#modalPatientInfo"));
+		});
+		$jq("#modalPatientInfo").modal('hide');
+		$jq("#confirm-modal").modal('show');
+	}
+	setSave();
+}
+
+function populatePatientInfoModal() {
+	if (validAccessions.length < 1) return;
+	removeUnusedPatientInfoRows();
+	validAccessions.sort(function (a,b) { return a - b; });
+	var accCnt = validAccessions.length;
+	for (var i = 0; i < accCnt; i++) {
+		if ($jq('#patientRow_' + validAccessions[i]).length) {
+			continue;
+		}
+		addPatientInfoRow(validAccessions[i]);
+	}
+	sortAndAlternateRowColors("patientInfoTable", "#f9f9f9");
+	$jq('#modalPatientInfo').modal('show');
+}
+
+function sortAndAlternateRowColors(name, color) {
+	var table = $jq('#' + name);
+	var rows = $jq('tr:gt(0)', table);
+	rows.sort(function(a, b) {
+	    var keyA = $jq(a).attr('id').substring($jq(a).attr('id').indexOf('_') + 1);
+	    var keyB = $jq(b).attr('id').substring($jq(b).attr('id').indexOf('_') + 1);
+	    return keyA - keyB;
+	});
+	removeAllPatientInfoRows();
+	$jq.each(rows, function() {
+		$jq(table).append($jq(this));
+	});
+
+	$jq(table).find("tr:even").css("background-color", color);
+}
+
+function removeAllPatientInfoRows() {
+	$jq("#patientInfoTable").find("tr:gt(0)").remove();
+}
+
+function removeUnusedPatientInfoRows() {
+	$jq("#patientInfoTable").find("tr:gt(0)").each(function() {
+		if ($jq.inArray(parseInt($jq(this).attr("id").substring($jq(this).attr("id").indexOf('_') + 1), 10), validAccessions) == -1) {
+			$jq(this).remove();
+		}
+	});
+}
+
+function addPatientInfoRow(accNo) {
+	// duplicate patient info row template, update all ids
+	$jq("#patientRow_patientTmpl").clone().find("a, button, div, i, input, label, select, span, td").each(function() {
+		if ($jq(this).attr("id") != null) {
+			$jq(this).val('').attr('id', function(_, id) { return id.substring(0, id.indexOf('_')) + '_' + accNo; });
+			if ($jq(this).attr("id").substring(0, $jq(this).attr("id").indexOf('_')) == "accNo")
+				$jq(this).html(accNo);
+		}
+	}).end().attr("id", function(_, id) { return id.substring(0, id.indexOf('_')) + '_' + accNo; }).appendTo("#patientInfoTable");
+}
+
+function savePatients() {
+	var xml = convertPatientsToXml();
+	$("patientXML").value = xml;
+}
+
+function convertPatientsToXml(){
+	var samplesRows = $("samplesAddedTable").rows;
+	var rows = $("patientInfoTable").rows;
+	
+	var xml = "<?xml version='1.0' encoding='utf-8'?><patients>";
+
+	for( var x = 1; x < samplesRows.length; x++ ){
+		for( var i = 1; i < rows.length; i++ ){
+			xml = xml + convertPatientToXml( samplesRows[x].id, rows[i].id.substring($jq(rows[i]).attr('id').indexOf('_')) );
+		}
+	}
+	xml = xml + "</patients>";
+
+	return xml;
+}
+
+function convertPatientToXml( parentRowId, id ){
+	var refID = $jq("#referringID" + id);
+	var pidID = $jq("#patientID" + id);
+	var fnameID = $jq("#patientFirstName" + id);
+	var emergencyID = $jq("#emergency" + id);
+	var lnameID = $jq("#patientLastName" + id);
+	var dobID = $jq("#patientDob" + id);
+	var ageID = $jq("#patientAge" + id);
+	var sexID = $jq("#patientGender" + id);
+	var ageUintID = $jq("#patientAgeUnit" + id);
+	var departmentID = $jq("#patientDepartment" + id);
+	var streetAddressID = $jq("#patientStreetAddress" + id);
+	var wardID = $jq("#patientWard" + id);
+	var districtID = $jq("#patientDistrict" + id);
+	var cityID = $jq("#patientCity" + id);
+	var diagnosisID = $jq("#patientDiagnosis" + id);
+	var patientTypeID = $jq("#patientType" + id);
+	var chartNumberID = $jq("#patientChartNumber" + id);
+	var illnessDateID = $jq("#patientIllnessDate" + id);
+	var collectionDateID = $jq("#patientCollectionDate" + id);
+	var collectionTimeID = $jq("#patientCollectionTime" + id);
+	var xml = "<patient accNo='" + id.substring(1);
+	
+    if ((dobID.length && $jq.trim(dobID.val()).length !== 0) ||
+    	(ageID.length && $jq.trim(ageID.val()).length !== 0) ||
+    	(sexID.length && $jq.trim(sexID.val()).length !== 0)) {
+    	xml += "' patientDob='" + dobID.val() +
+		  	  "' patientAge='" + ageID.val() +
+		  	  "' patientAgeUnit='" + ageUintID.val() +
+		  	  "' patientGender='" + sexID.val();
+    }
+    xml += "' emergency='" + emergencyID.val().escapeHTML();
+    xml += "'>";
+    // Client Reference
+	if (refID.length && $jq.trim(refID.val()).length !== 0) {
+		xml += "<referringID>" + refID.val().escapeHTML() + "</referringID>";
+	} else {
+		xml += "<referringID/>";
+	}
+    // First Name
+	if (fnameID.val()) {
+		xml += "<patientFirstName>" + fnameID.val().escapeHTML() + "</patientFirstName>";
+	} else {
+		xml += "<patientFirstName/>";
+	}
+    // Last Name
+	if (lnameID.val()) {
+		xml += "<patientLastName>" + lnameID.val().escapeHTML() + "</patientLastName>";
+	} else {
+		xml += "<patientLastName/>";
+	}
+	// Street Address
+	if (streetAddressID.val()) {
+		xml += "<patientStreetAddress>" + streetAddressID.val().escapeHTML() + "</patientStreetAddress>";
+	} else {
+		xml += "<patientStreetAddress/>";
+	}
+	// Ward
+	if (wardID.val()) {
+		xml += "<patientWard>" + wardID.val().escapeHTML() + "</patientWard>";
+	} else {
+		xml += "<patientWard/>";
+	}
+	// District
+	xml += "<patientDictrict>" + districtID.val() + "</patientDictrict>";
+	// City
+	xml += "<patientCity>" + cityID.val() + "</patientCity>";
+	// Diagnosis
+	if (diagnosisID.val()) {
+		xml += "<patientDiagnosis>" + diagnosisID.val().escapeHTML() + "</patientDiagnosis>";
+	} else {
+		xml += "<patientDiagnosis/>";
+	}
+	// Department
+	xml += "<patientDepartment>" + departmentID.val() + "</patientDepartment>";
+	// Patient Type
+	xml += "<patientType>" + patientTypeID.val() + "</patientType>";
+	// External ID
+	if (pidID.val()) {
+		xml += "<patientID>" + pidID.val().escapeHTML() + "</patientID>";
+	} else {
+		xml += "<patientID/>";
+	}
+	// Chart Number
+	if (chartNumberID.val()) {
+		xml += "<patientChartNumber>" + chartNumberID.val().escapeHTML() + "</patientChartNumber>";
+	} else {
+		xml += "<patientChartNumber/>";
+	}
+	// Illness Date
+	if (illnessDateID.val()) {
+		xml += "<patientIllnessDate>" + illnessDateID.val().escapeHTML() + "</patientIllnessDate>";
+	} else {
+		xml += "<patientIllnessDate/>";
+	}
+	// Collection Date
+	if (collectionDateID.val()) {
+		xml += "<patientCollectionDate>" + collectionDateID.val().escapeHTML() + "</patientCollectionDate>";
+	} else {
+		if ($jq("#collectionDate" + parentRowId).val()) {
+			xml += "<patientCollectionDate>" + $jq("#collectionDate" + parentRowId).val().escapeHTML() + "</patientCollectionDate>";
+		} else {
+			xml += "<patientCollectionDate/>";
+		}
+	}
+	// Collection Time
+	if (collectionTimeID.val()) {
+		xml += "<patientCollectionTime>" + collectionTimeID.val().escapeHTML() + "</patientCollectionTime>";
+	} else {
+		if ($jq("#collectionTime" + parentRowId).val()) {
+			xml += "<patientCollectionTime>" + $jq("#collectionTime" + parentRowId).val().escapeHTML() + "</patientCollectionTime>";
+		} else {
+			xml += "<patientCollectionTime/>";
+		}
+	}
+	xml += "</patient>";
+	
+	return xml;
+}
+
+function checkValidTime(time, blankAllowed)
+{
+    var lowRangeRegEx = new RegExp("^[0-1]{0,1}\\d:[0-5]\\d$");
+    var highRangeRegEx = new RegExp("^2[0-3]:[0-5]\\d$");
+
+    if (time.value.blank() && blankAllowed == true) {
+    	time.value = "";
+        selectFieldErrorDisplay(true, time);
+        setSampleFieldValidity(true, time.id);
+        setPatientModalSave();
+        setSave();
+        return;        
+    }
+
+    if( lowRangeRegEx.test(time.value) ||
+        highRangeRegEx.test(time.value) ) {
+        if( time.value.length == 4 ) {
+            time.value = "0" + time.value;
+        }
+        selectFieldErrorDisplay(true, time);
+        setSampleFieldValidity(true, time.id);
+    } else {
+        selectFieldErrorDisplay(false, time);
+        setSampleFieldValidity(false, time.id);
+    }
+
+    setPatientModalSave();
+    setSave();
+}
+
+function checkFullName(field) {
+    //Check if field is blank or empty
+    if (field.value == null || field.value == "" || field.value.length == 0) {
+        selectFieldErrorDisplay(false, field);
+    } else {
+        selectFieldErrorDisplay(true, field);
+    }
+}
+
+function getCurrentTime(){
+	var date = new Date();
+
+	return (formatToTwoDigits(date.getHours()) + ":"  + formatToTwoDigits(date.getMinutes()));
+}
+
+function formatToTwoDigits( number ){
+	return number > 9 ? number : "0" + number;
+}
+
+function changeAllDistrictValue(value) {
+	var districtInputs = $jq("[id^=patientDistrict_]");
+	districtInputs.val(value);
+}
+
+function changeAllCityValue(value) {
+	var cityInputs = $jq("[id^=patientCity_]");
+	cityInputs.val(value);
+	cityInputs.change();
+}
+
+function changeAllPatientTypeValue(value) {
+	var patientTypeInputs = $jq("[id^=patientType_]");
+	patientTypeInputs.val(value);
+}
+
+function changeAllDepartmentValue(value) {
+	var departmentInputs = $jq("[id^=patientDepartment_]");
+	departmentInputs.val(value);
+}
+
+function changeAllDiagnosisValue(value) {
+	var diagnosisInputs = $jq("[id^=patientDiagnosis_]");
+	diagnosisInputs.val(value);
+}
 </script>
 
-<html:hidden property="selectedTestIds" name="<%=formName%>" styleId="selectedTestIds"/>
-<%--AIS - bugzilla 1397--%>
-<html:hidden property="selectedTestNames" name="<%=formName%>" styleId="selectedTestNames"/>
-<html:hidden property="currentDate" name="<%=formName%>" styleId="currentDate"/>
-<%--bugzilla 1387 added domain--%>
-<html:hidden property="domain" name="<%=formName%>" value="<%=genericDomain%>" styleId="domain"/>
+<!-- Modal code here -->		
+<script type="text/javascript">
+$jq(document).ready(function () {
+	// 
+	var newSelect = document.createElement("select");
+	$jq("#patientDistrictForAll option").each(function(){
+		var newOption = new Option($jq(this).text(), $jq(this).val());
+		newSelect.add(newOption);
+	});
+	originalDistrictList = newSelect.options;
+	mapCityDistrict();
+	
+	// Modal definitions
+	$jq('#modalPatientInfo').modal({  // TEMP FOR LABEL PRINT SIMULATION
+		backdrop: 'static',
+		show: false
+	}).css({
+		'top': "35%",
+		'width': function () { 
+			return ($jq(document).width() * .9) + 'px';  
+		},
+		'max-height': function () { 
+			return ($jq(document).height() * .9) + 'px';  
+		},
+		'margin-left': function () {
+			return -($jq(this).width() / 2);
+		}
+	}).on('show', function() {
+		$jq(this).data("modalUpdated", false);
+	});
+	
+	$jq("#cancel-patientInfo").click(function() {
+		cancelPatientInfo();
+	});
 
-<table width="100%">
+	new AjaxJspTag.Autocomplete(
+		"ajaxAutocompleteXML", {
+		source: "projectIdOrName",
+		target: "projectIdOrNameOther",
+		minimumCharacters: "1",
+		className: "autocomplete",
+		parameters: "projectName={projectIdOrName},provider=ProjectAutocompleteProvider,fieldName=projectName,idName=id"
+	});
+
+	new AjaxJspTag.Autocomplete(
+		"ajaxAutocompleteXML", {
+		source: "submitterNumber",
+		target: "submitterNumberOther",
+		minimumCharacters: "1",
+		className: "autocomplete",
+		parameters: "organizationName={submitterNumber},provider=OrganizationAutocompleteProvider,fieldName=organizationName,idName=id"
+	});
+	    
+	$jq("body").keydown(function (e) {
+        var row;
+        var focusedElement = $jq(document.activeElement);
+        
+        if (e.keyCode == 39) {
+            row = $(focusedElement).closest('td').next();
+            row.find('input,select').focus();
+            e.preventDefault();
+            return false;
+        }
+        else if (e.keyCode == 37) {
+            row = $(focusedElement).closest('td').prev();
+            row.find('input,select').focus();
+            e.preventDefault();
+            return false;
+        }
+        else if (e.keyCode == 40) //down arrow key code
+        {
+            row = $(focusedElement).closest('tr').next();
+            if (row) {
+            	var newRowId = row.attr('id');
+            	var currentId = focusedElement.attr('id');
+            	
+            	if(newRowId.length > 10 && currentId.length > 10) {
+	            	var firstPart = currentId.substring(0, currentId.length-10);
+	           		var newElementId = firstPart + newRowId.substring(newRowId.length-10);
+
+	           		if (row.find('input')){
+	           			row.find("input[id^='"+newElementId+"']").focus();
+	           		}
+	           		if (row.find('select')){
+	           			row.find("select[id^='"+newElementId+"']").focus();
+	           			e.preventDefault();
+	   	             	return false; 
+	           		}
+            	}
+            }
+        }
+        else if (e.keyCode == 38) // up arrow key code
+        {
+        	row = $(focusedElement).closest('tr').prev();
+            if (row) {
+            	var newRowId = row.attr('id');
+            	var currentId = focusedElement.attr('id');
+            	if(newRowId.length > 10 && currentId.length > 10) {
+	            	var firstPart = currentId.substring(0, currentId.length-10);
+	           		var newElementId = firstPart + newRowId.substring(newRowId.length-10);
+	           		
+	           		if (row.find('input')){
+	           			row.find("input[id^='"+newElementId+"']").focus();
+	           		}
+	           		if (row.find('select')){
+	           			row.find("select[id^='"+newElementId+"']").focus();
+	           			e.preventDefault();
+	   	             	return false; 
+	           		}
+            	}
+            }
+        }
+    });
+});
+</script>
+
+<html:hidden property="currentDate" name="<%=formName%>" styleId="currentDate"/>
+<html:hidden property="accessionList" name="<%=formName%>" value="" styleId="accessionList"/>
+
+<div style="padding-left:80%" id="printForm">
+<button name="printRequestForm"
+		type="button"
+		onclick="window.print();return false;"
+		hidden="true"><bean:message key="label.button.printRequestForm" /></button>
+</div>
+
+<table style="width:90%">
 	<%--bgm - bugzilla 1665 moved recieved.date here to be the first row above accn # --%>
 	<tr> 
-		<td width="15%">
-			<bean:message key="quick.entry.received.date"/>:<span class="requiredlabel">*</span>
+		<td>
+			<%=StringUtil.getContextualMessageForKey("quick.entry.received.date")%>:<span class="requiredlabel">*</span>
 			<font size="1"><%=DateUtil.getDateUserPrompt()%></font>
 		</td>
-		<td width="85%"> 
-			<app:text name="<%=formName%>" 
-					  property="receivedDateForDisplay" 
-					  onkeyup="myCheckDate(this, event, false,false);" 
-					  onblur="myCheckDate(this, event, true, true);" 
-					  size="25" 
-					  styleClass="text" 
-					  styleId="receivedDateForDisplay"/>
-			<div id="receivedDateForDisplayMessage" class="blank">&nbsp;</div>
+		<td> 
+			<table style="border-collapse:collapse;padding:0px">
+				<tr>
+					<td>
+						<app:text name="<%=formName%>"
+								  property="receivedDateForDisplay"
+								  onblur="checkValidEntryDate(this, 'past'); makeDirty();"
+								  onkeyup="addDateSlashes(this, event);"
+								  size="25"
+								  maxlength="10"
+								  styleClass="text"
+								  styleId="receivedDateForDisplay"/>
+					</td>
+					<td style="padding-left:5px;padding-right:8px">
+						<bean:message key="sample.receptionTime"/>:
+   				     	<html:text name="<%=formName %>"
+                                   onkeyup="filterTimeKeys(this, event);"
+    			               	   property="receivedTime"
+      			             	   styleId="receivedTime"
+      			             	   styleClass="input-mini"
+       			            	   maxlength="5"
+       			            	   onblur="checkValidTime(this, true);"/>
+					</td>
+				</tr>
+			</table>
 		</td>
 	</tr>
 	<tr>
-		<td width="15%">
-		  <table>
-		   <tr>
-		    <td>
-			<bean:message key="quick.entry.accession.number"/>:<span class="requiredlabel">*</span>
-			</td>
-		   </tr>
-		   <tr>
-		    <td>&nbsp;</td>
-		   </tr>
-		  </table>
+		<td>
+			<bean:message key="humansampleone.organization.localAbbreviation"/>:
+			<span class="requiredlabel">*</span>
 		</td>
-		<td width="85%">
-         <table>
-		  <tr>
-	    	<%--AIS:bugzilla 1463 added maxlength--%> 
-		   <td>
-			<app:text name="<%=formName%>" 
-					  property="accessionNumber" 
-					  onblur="validateAccessionNumber(this);" 
-					  size="25" 
-					  maxlength="10"
-					  styleClass="text" 
-					  styleId="accessionNumber"/>
-			<div id="accessionNumberMessage" class="blank">&nbsp;</div>
-		  </td>
-		  <td style="float:left">
-   		    <font size="1"><bean:message key="quick.entry.accession.number.thru"/></font>
-   		    &nbsp;&nbsp;
-   		  </td>
-   		  <td style="float:left">
-			<app:text name="<%=formName%>" 
-					  property="accessionNumber2" 
-					  onblur="validateAccessionNumber2(this);" 
-					  size="25" 
-					  maxlength="10"
-					  styleClass="text" 
-					  styleId="accessionNumber2"/>
-			<div id="accessionNumber2Message" class="blank">&nbsp;</div>
-		  </td>
-		 </tr>
-		 <tr>
-		  <td>
-		  &nbsp;
-		  </td>
-		  <td>
-		  &nbsp;
-		  </td>
-		  <td valign="top" align="center">
-		    <font size="1"><bean:message key="quick.entry.accession.number.batch.message"/></font>
-		  </td>
-		 </tr>
-		</table>
-	  </td>
-	</tr>
-	<tr> 
-		<td width="15%">
-			<bean:message key="quick.entry.sample.type"/>:<span class="requiredlabel">*</span>
-		</td>
-	    <td width="85%"> 
-			<app:text name="<%=formName%>" 
-					  property="typeOfSampleDesc" 
-					  onblur="this.value=this.value.toUpperCase();validateSampleType();processSampleType();" 
-					  size="25" 
-					  styleClass="text" 
-					  styleId="typeOfSampleDesc"/>
-			<div id="typeOfSampleDescMessage" class="blank">&nbsp;</div>
-			<html:hidden property="typeOfSampleId" name="<%=formName%>" styleId="typeOfSampleId"/>
+		<td>
+			<table style="border-collapse:collapse;padding:0px">
+				<tr>
+					<td>
+						<app:text name="<%=formName%>"
+								  property="submitterNumber"
+								  onblur="validateOrganizationLocalAbbreviation();"
+								  onchange="makeDirty();"
+								  size="25"
+			  					  maxlength="25"
+								  styleClass="text"
+								  styleId="submitterNumber"/>
+					</td>
+					<td style="padding-left:5px;padding-right:8px">
+						<bean:message key="quick.entry.clinic.name"/>:
+						<div id="clinicName" style="display: inline;color: black;"></div>
+						<html:hidden
+								property="submitterNumberOther"
+								name="<%=formName%>" styleId="submitterNumberOther" />
+					</td>
+				</tr>
+			</table>
 		</td>
 	</tr>
 	<tr>
-		<td width="15%">
-			<bean:message key="quick.entry.sample.source"/>: <%--AIS - bugzilla 1396 ( removed required )--%>
+		<td>
+			<bean:message key="quick.entry.project.number"/>:
 		</td>
-		<td width="85%"> 
-			<app:text name="<%=formName%>" 
-					  property="sourceOfSampleDesc" 
-					  onblur="this.value=this.value.toUpperCase();validateSampleSource();" 
-					  size="25" 
-					  styleClass="text" 
-					  styleId="sourceOfSampleDesc"/>
-			<div id="sourceOfSampleDescMessage" class="blank">&nbsp;</div>
-			<html:hidden property="sourceOfSampleId" name="<%=formName%>" styleId="sourceOfSampleId"/>
-		</td>
-	</tr>
-    <%--bugzilla 1778--%>
-	<tr>
-		<td width="15%">
-			<bean:message key="quick.entry.source.other"/>: <%--bugzilla 1778--%>
-		</td>
-		<td width="85%"> 
-			<app:text name="<%=formName%>" 
-					  property="sourceOther" 
-					  onblur="this.value=this.value.toUpperCase();" 
-					  size="40" 
-					  styleClass="text" 
-					  styleId="sourceOther"/>
+		<td> 
+			<table style="border-collapse:collapse;padding:0px">
+				<tr>
+					<td>
+						<app:text name="<%=formName%>" 
+					  			  property="projectIdOrName" 
+	  				  			  onblur="this.value=this.value.toUpperCase();validateProjectIdOrName(this);"
+	  				  			  onchange="makeDirty();"
+					  			  size="25"
+					  			  maxlength="50"
+	  				  			  styleClass="text" 
+					  			  styleId="projectIdOrName"/>
+					</td>
+					<td style="padding-left:5px;padding-right:8px">
+						<div id="projectIdOrNameDisplay" style="display: inline;color: black;"></div>
+						<html:hidden property="projectIdOrNameOther" name="<%=formName%>" styleId="projectIdOrNameOther" />
+					</td>
+				</tr>
+			</table>
 		</td>
 	</tr>
-    <%--bugzilla 1751 move assign test button to above assigned tests--%>
 	<tr>
-		<td width="15%">
-			&nbsp;
+		<td style="min-width: 200px;">
+			<%=StringUtil.getContextualMessageForKey("quick.entry.accession.number")%>:<span class="requiredlabel">*</span>
+			<div id="accessionTotal" style="font-size:.75em;display:none;">&nbsp;</div><br/>
+			<div id="accessionRangeError" style="display:none;">&nbsp;</div>
 		</td>
-		<td width="85%"> 
-            <html:button onclick="addTestPopup(window.document.forms[0]);"
-                            property="addTest" disabled="<%=Boolean.valueOf(addDisabled).booleanValue()%>" >
-  		        <bean:message key="label.button.addTest"/>
-  	        </html:button>  		  	      			
-  		</td>
+		<%--AIS:bugzilla 1463 added maxlength--%> 
+		<td>
+			<table style="border-collapse:collapse;padding:0px">
+				<tr>
+					<td>
+						<app:text name="<%=formName%>" 
+								  property="accessionNumber" 
+								  onchange="validateAccessionNumber(this)" 
+								  size="25" 
+								  maxlength="<%= Integer.toString(accessionNumberValidator.getMaxAccessionLength())%>"
+								  styleClass="text" 
+								  styleId="accessionNumber"/>
+					</td>
+					<td style="padding-left:5px;padding-right:8px">
+   		    			<bean:message key="quick.entry.accession.number.thru"/>
+					</td>
+					<td>
+						<app:text name="<%=formName%>" 
+								  property="accessionNumber2" 
+								  onchange="validateAccessionNumber2(this)" 
+								  size="25" 
+								  maxlength="<%= Integer.toString(accessionNumberValidator.getMaxAccessionLength())%>"
+								  styleClass="text" 
+								  styleId="accessionNumber2"/>
+					</td>
+					<% if (useModalSampleEntry) { %>
+					<td width="22%" style="padding-left:25px; padding-bottom:9px;">
+						<button data-toggle="modal"
+								class="btn btn-default btn-block"
+								id="printMasterLabels"
+								name="printMasterLabels"
+								type="button"
+								onclick="setupPrintLabelsModal($('accessionNumber'), $('accessionNumber2'));$jq('#label-modal').modal('show');"
+						><bean:message key="label.button.printMasterLabels" /></button>
+					</td>
+					<% } %>
+				</tr>
+			</table>
+		</td>
 	</tr>
-	<tr>
-		<td width="15%" valign="top">
-			<bean:message key="quick.entry.assigned.tests"/>:
-		</td>
-		<td width="85%">
-			<select name="assignedTests" 
-					id="assignedTests" 
-					size="5" 
-					multiple="multiple" 
-					style="width: 200px" 
-					readonly="true">
-			</select>
-		</td>
-	</tr>	
 </table>
-   
-<ajax:autocomplete source="sourceOfSampleDesc"
-				   target="sourceOfSampleId"
-				   baseUrl="ajaxAutocompleteXML"
-				   className="autocomplete"
-				   parameters="sourceOfSampleDesc={sourceOfSampleDesc},domain={domain},provider=SampleSourceAutocompleteProvider,fieldName=description,idName=id"
-				   minimumCharacters="1"
-				   postFunction="sampleSourceFocus" /> 
-<ajax:autocomplete source="typeOfSampleDesc"
-				   target="typeOfSampleId"
-				   baseUrl="ajaxAutocompleteXML"
-				   className="autocomplete"
-				   parameters="typeOfSampleDesc={typeOfSampleDesc},domain={domain},provider=SampleTypeAutocompleteProvider,fieldName=description,idName=id"
-				   minimumCharacters="1"
-				   postFunction="sampleTypeFocus"  />  
-				   
-<%--bugzilla 1512 custom JavascriptValidator--%>
-<app:javascript formName="quickEntryForm" staticJavascript="true"/>
 
+<table style="display: none">
+	<!-- Begin empty patient info row template -->
+	<tr id="patientRow_patientTmpl">
+		<td><span id="accNo_patientTmpl"></span></td>
+		<!--  External Id -->
+		<% if (useExternalId) { %>
+		<td><input type="text" maxlength="255" class="input-small"
+				   id="patientID_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!-- Trung add -->
+		<td>
+			<html:select name='<%=formName%>'
+                   property="emergency"
+                   styleClass="input-small"
+					styleId="emergency_patientTmpl">
+                   <option><bean:message key="vn.hse1.normal" /></option>
+                   <option><bean:message key="vn.hse1.emergency" /></option>
+			</html:select>
+		</td>
+		<!-- End Add -->
+		<!--  Client Reference -->
+		<% if (useClientReference) { %>
+		<td><input type="text" maxlength="30" class="input-small"
+				   id="referringID_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Patient Name -->
+		<% if (useSingleNameField) { %>
+		<td><input type="text" maxlength="255" class="input-medium"
+				   id="patientFirstName_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);checkFullName(this);setPatientModalSave();'></td>
+		<% } else { %>
+		<td><input type="text" maxlength="255" class="input-small"
+				   id="patientLastName_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<td><input type="text" maxlength="255" class="input-small"
+				   id="patientFirstName_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Date of Birth -->
+		<% if (useBirthDate) { %>
+		<td><input type="text" maxlength="10" class="input-small"
+				   id="patientDob_patientTmpl"
+				   onkeyup="addDateSlashes(this, event);"
+				   onblur='checkValidEntryDate(this, "past", true);$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Age -->
+		<% if (useAge) { %>
+		<td><input type="text" maxlength="4" class="input-mini"
+				   id="patientAge_patientTmpl"
+				   onchange='checkValidEntryAge(this);$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Age Unit -->
+		<% if (useAgeUnit) { %>
+		<td>
+			<html:select name='<%=formName%>'
+                   property="patientAgeUnit"
+                   styleClass="input-small"
+					styleId="patientAgeUnit_patientTmpl">
+                   <option><bean:message key="patient.age.year" /></option>
+                   <option><bean:message key="patient.age.month" /></option>
+                   <option><bean:message key="patient.age.day" /></option>
+			</html:select>
+		</td>
+		<% } %>
+		<!--  Gender -->
+		<% if (useGender) { %>
+		<td>
+			<app:select name='<%=formName%>'
+						 property="patientGender"
+						 onchange="$jq('#modalPatientInfo').data('modalUpdated', true);setPatientModalSave();"
+						 styleClass="input-small"
+						 styleId="patientGender_patientTmpl">
+				<app:optionsCollection name='<%=formName%>' property="genderList" label="value" value="id" />
+			</app:select>
+		</td>
+		<% } %>
+		<!--  Department -->
+		<% if (useDepartment) { %>
+		<td>
+			<app:select name='<%=formName%>'
+						 property="patientDepartment"
+						 onchange="$jq('#modalPatientInfo').data('modalUpdated', true);"
+						 styleClass="input-medium"
+						 styleId="patientDepartment_patientTmpl">
+				<app:optionsCollection name='<%=formName%>' property="departmentList" label="value" value="id" />
+			</app:select>
+		</td>
+		<% } %>
+		<!--  Street Address -->
+		<% if (useStreetAddress) { %>
+		<td><input type="text" maxlength="255" class="input-large"
+				   id="patientStreetAddress_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Ward -->
+		<% if (useWard) { %>
+	    <td><input type="text" maxlength="255" class="input-small"
+				   id="patientWard_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  City -->
+		<% if (useCity) { %>
+		<td>
+			<app:select name='<%=formName%>'
+						 property="patientCity"
+						 onchange="$jq('#modalPatientInfo').data('modalUpdated', true);updateCityDistrictOptions(this.id, 'patientDistrict_' + this.id.substring(12));"
+						 styleClass="input-small"
+						 styleId="patientCity_patientTmpl">
+				<app:optionsCollection name='<%=formName%>' property="cityList" label="value" value="id" />
+			</app:select>
+		</td>
+		<% } %>
+		<!--  District -->
+		<% if (useDistrict) { %>
+		<td>
+			<app:select name='<%=formName%>'
+						 property="patientDistrict"
+						 onchange="$jq('#modalPatientInfo').data('modalUpdated', true);"
+						 styleClass="input-medium"
+						 styleId="patientDistrict_patientTmpl">
+				<app:optionsCollection name='<%=formName%>' property="districtList" label="value" value="id" />
+			</app:select>
+		</td>
+		<% } %>
+		<!--  Diagnosis -->
+		<% if (useDiagnosis) { %>
+		<td><input type="text" maxlength="255" class="input-medium"
+				   id="patientDiagnosis_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Patient Type -->
+		<% if (usePatientType) { %>
+		<td>
+			<app:select name='<%=formName%>'
+						 property="patientType"
+						 onchange="$jq('#modalPatientInfo').data('modalUpdated', true);"
+						 styleClass="input-large"
+						 styleId="patientType_patientTmpl">
+				<app:optionsCollection name='<%=formName%>' property="patientTypeList" label="value" value="id" />
+			</app:select>
+		</td>
+		<% } %>
+		<!--  Chart Number -->
+		<% if (useChartNumber) { %>
+		<td><input type="text" maxlength="255" class="input-small"
+				   id="patientChartNumber_patientTmpl"
+				   onchange='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Illness Date -->
+		<% if (useIllnessDate) { %>
+		<td><input type="text" maxlength="10" class="input-small"
+				   id="patientIllnessDate_patientTmpl"
+				   onkeyup="addDateSlashes(this, event);"
+				   onblur='checkValidEntryDate(this, "past", true);$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Collection Date -->
+		<% if (useCollectionDate) { %>
+		<td><input type="text" maxlength="10" class="input-small"
+				   id="patientCollectionDate_patientTmpl"
+				   onkeyup="addDateSlashes(this, event);"
+				   onblur='checkValidEntryDate(this, "past", true);$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!--  Collection Time -->
+		<% if (useCollectionTime) { %>
+		<td><input type="text" maxlength="10" class="input-small"
+				   id="patientCollectionTime_patientTmpl"
+				   onkeyup="filterTimeKeys(this, event);"
+				   onchange="checkValidTime(this, true);"
+				   onblur='$jq("#modalPatientInfo").data("modalUpdated", true);'></td>
+		<% } %>
+		<!-- Added by markaae.fr 2016-10-18 02:50PM (Day Difference between collection_date and onset_date) -->
+      	<td>
+			<app:text name="<%=formName%>" 
+				  property="sampleItemDayDifference" 
+  				  onchange="makeDirty();"
+				  styleClass="text input-mini" 
+  				  styleId="dayDifference_tmpl"
+  				  disabled='true'
+  				   />
+		</td>
+	</tr>
+	<!--  End empty patient info row template -->
+</table>
+
+<br />
+<!--  Sample Add Tile (either modal or non-modal version) -->
+<% if (useModalSampleEntry) { %>
+<div id="sampleAddModal">
+	<tiles:insert attribute="addSampleModal"/>
+</div>
+<% } else { %>
+<hr style="width:100%;height:5px" />
+<input type="button" name="showHide" value="+" onclick="showHideSection(this, 'samplesDisplay');" id="samplesSectionId">
+<%= StringUtil.getContextualMessageForKey("sample.entry.sampleList.label") %>
+<span class="requiredlabel">*</span>
+<div id="samplesDisplay" class="colorFill" style="display:none;" >
+    <tiles:insert attribute="addSample"/>
+</div>
+<% } %>
+
+<!-- Patient info modal definition -->			
+<div id="modalPatientInfo" class="modal hide fade sample-modal">
+	<div class="modal-header">
+		<button type="button"
+				onclick="cancelPatientInfo();"
+				class="close"
+				data-dismiss="modal">&times;</button>
+		<h3><bean:message key="quick.entry.add.patient.info" /></h3>
+	</div>
+	<div>
+		<table style="margin-left:auto;">
+			<tr>
+				<% if (useDepartment) { %>
+				<td><bean:message key="patient.department" />:</td>
+				<td>
+					<app:select name='<%=formName%>'
+						property="patientDepartment"
+						onchange="changeAllDepartmentValue(this.value);"
+						styleClass="input-medium"
+						styleId="patientDepartment_patientTmpl">
+						<app:optionsCollection name='<%=formName%>' property="departmentList" label="value" value="id" />
+					</app:select>
+				</td>
+				<% } %>
+				<% if (useCity) { %>
+				<td><bean:message key="person.city" />:</td>
+				<td>
+					<app:select name='<%=formName%>'
+						property="patientCity"
+						onchange="changeAllCityValue(this.value);updateCityDistrictOptions('patientCityForAll', 'patientDistrictForAll')"
+						styleClass="input-medium"
+						styleId="patientCityForAll">
+						<app:optionsCollection name='<%=formName%>' property="cityList" label="value" value="id" />
+					</app:select>
+				</td>
+				<% } %>
+				<% if (useDistrict) { %>
+				<td><bean:message key="person.address.district" />:</td>
+				<td>
+					<app:select name='<%=formName%>'
+						property="patientDistrict"
+						onchange="changeAllDistrictValue(this.value);"
+						styleClass="input-medium"
+						styleId="patientDistrictForAll">
+						<app:optionsCollection name='<%=formName%>' property="districtList" label="value" value="id" />
+					</app:select>
+				</td>
+				<% } %>
+				<% if (useDiagnosis) { %>
+				<td><bean:message key="patient.diagnosis" />:</td>
+				<td>
+					<input type="text" maxlength="255" class="input-medium"
+				   		id="patientDiagnosis_patientTmpl"
+				   		onchange='changeAllDiagnosisValue(this.value);'>
+				</td>
+				<% } %>
+				<% if (usePatientType) { %>
+				<td><bean:message key="patienttype.type" />:</td>
+				<td>
+					<app:select name='<%=formName%>'
+						property="patientType"
+						onchange="changeAllPatientTypeValue(this.value);"
+						styleClass="input-large"
+						styleId="patientType_patientTmpl">
+						<app:optionsCollection name='<%=formName%>' property="patientTypeList" label="value" value="id" />
+					</app:select>
+				</td>
+				<% } %>
+			</tr>
+		</table>
+	</div>
+	<div class="modal-body">
+		<div class="row-fluid">
+			<div class="span12">
+				<table id="patientInfoTable" class="table table-bordered">
+					<tr>
+						<th><bean:message key="quick.entry.accession.number" /></th>
+						<% if (useExternalId) { %>
+						<th><bean:message key="patient.externalId" /></th>
+						<% } %>
+						<% if (useClientReference) { %>
+						<th><bean:message key="sample.clientReference" /></th>
+						<% } %>
+						<th></th>
+						<% if (useSingleNameField) { %>
+						<th><bean:message key="patient.epiFullName" /><span class="requiredlabel">*</span></th>
+						<% } else { %>
+						<th><bean:message key="patient.epiLastName" /></th>
+						<th><bean:message key="patient.epiFirstName" /></th>
+						<% } %>
+						<% if (useBirthDate) { %>
+						<th><bean:message key="patient.birthDate" /><br/><bean:message key="sample.date.format" /></th>
+						<% } %>
+						<% if (useAge) { %>
+						<th><bean:message key="patient.age" /></th>
+						<% } %>
+						<% if (useAgeUnit) { %>
+						<th></th>
+						<% } %>
+						<% if (useGender) { %>
+						<th><bean:message key="patient.gender" /><span class="requiredlabel">*</span></th>
+						<% } %>
+						<% if (useDepartment) { %>
+						<th><bean:message key="patient.department" /></th>
+						<% } %>
+						<% if (useStreetAddress) { %>
+						<th><bean:message key="person.streetAddress.street" /></th>
+						<% } %>
+						<% if (useWard) { %>
+						<th><bean:message key="person.address.ward" /></th>
+						<% } %>
+						<% if (useCity) { %>
+						<th><bean:message key="person.city" /></th>
+						<% } %>
+						<% if (useDistrict) { %>
+						<th><bean:message key="person.address.district" /></th>
+						<% } %>
+						<% if (useDiagnosis) { %>
+						<th><bean:message key="patient.diagnosis" /></th>
+						<% } %>
+						<% if (usePatientType) { %>
+						<th><bean:message key="patienttype.type" /></th>
+						<% } %>
+						<% if (useChartNumber) { %>
+						<th><bean:message key="patient.chartNumber" /></th>
+						<% } %>
+						<% if (useIllnessDate) { %>
+						<th><bean:message key="quick.entry.onset.date" /></th>
+						<% } %>
+						<% if (useCollectionDate) { %>
+						<th><bean:message key="sample.collectionDate" /></th>
+						<% } %>
+						<% if (useCollectionTime) { %>
+						<th><bean:message key="sample.collectionTime" /></th>
+						<% } %>
+						<th><bean:message key="sample.entry.sample.daydifference"/></th>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+	<div class="modal-footer">
+		<button class="btn btn-primary btn-large"
+				data-dismiss="modal"
+				id="patientInfo-save"
+				disabled><bean:message key="label.button.save" /></button>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		<button class="btn btn-small"
+				data-dismiss="modal"
+				id="cancel-patientInfo"><bean:message key="label.button.cancel" /></button>
+	</div>
+</div>
+
+<html:hidden name="<%=formName%>" property="patientXML"  styleId="patientXML"/>

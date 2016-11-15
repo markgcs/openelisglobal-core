@@ -2,13 +2,18 @@ package us.mn.state.health.lims.observationhistory.daoimpl;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Query;
+
+import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
+import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.daoimpl.GenericDAOImpl;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.observationhistory.dao.ObservationHistoryDAO;
 import us.mn.state.health.lims.observationhistory.valueholder.ObservationHistory;
 import us.mn.state.health.lims.patient.valueholder.Patient;
 import us.mn.state.health.lims.sample.valueholder.Sample;
+import us.mn.state.health.lims.samplehuman.valueholder.SampleHuman;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +39,30 @@ public class ObservationHistoryDAOImpl extends GenericDAOImpl<String, Observatio
             updateData( observation );
         }
     }
+    @Override
+	public boolean insertDataWS(ObservationHistory observation) throws LIMSRuntimeException {
+
+		try {
+			String id = (String) HibernateUtil.getSession().save(observation);
+			observation.setId(id);
+
+			// bugzilla 1824 inserts will be logged in history table
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = observation.getSysUserId();
+			String tableName = "SAMPLE_HUMAN";
+			auditDAO.saveNewHistory(observation, sysUserId, tableName);
+
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+
+		} catch (Exception e) {
+			// bugzilla 2154
+			LogEvent.logError("SampleHumanDAOImpl", "insertData()", e.toString());
+			throw new LIMSRuntimeException("Error in SampleHuman insertData()", e);
+		}
+
+		return true;
+	}
 
     public List<ObservationHistory> getAll(Patient patient, Sample sample) {
         if( patient != null && sample != null){
@@ -135,6 +164,26 @@ public class ObservationHistoryDAOImpl extends GenericDAOImpl<String, Observatio
             closeSession();
 
             return ohList;
+        }catch(HibernateException e){
+            handleException(e, "getObservationHistoriesByPatientIdAndType");
+        }
+
+        return null;
+    }
+    @Override
+    public ObservationHistory getObservationHistoriesByPatientIdAndTypeOnlyOne( String patientId, String observationHistoryTypeId ) throws LIMSRuntimeException{
+        String sql = "from ObservationHistory oh where oh.patientId = :patientId and oh.observationHistoryTypeId = :ohTypeId order by oh.lastupdated desc";
+
+        try{
+            Query query = HibernateUtil.getSession().createQuery(sql);
+            query.setInteger("patientId", Integer.parseInt(patientId));
+            query.setInteger("ohTypeId", Integer.parseInt(observationHistoryTypeId));
+
+            ObservationHistory oh = (ObservationHistory)query.setMaxResults(1).uniqueResult();
+
+            closeSession();
+
+            return oh;
         }catch(HibernateException e){
             handleException(e, "getObservationHistoriesByPatientIdAndType");
         }

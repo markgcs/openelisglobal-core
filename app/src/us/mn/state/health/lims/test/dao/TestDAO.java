@@ -20,6 +20,7 @@ import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.test.valueholder.Test;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.util.List;
 
 /**
@@ -77,6 +78,8 @@ public interface TestDAO extends BaseDAO {
 	public List getMethodsByTestSection(String filter) throws LIMSRuntimeException;
 
 	public List getTestsByTestSection(String filter) throws LIMSRuntimeException;
+	
+    public List<String> getTestIdsByTestSection(String testSectionId) throws LIMSRuntimeException;
 
 	public List getTestsByMethod(String filter) throws LIMSRuntimeException;
 
@@ -112,8 +115,6 @@ public interface TestDAO extends BaseDAO {
 	public Test getTestById(String testId) throws LIMSRuntimeException;
 
 	public Test getTestByDescription(String description) throws LIMSRuntimeException;
-
-    public List<Test> getTestsByTestSectionId(String id) throws LIMSRuntimeException;
-
-    public Test getTestByGUID( String guid) throws LIMSRuntimeException;
+	 public List<Test> getTestBySectionId(int sectionId) throws LIMSRuntimeException;
+	
 }

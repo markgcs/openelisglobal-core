@@ -15,13 +15,19 @@
 */
 package us.mn.state.health.lims.sample.dao;
 
-import java.sql.Date;
 import java.util.List;
 
 import us.mn.state.health.lims.common.dao.BaseDAO;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 
+/**
+ * @author diane benz
+ *
+ * To change this generated comment edit the template variable "typecomment":
+ * Window>Preferences>Java>Templates. To enable and disable the creation of type
+ * comments go to Window>Preferences>Java>Code Generation.
+ */
 public interface SampleDAO extends BaseDAO {
 
 	public boolean insertData(Sample sample) throws LIMSRuntimeException;
@@ -43,6 +49,7 @@ public interface SampleDAO extends BaseDAO {
 	public Sample getSampleByAccessionNumber(String accessionNumber) throws LIMSRuntimeException;
 
 	public boolean insertDataWithAccessionNumber(Sample sample) throws LIMSRuntimeException;
+	public String insertDataSampleWithAccessionNumber(Sample sample) throws LIMSRuntimeException;
 
 	public List getSamplesByStatusAndDomain(List statuses, String domain) throws LIMSRuntimeException;
 
@@ -68,6 +75,4 @@ public interface SampleDAO extends BaseDAO {
     public String  getLargestAccessionNumberMatchingPattern(String startingWith, int size) throws LIMSRuntimeException;
 
 	public List<Sample> getSamplesWithPendingQaEventsByService(String serviceId) throws LIMSRuntimeException;
-
-    public List<Sample> getConfirmationSamplesReceivedInDateRange(Date receivedDateStart, Date receivedDateEnd) throws LIMSRuntimeException;
 }

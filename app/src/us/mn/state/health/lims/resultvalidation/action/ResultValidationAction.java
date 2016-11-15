@@ -16,11 +16,21 @@
  */
 package us.mn.state.health.lims.resultvalidation.action;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
+
+import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
+import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
+import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.services.DisplayListService.ListType;
@@ -28,34 +38,35 @@ import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.login.dao.UserModuleDAO;
+import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
 import us.mn.state.health.lims.resultvalidation.action.util.ResultValidationPaging;
 import us.mn.state.health.lims.resultvalidation.bean.AnalysisItem;
 import us.mn.state.health.lims.resultvalidation.util.ResultsValidationUtility;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
+import us.mn.state.health.lims.test.dao.TestDAO;
 import us.mn.state.health.lims.test.dao.TestSectionDAO;
+import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
 import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
 import us.mn.state.health.lims.test.valueholder.TestSection;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ResultValidationAction extends BaseResultValidationAction {
 
     @Override
 	protected ActionForward performAction(ActionMapping mapping, ActionForm form, HttpServletRequest request, HttpServletResponse response)
 			throws Exception {
-
 		BaseActionForm dynaForm = (BaseActionForm) form;
 
 		request.getSession().setAttribute(SAVE_DISABLED, "true");
 		String testSectionId = (request.getParameter("testSectionId"));
-
+		String selectedTestId = (request.getParameter("test"));
+		String accessionNumber = (request.getParameter("accessionNumber"));
+		String receivedDate = (request.getParameter("receivedDate"));
 		ResultValidationPaging paging = new ResultValidationPaging();
 		String newPage = request.getParameter("page");
 
 		TestSection ts = null;
-
+		
 		if (GenericValidator.isBlankOrNull(newPage)) {
 
 			// Initialize the form.
@@ -63,21 +74,69 @@ public class ResultValidationAction extends BaseResultValidationAction {
 			
 			// load testSections for drop down
 			TestSectionDAO testSectionDAO = new TestSectionDAOImpl();
-			PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.getList(ListType.TEST_SECTION));
+            // load testnames for drop down
+            TestDAO testDAO = new TestDAOImpl();
+			//Tien add
+			UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
+			
+			if (!GenericValidator.isBlankOrNull(testSectionId)) {
+                ts = testSectionDAO.getTestSectionById(testSectionId);
+                PropertyUtils.setProperty(dynaForm, "testSectionId", testSectionId);
+            }
+			if (!GenericValidator.isBlankOrNull(receivedDate)) {
+                PropertyUtils.setProperty(dynaForm, "receivedDate", receivedDate);
+            }
+			// Added by Mark 2016-08-29 04:18PM
+            if (!GenericValidator.isBlankOrNull(selectedTestId)) {
+                PropertyUtils.setProperty(dynaForm, "selectedTestId", selectedTestId);
+            }
+            // End of Modification
+			
+			//check if user is admin, load all test section
+	        if(userModuleDAO.isUserAdmin(request)){
+	            PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.getList(ListType.TEST_SECTION));
+	            /*if (!GenericValidator.isBlankOrNull(testSectionId)) {     
+                    PropertyUtils.setProperty(dynaForm, "testNames", DisplayListService.createTestListBySectionId(Integer.parseInt(testSectionId)));
+	            } else {*/
+	                PropertyUtils.setProperty(dynaForm, "testNames", DisplayListService.getList(ListType.ALL_TESTS));
+	            //}
+	        }
+	        // if user is not admin, load test sections belong to this user
+	        else {
+                PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.createTestSectionListByUserId(currentUserId));
+                /*if (!GenericValidator.isBlankOrNull(testSectionId)) {               
+                    PropertyUtils.setProperty(dynaForm, "testNames", DisplayListService.createTestListBySectionId(Integer.parseInt(testSectionId)));
+                } else {*/
+                    PropertyUtils.setProperty(dynaForm, "testNames", DisplayListService.createTestListByUserId(Integer.parseInt(currentUserId)));
+                //}
+	        }
+	        //end
+//			PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.createTestSectionListByUserId(currentUserId));
 			PropertyUtils.setProperty(dynaForm, "testSectionsByName", DisplayListService.getList(ListType.TEST_SECTION_BY_NAME));
 			
-			if (!GenericValidator.isBlankOrNull(testSectionId)) {
-				ts = testSectionDAO.getTestSectionById(testSectionId);
-				PropertyUtils.setProperty(dynaForm, "testSectionId", "0");
-			}
-			
-			
-			List<AnalysisItem> resultList;
+			List<AnalysisItem> resultList = null;
 			ResultsValidationUtility resultsValidationUtility = new ResultsValidationUtility();
 			setRequestType(ts == null ? StringUtil.getMessageForKey("workplan.unit.types") : ts.getLocalizedName());
-			if (!GenericValidator.isBlankOrNull(testSectionId)) {
-               resultList = resultsValidationUtility.getResultValidationList( getValidationStatus(), testSectionId );
-				
+			
+			if (!GenericValidator.isBlankOrNull(testSectionId) || !GenericValidator.isBlankOrNull(receivedDate)) {
+				resultList = resultsValidationUtility.getResultValidationList( selectedTestId, getValidationStatus(), testSectionId, receivedDate);
+				// Added by Mark 2016-08-25 - To set system_user_section values to resultList (AnalysisItem)
+                for (AnalysisItem analysisItem : resultList) {
+                    Analysis analysis = new Analysis();
+                    AnalysisDAO analysisDAO = new AnalysisDAOImpl();
+                    analysis = analysisDAO.getAnalysisById(analysisItem.getAnalysisId());
+                    for (SystemUserSection system : getUserSection()) {
+                        if ( analysis.getTestSection().getId().equals(system.getTestSection().getId()) ) {
+                            system.setTestSectionId(system.getTestSection().getId());
+                            analysisItem.setStatusUserSession(system);
+                            break;
+                        }
+                    }
+                }
+                // End of Modification
+			} else if (!GenericValidator.isBlankOrNull(accessionNumber)) {
+				resultList = resultsValidationUtility.getResultValidationListByAccessionNumber( getValidationStatus(), accessionNumber );
+			
 			} else {
 				resultList = new ArrayList<AnalysisItem>();
 			}
@@ -86,7 +145,11 @@ public class ResultValidationAction extends BaseResultValidationAction {
 		} else {
 			paging.page(request, dynaForm, newPage);
 		}
-
+		//Not found message appears right after Validation by Unit is displayed (OEG-534)
+        if (StringUtil.isNullorNill(testSectionId)) {
+            PropertyUtils.setProperty(dynaForm, "displayTestSections", false);
+        }
+        
 		return mapping.findForward(FWD_SUCCESS);
 	}
 
@@ -100,5 +163,4 @@ public class ResultValidationAction extends BaseResultValidationAction {
         return validationStatus;
 	}
 	
-
 }

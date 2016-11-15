@@ -78,6 +78,7 @@ public class PanelItemUpdateAction extends BaseAction {
 		request.setAttribute(PREVIOUS_DISABLED, "false");
 		request.setAttribute(NEXT_DISABLED, "false");
 		
+		TestDAO testDAO = new TestDAOImpl();
 		String id = request.getParameter(ID);
 		
 		if (StringUtil.isNullorNill(id) || "0".equals(id)) {
@@ -174,6 +175,14 @@ public class PanelItemUpdateAction extends BaseAction {
 			//System.out.println("This is id " + parentPanel.getId());
 		}
 		panelItem.setPanel(parentPanel);
+		
+        String testName = (String) dynaForm.get("testName");
+        Test test = testDAO.getTestByName(testName);
+        if (test != null) {
+            panelItem.setTest(test);
+            // Fix bug 715
+            panelItem.setTestName(testName.length() > 20 ? testName.substring(0, 20) : testName);
+        }
 
 		try {
 
@@ -181,12 +190,10 @@ public class PanelItemUpdateAction extends BaseAction {
 
 			if (!isNew) {
 				// UPDATE
-
 				panelItemDAO.updateData(panelItem);
 
 			} else {
 				// INSERT
-
 				panelItemDAO.insertData(panelItem);
 			}
 			tx.commit();
@@ -322,14 +329,14 @@ public class PanelItemUpdateAction extends BaseAction {
 
 		// test name validation against database
 		String testNameSelected = (String) dynaForm.get("testName");
-
+		
 		if (!StringUtil.isNullorNill(testNameSelected)) {
 			Test test = new Test();
 			
 			test.setTestName(testNameSelected);
 			TestDAO testDAO = new TestDAOImpl();
 			test = testDAO.getTestByName(test);
-
+			
 			String messageKey = "panelitem.testName";
 			
 			if (test == null) {
@@ -339,17 +346,17 @@ public class PanelItemUpdateAction extends BaseAction {
 				errors.add(ActionMessages.GLOBAL_MESSAGE, error);
 			}
 		}
-		
-	    // Bugzilla 2207 check for duplicate sort order item
-	    String panelName = (String) dynaForm.get("parentPanelName");
+	    
+		// Sort order doesn't required anymore
+        /*String panelName = (String) dynaForm.get("parentPanelName");
 	    String sortOrder = (String) dynaForm.get("sortOrder");
         String id = (String) dynaForm.get("id");
     
-	    if (!StringUtil.isNullorNill(panelName) && !StringUtil.isNullorNill (sortOrder)) {
+	    if (!StringUtil.isNullorNill(panelName) && !StringUtil.isNullorNill (sortOrder)) {	        
 		    PanelItem panelItem = new PanelItem();
 		    panelItem.setPanelName(panelName);
 		    panelItem.setSortOrder(sortOrder);
-		
+		    
 		    if (!StringUtil.isNullorNill(id)) {
 		        panelItem.setId(id);
 		     }
@@ -364,7 +371,7 @@ public class PanelItemUpdateAction extends BaseAction {
 					        getMessageForKey(messageKey), null);
 			    errors.add(ActionMessages.GLOBAL_MESSAGE, error);
 		    }
-	    }
+	    }*/
 	
 	    return errors;
 	}

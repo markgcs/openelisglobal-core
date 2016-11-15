@@ -131,7 +131,7 @@ public abstract class ActivityReport extends Report implements IReportCreator{
         String name = StringUtil.buildDelimitedStringFromList(values, " / ", true);
         
         if( useTestName ){
-            item.setPatientOrTestName( resultService.getReportingTestName() );
+            item.setPatientOrTestName( resultService.getTestName() );
             item.setNonPrintingPatient( name );
         }else{
             item.setPatientOrTestName( name );

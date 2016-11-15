@@ -1,11 +1,12 @@
 <%@ page language="java"
 	contentType="text/html; charset=utf-8"
-	import="us.mn.state.health.lims.common.action.IActionConstants,
-	us.mn.state.health.lims.common.util.StringUtil,
-	us.mn.state.health.lims.common.provider.validation.AccessionNumberValidatorFactory,
-    us.mn.state.health.lims.common.util.Versioning,
-	us.mn.state.health.lims.common.provider.validation.IAccessionNumberValidator"
-%>
+	import="us.mn.state.health.lims.common.formfields.FormFields.Field,
+			us.mn.state.health.lims.common.formfields.FormFields,
+			us.mn.state.health.lims.common.action.IActionConstants,
+			us.mn.state.health.lims.common.provider.validation.AccessionNumberValidatorFactory,
+			us.mn.state.health.lims.common.provider.validation.IAccessionNumberValidator,
+			us.mn.state.health.lims.common.util.StringUtil,
+		    us.mn.state.health.lims.common.util.Versioning"%>
 
 <%@ taglib uri="/tags/struts-bean" prefix="bean" %>
 <%@ taglib uri="/tags/struts-html" prefix="html" %>
@@ -14,33 +15,61 @@
 <%@ taglib uri="/tags/struts-tiles"     prefix="tiles" %>
 <%@ taglib uri="/tags/sourceforge-ajax" prefix="ajax"%>
 
+<bean:define id="formName"		value='<%= (String)request.getAttribute(IActionConstants.FORM_NAME) %>' />
+<bean:define id="genericDomain" value='' />
+
 <%!
+	java.util.Locale locale = null;
 	IAccessionNumberValidator accessionValidator;
-	String basePath = "";
 	String formName;
  %>
-
 <%
-	accessionValidator = new AccessionNumberValidatorFactory().getValidator();
+	String basePath = "";
 	String path = request.getContextPath();
 	basePath = request.getScheme() + "://" + request.getServerName() + ":"	+ request.getServerPort() + path + "/";
+	accessionValidator = new AccessionNumberValidatorFactory().getValidator();
 	formName = (String)request.getAttribute(IActionConstants.FORM_NAME);
+	locale = (java.util.Locale)request.getSession().getAttribute(org.apache.struts.Globals.LOCALE_KEY);
 %>
 
-<link rel="stylesheet" media="screen" type="text/css" href="<%=basePath%>css/bootstrap.css?ver=<%= Versioning.getBuildNumber() %>" />
-<link rel="stylesheet" media="screen" type="text/css" href="<%=basePath%>css/openElisCore.css?ver=<%= Versioning.getBuildNumber() %>" />
+<link rel="stylesheet" href="css/jquery_ui/jquery.ui.all.css?ver=<%= Versioning.getBuildNumber() %>">
+<link rel="stylesheet" href="css/customAutocomplete.css?ver=<%= Versioning.getBuildNumber() %>">
 
-<script type="text/javascript" src="scripts/utilities.js?ver=<%= Versioning.getBuildNumber() %>" ></script>
+<script type="text/javascript" src="<%=basePath%>scripts/utilities.js?ver=<%= Versioning.getBuildNumber() %>" ></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.core.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.widget.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.button.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.menu.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.position.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ui/jquery.ui.autocomplete.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/jquery.selectlist.dev.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/customAutocomplete.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/ajaxCalls.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+<script type="text/javascript" src="<%=basePath%>scripts/laborder.js?ver=<%= Versioning.getBuildNumber() %>"></script>
 
 <script type="text/javascript">
 
-function submit(){
+	var requiredFields = new Array("submitterNumber");
 
-	var form = window.document.forms[0];
-	form.action = "AuditTrailReport.do";
-	form.submit();
-	return false;
-}
+	// $jq is now an alias to the jQuery function; creating the new alias is optional.
+	var $jq = jQuery.noConflict();
+	 
+    $jq(document).ready( function() {
+    	$jq(".current input").each( function(index,elem){ $jq(elem).attr('readonly', true) });
+    	$jq(".current .spacerRow").each( function(index, elem){ $jq(elem).hide() });
+    });
+
+	function submit(){
+		var form = window.document.forms[0];
+		form.action = "AuditTrailReport.do";
+		form.submit();
+		
+		return false;
+	}
+	
+	function setSampleFieldValidity(valid, fieldId) {
+		// To catch setSampleFieldValidity call from common->sampleOrder.jsp
+	}
 
 </script>
 
@@ -84,7 +113,8 @@ function submit(){
 		</div>
 	    <div class="current" >
             <h2><bean:message key="order.information" /></h2>
-            <tiles:insert attribute="orderInfo" />
+			<tiles:insert attribute="sampleOrder" />
+    		<tiles:useAttribute name="displayOrderItemsInPatientManagement" scope="request" />
             <tiles:insert attribute="patientInfo" />
         </div>
 		<div class="row-fluid">
@@ -120,11 +150,11 @@ function submit(){
 				</table>
 				
 				<div id="showOptions" class="show-table-options">
-					<button class="reset-sort btn btn-mini" disabled="disabled"><i class="icon-refresh"></i> Reset</button>
-					<label> <bean:message key="audit.show" /> :
+					<button class="reset-sort btn btn-mini" disabled="disabled"><i class="icon-refresh"></i> <%=StringUtil.getMessageForKey("label.button.reset") %></button>
+					<label> <%=StringUtil.getMessageForKey("label.pagination.show") %> :
 				        <select id="filterByType">
 				        <!--  Options for filter are added via filterByType jquery function -->
-				            <option value=""><bean:message key="audit.show.all"/></option>
+				            <option value=""><%=StringUtil.getMessageForKey("label.button.checkAll") %></option>
 				        </select>
 				    </label>
 				</div>
@@ -137,20 +167,5 @@ function submit(){
 	</logic:notEmpty>
 	
 <logic:notEmpty name='<%= formName %>' property="log" >
-    <script type="text/javascript">
-        function getAuditSearchText(){  return '<bean:message key="audit.search.text" />';  }
-        function getAuditFilteredFrom(){  return '<bean:message key="audit.filtered.from" />';  }
-        function getAuditNoPrefix(){  return '<bean:message key="audit.no.prefix" />';  }
-        function getAuditEntriesDisplayed(){  return '<bean:message key="audit.entries.displayed" />';  }
-        function getAuditNoRecords(){  return '<bean:message key="audit.no.records" />';  }
-    </script>
-<script type="text/javascript" src="<%=basePath%>scripts/oe.datatables.functions.js?ver=<%= Versioning.getBuildNumber() %>"></script>
+	<script type="text/javascript" src="<%=basePath%>scripts/oe.datatables.functions.js?ver=<%= Versioning.getBuildNumber() %>" params="locale='<%=locale%>'"></script>
 </logic:notEmpty>
-
-<script type="text/javascript">
-
-    jQuery(document).ready( function() {
-        jQuery(".current input").each( function(index,elem){ jQuery(elem).attr('readonly', true) });
-        jQuery(".current .spacerRow").each( function(index, elem){jQuery(elem).hide()});
-    } );
-</script>

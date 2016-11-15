@@ -50,5 +50,5 @@ public interface GenderDAO extends BaseDAO {
 
 	public Integer getTotalGenderCount() throws LIMSRuntimeException;
 
-
+	public Gender readGender(String idString) throws LIMSRuntimeException;
 }

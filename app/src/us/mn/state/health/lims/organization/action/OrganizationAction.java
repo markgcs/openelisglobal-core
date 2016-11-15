@@ -31,6 +31,7 @@ import us.mn.state.health.lims.citystatezip.dao.CityStateZipDAO;
 import us.mn.state.health.lims.citystatezip.daoimpl.CityStateZipDAOImpl;
 import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.BaseActionForm;
+import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.formfields.FormFields;
 import us.mn.state.health.lims.common.formfields.FormFields.Field;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -155,6 +156,9 @@ public class OrganizationAction extends BaseAction {
 					}
 				}
 			}
+			if (organization.getCity() != null) {
+			    organization.setSelectedCityId(organization.getCity().getId());
+			}
 
 		} else { // this is a new organization
 
@@ -172,6 +176,11 @@ public class OrganizationAction extends BaseAction {
 		if (organization.getId() != null && !organization.getId().equals("0")) {
 			request.setAttribute(ID, organization.getId());
 		}
+		
+		DictionaryDAO dictDAO = new DictionaryDAOImpl();
+        List<Dictionary> cities = dictDAO.getDictionaryEntriesByCategoryId(IActionConstants.CITY_CATEGORY_ID.toString());
+        PropertyUtils.setProperty(form, "cities", cities);
+        
 
 		PropertyUtils.copyProperties(form, organization);
 
@@ -244,7 +253,8 @@ public class OrganizationAction extends BaseAction {
 
 	private List<Dictionary> getDepartmentList() {
 		DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
-		return dictionaryDAO.getDictionaryEntrysByCategoryAbbreviation("description", "haitiDepartment", true);
+		// change to get list of patientClinicalDept instead of haitiDepartment
+		return dictionaryDAO.getDictionaryEntrysByCategory("description", "patientClinicalDept", true);
 	}
 
 	protected String getPageTitleKey() {

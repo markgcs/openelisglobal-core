@@ -21,7 +21,13 @@ import us.mn.state.health.lims.common.dao.BaseDAO;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.unitofmeasure.valueholder.UnitOfMeasure;
 
-
+/**
+ * @author diane benz
+ * 
+ * To change this generated comment edit the template variable "typecomment":
+ * Window>Preferences>Java>Templates. To enable and disable the creation of type
+ * comments go to Window>Preferences>Java>Code Generation.
+ */
 public interface UnitOfMeasureDAO extends BaseDAO {
 
 	public boolean insertData(UnitOfMeasure unitOfMeasure)
@@ -36,6 +42,9 @@ public interface UnitOfMeasureDAO extends BaseDAO {
 
 	public void getData(UnitOfMeasure unitOfMeasure)
 			throws LIMSRuntimeException;
+	
+    public void updateDataWithoutDuplicateCheck(UnitOfMeasure unitOfMeasure)
+            throws LIMSRuntimeException;
 
 	public void updateData(UnitOfMeasure unitOfMeasure)
 			throws LIMSRuntimeException;
@@ -49,7 +58,6 @@ public interface UnitOfMeasureDAO extends BaseDAO {
 	public UnitOfMeasure getUnitOfMeasureByName(UnitOfMeasure unitOfMeasure)
 			throws LIMSRuntimeException;
 
+	//bugzilla 1411
 	public Integer getTotalUnitOfMeasureCount() throws LIMSRuntimeException;
-
-	public UnitOfMeasure getUnitOfMeasureById(String uomId) throws LIMSRuntimeException;
 }

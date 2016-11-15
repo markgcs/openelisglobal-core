@@ -16,6 +16,8 @@
 */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.HashMap;
+
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -31,4 +33,10 @@ public class IndicatorAllTestLNSP extends IndicatorAllTest implements IReportCre
 	protected String getLabNameLine2() {
 		return StringUtil.getContextualMessageForKey("report.labName.two");
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

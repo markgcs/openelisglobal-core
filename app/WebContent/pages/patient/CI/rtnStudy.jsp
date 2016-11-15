@@ -2,7 +2,6 @@
 	import="us.mn.state.health.lims.common.action.IActionConstants,us.mn.state.health.lims.common.util.SystemConfiguration,us.mn.state.health.lims.common.formfields.FormFields,
 	us.mn.state.health.lims.common.util.StringUtil,
 	org.apache.commons.httpclient.NameValuePair"%>
-<%@ page import="us.mn.state.health.lims.common.util.DateUtil" %>
 
 <%@ taglib uri="/tags/struts-bean" prefix="bean"%>
 <%@ taglib uri="/tags/struts-html" prefix="html"%>
@@ -68,7 +67,7 @@ rtn = new RtnProjectChecker();
 		<td>
 			<bean:message key="sample.entry.project.receivedDate" />
 			&nbsp;
-			<%=DateUtil.getDateUserPrompt()%>
+			<bean:message key="sample.date.format" />
 		</td>
 		<td>
 			<app:text name="<%=formName%>" property="receivedDateForDisplay"
@@ -87,7 +86,7 @@ rtn = new RtnProjectChecker();
 		<td class="observationsQuestion">
 			<bean:message key="sample.entry.project.dateTaken" />
 			&nbsp;
-			<%=DateUtil.getDateUserPrompt()%>
+			<bean:message key="sample.date.format" />
 		</td>
 		<td>
 			<app:text name="<%=formName%>" property="interviewDate"
@@ -200,7 +199,7 @@ rtn = new RtnProjectChecker();
 		<td>
 			<bean:message key="patient.project.dateOfBirth" />
 			&nbsp;
-			<%=DateUtil.getDateUserPrompt()%>
+			<bean:message key="sample.date.format" />
 		</td>
 		<td>
 			<app:text name="<%=formName%>" property="birthDateForDisplay"

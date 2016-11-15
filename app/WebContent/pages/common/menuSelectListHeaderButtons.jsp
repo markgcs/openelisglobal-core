@@ -161,12 +161,14 @@ function submitSearchForClick(button){
 		<tr>
 		<!-- we put "!" before disableEdit then the "Editer" button will be  always disabled at the  initialization of this page   -->
 			<td><html:button
+					styleClass="btn btn-default"
 					onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?ID=');return false;"
 					property="edit"
 					disabled="<%=!disableEdit%>">
 					<bean:message key="label.button.edit" />
 				</html:button> &nbsp; 
 				<html:button
+					styleClass="btn btn-default"
 					onclick="setMenuAction(this, window.document.forms[0], 'Delete', 'yes', '?ID=');return false;"
 					property="deactivate"
 					disabled="true"> 
@@ -177,6 +179,7 @@ function submitSearchForClick(button){
 				<bean:message key="label.form.or" />&nbsp; 
 				
 				<html:button
+					styleClass="btn btn-default"
 					onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?ID=0');return false;"
 					property="add"
 					disabled="<%=Boolean.valueOf(addDisabled).booleanValue()%>">
@@ -188,15 +191,17 @@ function submitSearchForClick(button){
 				name="<%=IActionConstants.MENU_SEARCH_BY_TABLE_COLUMN%>">
 				<td></td>
 
-				<td align="right"><bean:message key="label.form.searchby" /> <bean:message
-						key="<%=searchColumn%>" /> <html:text name="<%=formName%>"
+				<td align="right"><bean:message key="label.form.searchby" />
+				<bean:message key="<%=searchColumn%>" />
+				<html:text name="<%=formName%>"
 						property="searchString" onkeypress="submitSearchForEnter(event);"
 						size="20" maxlength="20" value="<%=searchStr%>"
+						style="margin-top:10px;"
 						disabled="<%=Boolean.valueOf(notAllowSearching).booleanValue()%>" />
 
-
-					<html:button property="search" styleId="searchButton"
+				<html:button property="search" styleId="searchButton"
 						onclick="submitSearchForClick(this);return false;"
+						styleClass="btn btn-default"
 						disabled="<%=Boolean.valueOf(notAllowSearching).booleanValue()%>">
   			       <bean:message key="label.button.search"/>
   		       </html:button>
@@ -211,12 +216,14 @@ function submitSearchForClick(button){
       
 			<td align="right">
 			   <html:button
+			   		styleClass="btn btn-default"
 					onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=1');return false;"
 					property="previous"
 					disabled="<%=Boolean.valueOf(previousDisabled).booleanValue()%>">
 					<bean:message key="label.button.previous" />
 				</html:button> &nbsp; 
 				<html:button
+					styleClass="btn btn-default"
 					onclick="setMenuAction(this, window.document.forms[0], '', 'yes', '?paging=2');return false;"
 					property="next"
 					disabled="<%=Boolean.valueOf(nextDisabled).booleanValue()%>">
@@ -249,9 +256,9 @@ function output() {
    }
      if(total == 0){
     	 window.document.<%=(String) request.getAttribute(IActionConstants.FORM_NAME)%>.edit.disabled=true;
-    	 <% if( allowDeactivate){ %>
+     	 <% if( allowDeactivate){ %>
     	 	window.document.<%=(String) request.getAttribute(IActionConstants.FORM_NAME)%>.deactivate.disabled=true;
-    	 <% } %>	
+     	 <% } %> 
      } else if(total == 1){
     	 window.document.<%=(String) request.getAttribute(IActionConstants.FORM_NAME)%>.edit.disabled=false;
     	 <% if( allowDeactivate){ %>

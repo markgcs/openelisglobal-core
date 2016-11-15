@@ -59,9 +59,9 @@ public class DictionaryMenuAction extends BaseMenuAction {
 		DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
 		
 		if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES))
-		   dictionarys = dictionaryDAO.getPagesOfSearchedDictionarys(startingRecNo, searchString);
+		   dictionarys = dictionaryDAO.getPagesOfSearchedDictionarys(startingRecNo, searchString, false, false);
 		else
-		   dictionarys = dictionaryDAO.getPageOfDictionarys(startingRecNo);
+		   dictionarys = dictionaryDAO.getPageOfDictionarys(startingRecNo, false);
 	    // end of bugzilla 1413
 		
 		request.setAttribute("menuDefinition", "DictionaryMenuDefinition");
@@ -70,7 +70,7 @@ public class DictionaryMenuAction extends BaseMenuAction {
 		// bugzilla 1413 set pagination variables for searched results
 		if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES))
 			request.setAttribute(MENU_TOTAL_RECORDS, String.valueOf(dictionaryDAO
-					.getTotalSearchedDictionaryCount(searchString)));
+					.getTotalSearchedDictionaryCount(searchString, null)));
 		
 		  
 		else

@@ -25,8 +25,12 @@ import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionMapping;
 
 import us.mn.state.health.lims.common.action.BaseMenuAction;
+import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.common.log.LogEvent;
+import us.mn.state.health.lims.login.dao.UserModuleDAO;
+import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
+import us.mn.state.health.lims.login.valueholder.UserSessionData;
 import us.mn.state.health.lims.systemusersection.dao.SystemUserSectionDAO;
 import us.mn.state.health.lims.systemusersection.daoimpl.SystemUserSectionDAOImpl;
 
@@ -45,11 +49,30 @@ public class SystemUserSectionMenuAction extends BaseMenuAction {
 
 		String stringStartingRecNo = (String) request.getAttribute("startingRecNo");
 		int startingRecNo = Integer.parseInt(stringStartingRecNo);
+		
+		String searchString = (String) request.getParameter("searchString");
+        String doingSearch = (String) request.getParameter("search");
 
 		SystemUserSectionDAO systemUserSectionDAO = new SystemUserSectionDAOImpl();
-		systemUserSections = systemUserSectionDAO.getPageOfSystemUserSections(startingRecNo);
-	
+		UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
+		UserSessionData usd = (UserSessionData)request.getSession().getAttribute(USER_SESSION_DATA);
+		
+		if (userModuleDAO.isUserAdmin(request)) {
+		    if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES)) {
+		        systemUserSections = systemUserSectionDAO.getPageOfSearchSystemUserSectionsForAdmin(searchString);
+	        } else {
+	            systemUserSections = systemUserSectionDAO.getPageOfSystemUserSectionsForAdmin(startingRecNo);
+	        }
+        } else {
+            if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES)) {
+                systemUserSections = systemUserSectionDAO.getPageOfSearchSystemUserSectionsForSectionAdmin(searchString, usd.getSystemUserId());
+            } else {
+                systemUserSections = systemUserSectionDAO.getPageOfSystemUserSectionsForSectionAdmin(startingRecNo, usd.getSystemUserId());
+            }
+        }
+		
 		request.setAttribute("menuDefinition", "SystemUserSectionMenuDefinition");
+		request.setAttribute(MENU_SEARCH_BY_TABLE_COLUMN, "systemuser.loginName");
 		
 		request.setAttribute(MENU_TOTAL_RECORDS, String.valueOf(systemUserSectionDAO.getTotalSystemUserSectionCount()));
 		request.setAttribute(MENU_FROM_RECORD, String.valueOf(startingRecNo));
@@ -64,6 +87,11 @@ public class SystemUserSectionMenuAction extends BaseMenuAction {
 		}
 		int endingRecNo = startingRecNo + numOfRecs;
 		request.setAttribute(MENU_TO_RECORD, String.valueOf(endingRecNo));
+		
+		if (!StringUtil.isNullorNill(doingSearch) && doingSearch.equals(YES) ) {
+            request.setAttribute(IN_MENU_SELECT_LIST_HEADER_SEARCH, "true");
+            request.setAttribute(MENU_SELECT_LIST_HEADER_SEARCH_STRING, searchString);
+        }
 
 		return systemUserSections;
 	}

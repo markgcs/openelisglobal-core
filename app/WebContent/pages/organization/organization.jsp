@@ -182,10 +182,18 @@ function validateForm(form) {
 							<bean:message key="organization.city"/>:
 						</td>
 						<td>
+				            <html:select name="<%=formName%>" property="selectedCityId">
+				            <app:optionsCollection name="<%=formName%>"
+				                property="cities"
+				                label="dictEntry"
+				                value="id" />
+				            </html:select>      
+				        </td>
+						<%-- <td>
 							<html:text styleId="city" size="30" name="<%=formName%>" property="city" />
 				   			<span id="indicator2" style="display:none;"><img src="<%=basePath%>images/indicator.gif"/></span>
 							<input id="cityID" name="cityID" type="hidden" size="30" />
-						</td>
+						</td> --%>
 		</tr>
 	    <% } %>
 		<% if( showDepartment ){ %>

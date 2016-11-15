@@ -479,16 +479,14 @@ public class AnalyteDAOImpl extends BaseDAOImpl implements AnalyteDAO {
 	          HibernateUtil.getSession().clear();
 	          
 	      	if (results != null && results.get(0) != null) {
-				if (results.get(0) != null) {
-					count = (Integer)results.get(0);
-				}
+				count = (Integer)results.get(0);
 			 }
 	          
-            }       catch (Exception e) {
-	                 e.printStackTrace();
-	                 throw new LIMSRuntimeException(
-			             "Error in AnalyteDAOImpl getTotalSearchedAnalyteCount()", e);
-                       }
+            }  catch (Exception e) {
+                 e.printStackTrace();
+                 throw new LIMSRuntimeException(
+    	             "Error in AnalyteDAOImpl getTotalSearchedAnalyteCount()", e);
+            }
 
        return count;
        

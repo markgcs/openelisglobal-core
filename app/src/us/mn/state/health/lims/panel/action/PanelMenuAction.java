@@ -90,6 +90,7 @@ public class PanelMenuAction extends BaseMenuAction {
 	}
 
 	protected String getDeactivateDisabled() {
-		return "true";
+	    // return false to enable "deactivate" button
+		return "false";
 	}
 }

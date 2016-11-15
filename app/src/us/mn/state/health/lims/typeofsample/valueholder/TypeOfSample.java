@@ -17,10 +17,9 @@
 */
 package us.mn.state.health.lims.typeofsample.valueholder;
 
-import us.mn.state.health.lims.common.services.LocalizationService;
+import org.codehaus.jackson.annotate.JsonIgnore;
+
 import us.mn.state.health.lims.common.valueholder.BaseObject;
-import us.mn.state.health.lims.common.valueholder.ValueHolder;
-import us.mn.state.health.lims.localization.valueholder.Localization;
 
 public class TypeOfSample extends BaseObject {
 
@@ -30,13 +29,17 @@ public class TypeOfSample extends BaseObject {
 	private static final long serialVersionUID = 1L;
 
 	private String id;
-	private String description;
-	private String domain;
-	private String localAbbreviation;
-	private boolean isActive;
-	private int sortOrder;
-	private ValueHolder localization = new ValueHolder();
 
+	private String description;
+
+	private String domain;
+	
+	private String localAbbreviation;
+
+	private boolean isActive;
+	
+	private int sortOrder;
+	
 	public String getLocalAbbreviation() {
 		return localAbbreviation;
 	}
@@ -47,6 +50,14 @@ public class TypeOfSample extends BaseObject {
 
 	public TypeOfSample() {
 		super();
+	}
+	public TypeOfSample(TypeOfSample typeOfSample) {
+		this.id=typeOfSample.getId();
+		this.description=typeOfSample.getDescription();
+		this.domain=typeOfSample.getDomain();
+		this.localAbbreviation=typeOfSample.getLocalAbbreviation();
+		this.isActive=typeOfSample.getIsActive();
+		this.sortOrder=typeOfSample.getSortOrder();
 	}
 
 	public void setId(String id) {
@@ -73,10 +84,10 @@ public class TypeOfSample extends BaseObject {
 		return domain;
 	}
 
-	@Override
+/*	@Override
 	protected String getDefaultLocalizedName() {
-		return LocalizationService.getLocalizedValue(getLocalization());
-	}
+		return description;
+	}*/
 
 	public boolean isActive() {
 		return isActive;
@@ -86,6 +97,7 @@ public class TypeOfSample extends BaseObject {
 		this.isActive = isActive;
 	}
 
+    @JsonIgnore
 	public boolean getIsActive() {
 		return isActive;
 	}
@@ -93,7 +105,8 @@ public class TypeOfSample extends BaseObject {
 	public void setIsActive(boolean isActive) {
 		this.isActive = isActive;
 	}
-	
+
+    @JsonIgnore
 	public int getSortOrder() {
 		return sortOrder;
 	}
@@ -102,11 +115,5 @@ public class TypeOfSample extends BaseObject {
 		this.sortOrder = sortOrder;
 	}
 
-	public Localization getLocalization() {
-		return (Localization)localization.getValue();
-	}
-
-	public void setLocalization(Localization localization) {
-		this.localization.setValue(localization);
-	}
+	
 }

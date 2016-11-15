@@ -34,17 +34,8 @@ public class MenuUtil {
 	private static final List<Menu> insertedMenus = new ArrayList<Menu>();
     private static final PluginMenuService pluginMenuService = PluginMenuService.getInstance();
 
-	/**
-	 * The intent of this method is to allow menu items to be added outside of the database.  Typically
-	 * plugins
-	 * @param menu The menu item to be added
-	 */
 	public static void addMenu(Menu menu) {
 		insertedMenus.add(menu);
-	}
-
-	public static void forceRebuild(){
-		root = null;
 	}
 
 	public static List<MenuItem> getMenuTree() {
@@ -56,7 +47,7 @@ public class MenuUtil {
 	}
 
 	private static void createTree() {
-		List<Menu> menuList = new MenuDAOImpl().getAllActiveMenus();
+		List<Menu> menuList = new MenuDAOImpl().getAllMenus();
 
 		Map<String, Menu> idToMenuMap = new HashMap<String, Menu>();
 
@@ -93,7 +84,7 @@ public class MenuUtil {
 				menuToMenuItemMap.get(menu.getParent()).getChildMenus().add(menuToMenuItemMap.get(menu));
 			}
 		}
-
+		
 		sortChildren( rootWrapper);
 		
 		root = rootWrapper.getChildMenus();

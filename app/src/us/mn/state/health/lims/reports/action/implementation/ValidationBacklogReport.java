@@ -79,7 +79,6 @@ public class ValidationBacklogReport extends Report {
 		setMapForAllSections();
 		loadBuckets();
 		bucketsToBeans();
-
 	}
 
 	private void setMapForAllSections(){
@@ -106,7 +105,6 @@ public class ValidationBacklogReport extends Report {
 			bucket.count++;
 		}
 	}
-
 	
 	private void bucketsToBeans(){
 		reportItems = new ArrayList<ValidationBacklogData>();
@@ -117,12 +115,21 @@ public class ValidationBacklogReport extends Report {
 			data.setCount(String.valueOf(bucket.count));
 			reportItems.add(data);
 		}
-
 	}
 
 	private class TestBucket{
 		public String testSection;
 		public int count = 0;
+	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+
+		createReportParameters();
+		setMapForAllSections();
+		loadBuckets();
+		bucketsToBeans();
 	}
 
 }

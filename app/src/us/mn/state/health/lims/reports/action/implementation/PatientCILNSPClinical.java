@@ -16,14 +16,29 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.LocalizationService;
+import us.mn.state.health.lims.common.services.NoteService;
+import us.mn.state.health.lims.common.services.ResultService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
+import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.StringUtil;
@@ -32,10 +47,7 @@ import us.mn.state.health.lims.referral.valueholder.ReferralResult;
 import us.mn.state.health.lims.reports.action.implementation.reportBeans.ClinicalPatientData;
 import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.sample.util.AccessionNumberUtil;
-import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
 import us.mn.state.health.lims.test.valueholder.Test;
-
-import java.util.*;
 
 public class PatientCILNSPClinical extends PatientReport implements IReportCreator, IReportParameterSetter{
 
@@ -49,6 +61,7 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Finalized)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.NonConforming_depricated)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.NotStarted)));
+		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.TechnicalAcceptance)));
 		analysisStatusIds.add(Integer.parseInt(StatusService.getInstance().getStatusID(AnalysisStatus.Canceled)));
         analysisStatusIds.add(Integer.parseInt( StatusService.getInstance().getStatusID( AnalysisStatus.TechnicalRejected ) ) );
@@ -84,21 +97,23 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 
     @Override
     protected String getHeaderName(){
-        return "CDIHeader.jasper";
+        if( configName.equals( "CI LNSP")){
+            return "CILNSPHeader.jasper";
+        }else{
+            return "CDIHeader.jasper";
+        }
     }
 
     @Override
 	protected void createReportItems(){
-        Set<SampleItem> sampleSet = new HashSet<SampleItem>(  );
-
         boolean isConfirmationSample = currentSampleService.isConfirmationSample();
 		List<Analysis> analysisList = analysisDAO.getAnalysesBySampleIdAndStatusId(currentSampleService.getId(), analysisStatusIds);
-		List<ClinicalPatientData> currentSampleReportItems = new ArrayList<ClinicalPatientData>( analysisList.size() );
+
 		currentConclusion = null;
 		for(Analysis analysis : analysisList){
             boolean hasParentResult = analysis.getParentResult() != null;
-            sampleSet.add( analysis.getSampleItem() );
-			if(analysis.getTest() != null ){
+			// case if there was a confirmation sample with no test specified
+			if(analysis.getTest() != null && !analysis.getStatusId().equals(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn))){
                 currentAnalysisService = new AnalysisService( analysis );
 				ClinicalPatientData resultsData = buildClinicalPatientData( hasParentResult );
                 if( isConfirmationSample){
@@ -113,20 +128,15 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
                 }
 
 				if(currentAnalysisService.getAnalysis().isReferredOut()){
-					Referral referral = referralDao.getReferralByAnalysisId( currentAnalysisService.getAnalysis().getId());
-					if(referral != null){
-						// addReferredTests method in both PatientClinical and PatientCILNSPClinical are nearly identical and 
-						// should be refactored to use the same code.
-						List<ClinicalPatientData> referredData = addReferredTests(referral, resultsData);
-						currentSampleReportItems.addAll( referredData );
-					}
+				Referral referral = referralDao.getReferralByAnalysisId( currentAnalysisService.getAnalysis().getId());
+				if(referral != null){
+						addReferredTests(referral, resultsData);
+				}
 				}else{
                     reportItems.add( resultsData );
-                    currentSampleReportItems.add( resultsData );
                 }
 			}
 		}
-		setCollectionTime( sampleSet, currentSampleReportItems, true );
 	}
 
     @Override
@@ -138,14 +148,11 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
         data.setAlerts( "R" );
         data.setAnalysisStatus( StringUtil.getMessageForKey( "report.test.status.inProgress" ) );
     }
-	
-    // addReferredTests method in both PatientClinical and PatientCILNSPClinical are nearly identical and 
-	// should be refactored to use the same code.
-    private List<ClinicalPatientData> addReferredTests(Referral referral, ClinicalPatientData parentData){
+
+    private void addReferredTests(Referral referral, ClinicalPatientData parentData){
 		List<ReferralResult> referralResults = referralResultDAO.getReferralResultsForReferral(referral.getId());
         String note =  new NoteService( currentAnalysisService.getAnalysis() ).getNotesAsString( false, true, "<br/>", FILTER, true );
-        List<ClinicalPatientData> currentSampleReportItems = new ArrayList<ClinicalPatientData>(  );
-        
+
 		if( !referralResults.isEmpty()){
 			boolean referralTestAssigned = false;
 			for( ReferralResult referralResult : referralResults){
@@ -155,11 +162,9 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 			}
 			if( !referralTestAssigned){
 				reportItems.add(parentData);	
-				currentSampleReportItems.add( parentData );
 			}
 		}else{
-			reportItems.add(parentData);
-			currentSampleReportItems.add( parentData );
+			reportItems.add(parentData);	
 		}
 		for(int i = 0; i < referralResults.size(); i++){
 			if( referralResults.get(i).getResult() == null ){
@@ -205,10 +210,8 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 				data.setHasRangeAndUOM(referralResult.getResult() != null && "N".equals(referralResult.getResult().getResultType()));
 
 				reportItems.add(data);
-				currentSampleReportItems.add( data );
 			}
 		}
-		return currentSampleReportItems;
 	}
 
 
@@ -256,12 +259,6 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
                 if( accessionSort != 0 ){
                     return accessionSort;
                 }
-                
-                int sectionSort = o1.getSectionSortOrder() - o2.getSectionSortOrder();
-
-                if( sectionSort != 0 ){
-                    return sectionSort;
-                }
 
                 int sampleTypeSort = o1.getSampleType().compareTo( o2.getSampleType() );
 
@@ -273,6 +270,12 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 
                 if( sampleIdSort != 0 ){
                     return sampleIdSort;
+                }
+
+                int sectionSort = o1.getSectionSortOrder() - o2.getSectionSortOrder();
+
+                if( sectionSort != 0 ){
+                    return sectionSort;
                 }
 
                 if( o1.getParentResult() != null && o2.getParentResult() != null ){
@@ -367,4 +370,10 @@ public class PatientCILNSPClinical extends PatientReport implements IReportCreat
 	protected boolean useReportingDescription(){
 		return true;
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+	}
+	
 }

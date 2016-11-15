@@ -17,8 +17,9 @@
 package us.mn.state.health.lims.common.services;
 
 import org.hibernate.Transaction;
+
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.DateUtil;
-import us.mn.state.health.lims.common.util.validator.GenericValidator;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.referencetables.daoimpl.ReferenceTablesDAOImpl;
 import us.mn.state.health.lims.reports.dao.DocumentTrackDAO;
@@ -29,6 +30,7 @@ import us.mn.state.health.lims.reports.valueholder.DocumentTrack;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.List;
 
 public class ReportTrackingService {
@@ -51,10 +53,10 @@ public class ReportTrackingService {
         RESULT_EXPORT_DOCUMENT_TYPE_ID = documentTypeDAO.getDocumentTypeByName( "resultExport" ).getId();
         MALARIA_CASE_DOCUMENT_TYPE_ID = documentTypeDAO.getDocumentTypeByName( "malariaCase" ).getId();
 	}	
-	public void addReports(List<String> refIds, ReportType type, String name, String currentSystemUserId) {
 	
-
+	public void addReports(List<String> refIds, ReportType type, String name, String currentSystemUserId) {
 		Transaction trx = HibernateUtil.getSession().beginTransaction();
+		
 		try {
 
 			String refTableId = getReferenceTable(type);
@@ -75,10 +77,11 @@ public class ReportTrackingService {
 				rtDAO.insertData(docTrack);
 				
 			}
-			
 			trx.commit();
+			
 		} catch (Exception e) {
 			trx.rollback();
+            LogEvent.logError("ReportTrackingService", "addReports()", Arrays.toString(e.getStackTrace()));
 		}
 	}
 
@@ -89,19 +92,18 @@ public class ReportTrackingService {
 
 	private String getReferenceTable(ReportType type) {
 		switch (type) {
-		case PATIENT: {
-			return new ReferenceTablesDAOImpl().getReferenceTableByName("SAMPLE").getId();
-		}
-        case NON_CONFORMITY_NOTIFICATION:{
-            return new ReferenceTablesDAOImpl().getReferenceTableByName( "SAMPLE_QAEVENT" ).getId();
-        }
-        case MALARIA_CASE:{
-            return new ReferenceTablesDAOImpl().getReferenceTableByName( "ANALYSIS" ).getId();
-        }
-        case RESULT_EXPORT:{
-            return new ReferenceTablesDAOImpl().getReferenceTableByName( "ANALYSIS" ).getId();
-        }
-
+    		case PATIENT: {
+    			return new ReferenceTablesDAOImpl().getReferenceTableByName("SAMPLE").getId();
+    		}
+            case NON_CONFORMITY_NOTIFICATION:{
+                return new ReferenceTablesDAOImpl().getReferenceTableByName( "SAMPLE_QAEVENT" ).getId();
+            }
+            case MALARIA_CASE:{
+                return new ReferenceTablesDAOImpl().getReferenceTableByName( "ANALYSIS" ).getId();
+            }
+            case RESULT_EXPORT:{
+                return new ReferenceTablesDAOImpl().getReferenceTableByName( "ANALYSIS" ).getId();
+            }
 		}
 
 		return null;
@@ -109,19 +111,18 @@ public class ReportTrackingService {
 
 	private String getReportTypeId(ReportType type) {
 		switch (type) {
-		case PATIENT: {
-			return PATIENT_DOCUMENT_TYPE_ID;
-		}
-        case NON_CONFORMITY_NOTIFICATION:{
-            return NON_CONFORMITY_DOCUMENT_TYPE_ID;
-        }
-        case RESULT_EXPORT:{
-            return RESULT_EXPORT_DOCUMENT_TYPE_ID;
-        }
-        case MALARIA_CASE:{
-            return MALARIA_CASE_DOCUMENT_TYPE_ID;
-        }
-
+    		case PATIENT: {
+    			return PATIENT_DOCUMENT_TYPE_ID;
+    		}
+            case NON_CONFORMITY_NOTIFICATION:{
+                return NON_CONFORMITY_DOCUMENT_TYPE_ID;
+            }
+            case RESULT_EXPORT:{
+                return RESULT_EXPORT_DOCUMENT_TYPE_ID;
+            }
+            case MALARIA_CASE:{
+                return MALARIA_CASE_DOCUMENT_TYPE_ID;
+            }
 		}
 
 		return null;
@@ -131,35 +132,18 @@ public class ReportTrackingService {
 		return docTrackDAO.getByTypeRecordAndTable(getReportTypeId(type), getReferenceTable(type), sample.getId());
 	}
 
-    public List<DocumentTrack> getReportsForSampleAndReportName(Sample sample,  ReportType type, String name) {
-        return docTrackDAO.getByTypeRecordAndTableAndName(getReportTypeId(type), getReferenceTable(type), sample.getId(), name);
-    }
-
     public DocumentTrack getLastReportForSample( Sample sample, ReportType type){
         List<DocumentTrack> reports = getReportsForSample( sample, type );
         return reports.isEmpty() ? null : reports.get( reports.size() - 1 );
     }
 
-	public DocumentTrack getLastNamedReportForSample( Sample sample, ReportType type, String name){
-		if( sample == null || type == null || GenericValidator.isBlankOrNull(name)){
-			return null;
-		}
-
-        List<DocumentTrack> reports = getReportsForSampleAndReportName( sample, type, name );
-        return reports.isEmpty() ? null : reports.get( reports.size() - 1 );
-	}
-
-	public Timestamp getTimeOfLastReport( Sample sample, ReportType type){
-        DocumentTrack report = getLastReportForSample(sample, type );
+    public Timestamp getTimeOfLastReport( Sample sample, ReportType type){
+        DocumentTrack report = getLastReportForSample( sample, type );
         return report == null ? null : report.getReportTime();
     }
-
-	public Timestamp getTimeOfLastNamedReport( Sample sample, ReportType type, String name){
-		DocumentTrack report = getLastNamedReportForSample( sample, type, name );
-		return report == null ? null : report.getReportTime();
-	}
 
 	public DocumentTrack getDocumentForId(String id){
 		return docTrackDAO.readEntity(id);
 	}
+	
 }

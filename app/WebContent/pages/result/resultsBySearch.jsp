@@ -14,17 +14,15 @@
 
 <script type="text/javascript" >
 
-function  /*void*/ setMyCancelAction(form, action, validate, parameters) 
-{   
+function  /*void*/ setMyCancelAction(form, action, validate, parameters) {   
 	//first turn off any further validation
 	setAction(window.document.forms[0], 'Cancel', 'no', '');	
 }
 
-function doSelectPatientForResults(){	
+function doSelectPatientForResults() {	
 	var form = document.forms[0];
 
 	form.action = "PatientResults.do?patientID="  + patientSelectID;
-
 	form.submit();
 }
 
@@ -39,7 +37,3 @@ function doSelectPatientForResults(){
 		<tiles:insert attribute="resultsPanel" />
 	</div>
 </logic:equal>
-
-
-
-

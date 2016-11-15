@@ -41,12 +41,15 @@ public class HaitiPasswordValidation implements ILoginPasswordValidation {
 		//make sure it contains at least one special character
 		
 		return !GenericValidator.isBlankOrNull(password) &&
-			   password.length() >= 7 &&
-			   !NEGATION_Of_MUST_ONLY_CONTAIN.matcher(password).find() &&	
-			   SPECIAL_CHARS.matcher(password).find();
+			   password.length() >= 8;
+			   
+			   //password now only require at least 8 characters, no more special characters
+			   /* && !NEGATION_Of_MUST_ONLY_CONTAIN.matcher(password).find() &&	
+			   SPECIAL_CHARS.matcher(password).find();*/
 	}
 
 	public String getInstructions() {
 		return StringUtil.getMessageForKey("login.complexity.message");
 	}
+	
 }

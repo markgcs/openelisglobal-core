@@ -17,7 +17,6 @@
 package us.mn.state.health.lims.common.services;
 
 import org.hibernate.Transaction;
-import org.jfree.util.Log;
 import us.mn.state.health.lims.analyzer.dao.AnalyzerDAO;
 import us.mn.state.health.lims.analyzer.daoimpl.AnalyzerDAOImpl;
 import us.mn.state.health.lims.analyzer.valueholder.Analyzer;
@@ -27,7 +26,6 @@ import us.mn.state.health.lims.analyzerimport.daoimpl.AnalyzerTestMappingDAOImpl
 import us.mn.state.health.lims.analyzerimport.util.AnalyzerTestNameCache;
 import us.mn.state.health.lims.analyzerimport.valueholder.AnalyzerTestMapping;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
-import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.plugin.AnalyzerImporterPlugin;
 import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
@@ -54,8 +52,12 @@ public class PluginAnalyzerService {
         AnalyzerDAO analyzerDAO = new AnalyzerDAOImpl();
         Analyzer analyzer = analyzerDAO.getAnalyzerByName(name);
         if ( analyzer != null && analyzer.getId() != null) {
-            analyzer.setActive(true);
-            registerAanlyzerInCache(name, analyzer.getId());
+            if (analyzer.isActive()) {
+                registerAanlyzerInCache(name, analyzer.getId());
+                return analyzer.getId();
+            } else {
+                analyzer.setActive(true);
+            }
         } else {
             if( analyzer == null){
                 analyzer = new Analyzer();
@@ -101,6 +103,7 @@ public class PluginAnalyzerService {
     private boolean newMapping(AnalyzerTestMapping mapping) {
         for( AnalyzerTestMapping existingMap: existingMappings){
             if( existingMap.getAnalyzerId().equals(mapping.getAnalyzerId()) &&
+                    existingMap.getTestId().equals(mapping.getTestId()) &&
                     existingMap.getAnalyzerTestName().equals(mapping.getAnalyzerTestName())){
                 return false;
             }
@@ -112,11 +115,12 @@ public class PluginAnalyzerService {
         ArrayList<AnalyzerTestMapping> testMappings = new ArrayList<AnalyzerTestMapping>();
         for(TestMapping names : nameMappings){
             String testId = getIdForTestName( names.getDbbTestName());
-
-            AnalyzerTestMapping analyzerMapping = new AnalyzerTestMapping();
-            analyzerMapping.setAnalyzerTestName(names.getAnalyzerTestName());
-            analyzerMapping.setTestId(testId);
-            testMappings.add(analyzerMapping);
+            if( testId != null){
+                AnalyzerTestMapping analyzerMapping = new AnalyzerTestMapping();
+                analyzerMapping.setAnalyzerTestName(names.getAnalyzerTestName());
+                analyzerMapping.setTestId(testId);
+                testMappings.add(analyzerMapping);
+            }
         }
         return testMappings;
     }
@@ -126,7 +130,7 @@ public class PluginAnalyzerService {
         if( test != null){
             return test.getId();
         }
-        LogEvent.logError("PluginAnalyzerService", "createTestMappings", "Unable to find test " + dbbTestName + " in test catalog");
+
         return null;
     }
 

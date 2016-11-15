@@ -17,21 +17,31 @@
  */
 package us.mn.state.health.lims.result.action;
 
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.validator.GenericValidator;
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
 import org.apache.struts.action.ActionMapping;
 import org.apache.struts.action.DynaActionForm;
+
 import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.services.DisplayListService.ListType;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
-import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.inventory.action.InventoryUtility;
 import us.mn.state.health.lims.inventory.form.InventoryKitItem;
+import us.mn.state.health.lims.login.dao.UserModuleDAO;
+import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
 import us.mn.state.health.lims.result.action.util.ResultsLoadUtility;
 import us.mn.state.health.lims.result.action.util.ResultsPaging;
 import us.mn.state.health.lims.statusofsample.util.StatusRules;
@@ -39,11 +49,6 @@ import us.mn.state.health.lims.test.beanItems.TestResultItem;
 import us.mn.state.health.lims.test.dao.TestSectionDAO;
 import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
 import us.mn.state.health.lims.test.valueholder.TestSection;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
 
 public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
 
@@ -59,6 +64,7 @@ public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
 		String requestedPage = request.getParameter("page");
 		
 		String testSectionId = request.getParameter("testSectionId");
+        String searchReceivedDate = request.getParameter("searchReceivedDate");
 		
 		request.getSession().setAttribute(SAVE_DISABLED, TRUE);
 
@@ -72,17 +78,31 @@ public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
         
 		// load testSections for drop down
 		TestSectionDAO testSectionDAO = new TestSectionDAOImpl();
-		List<IdValuePair> testSections = DisplayListService.getList(ListType.TEST_SECTION);
-		PropertyUtils.setProperty(dynaForm, "testSections", testSections);
+//		List<IdValuePair> testSections = DisplayListService.createTestSectionListByUserId(currentUserId);
+//		PropertyUtils.setProperty(dynaForm, "testSections", testSections);
+		
+		//Tien add
+        UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
+        // check if user is admin, load all test sections
+        if(userModuleDAO.isUserAdmin(request)){
+            PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.getList(ListType.TEST_SECTION));
+        }
+        //if not admin, only load test sections belong to this user
+        else{
+            PropertyUtils.setProperty(dynaForm, "testSections", DisplayListService.createTestSectionListByUserId(currentUserId));
+        }
+        //end
 		PropertyUtils.setProperty(dynaForm, "testSectionsByName", DisplayListService.getList(ListType.TEST_SECTION_BY_NAME));
 		
-		if (!GenericValidator.isBlankOrNull(testSectionId)) {
+		if (!GenericValidator.isBlankOrNull(testSectionId) && !GenericValidator.isBlankOrNull(searchReceivedDate)) {
 			ts = testSectionDAO.getTestSectionById(testSectionId);
+			PropertyUtils.setProperty(dynaForm, "testSectionId", testSectionId);		
+            // Added by markaae.fr 2016-10-04 10:52AM
+            PropertyUtils.setProperty(dynaForm, "searchReceivedDate", searchReceivedDate);
+            // End of Modification
+		} else {
 			PropertyUtils.setProperty(dynaForm, "testSectionId", "0");
-		} 
-		
-		
-		
+		}
 		setRequestType(ts == null ? StringUtil.getMessageForKey("workplan.unit.types") : ts.getLocalizedName());
 		
 		List<TestResultItem> tests;
@@ -92,11 +112,10 @@ public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
 		ResultsLoadUtility resultsLoadUtility = new ResultsLoadUtility(currentUserId);
 
 		if (GenericValidator.isBlankOrNull(requestedPage)) {
-			
 			new StatusRules().setAllowableStatusForLoadingResults(resultsLoadUtility);
 			
-			if (!GenericValidator.isBlankOrNull(testSectionId)) {
-				tests = resultsLoadUtility.getUnfinishedTestResultItemsInTestSection(testSectionId);
+			if (!GenericValidator.isBlankOrNull(testSectionId) && !GenericValidator.isBlankOrNull(searchReceivedDate)) {
+				tests = resultsLoadUtility.getUnfinishedTestResultItemsInTestSection(testSectionId, getUserSection(), searchReceivedDate);
 			} else {
 				tests = new ArrayList<TestResultItem>();
 			}
@@ -106,14 +125,13 @@ public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
 				for( TestResultItem resultItem : tests){
 					resultItem.setPatientInfo("---");
 				}
-				
 			}
-			
 			paging.setDatabaseResults(request, dynaForm, tests);
 
 		} else {
 			paging.page(request, dynaForm, requestedPage);
 		}
+		
 		if (ts != null) {
 			//this does not look right what happens after a new page!!!
 			boolean isHaitiClinical = ConfigurationProperties.getInstance().isPropertyValueEqual(Property.configurationName, "Haiti Clinical");
@@ -131,8 +149,8 @@ public class ResultsLogbookEntryAction extends ResultsLogbookBaseAction {
 
 	private String getCurrentDate() {
 		Date today = Calendar.getInstance().getTime();
+		
 		return DateUtil.formatDateAsText(today);
-
 	}
 
 }

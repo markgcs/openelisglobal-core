@@ -228,7 +228,7 @@ public class SampleXMLByTestProcessAction extends BaseAction {
 				orgName.append(organization.getStreetAddress());
 				orgName.append(SystemConfiguration.getInstance()
 						.getDefaultTransmissionTextSeparator());
-				orgName.append(organization.getCity());
+				orgName.append(organization.getCity().getDictEntry());
 				orgName.append(SystemConfiguration.getInstance()
 						.getDefaultTransmissionTextSeparator());
 				orgName.append(organization.getState());
@@ -320,7 +320,7 @@ public class SampleXMLByTestProcessAction extends BaseAction {
 
 								sampleHuman.setSampleId(sample.getId());
 								sampleHumanDAO.getDataBySample(sampleHuman);
-								sampleOrganization.setSample(sample);
+								sampleOrganization.setSampleId(sample.getId());
 								sampleOrganizationDAO
 										.getDataBySample(sampleOrganization);
 								patient.setId(sampleHuman.getPatientId());
@@ -355,7 +355,7 @@ public class SampleXMLByTestProcessAction extends BaseAction {
 									facility.setDepartment(o.getOrganizationName());
 									facility.setStreetAddress(o
 											.getStreetAddress());
-									facility.setCity(o.getCity());
+									facility.setCity(o.getCity().getDictEntry());
 									facility.setState(o.getState());
 									facility.setZipCode(o.getZipCode());
 								}

@@ -1,0 +1,13 @@
+
+    <Context path="openElisGlobal">
+            <Resource auth="Container"
+                           driverClassName="org.postgresql.Driver"
+                           maxActive="20"
+                           maxIdle="10"
+                           maxWait="-1"
+                           name="jdbc/LimsDS"
+                           password="clinlims"
+                           type="javax.sql.DataSource"
+                           url="jdbc:postgresql://120.72.83.85:5432/clinlims_migration_PI"
+                           username="clinlims"/>
+    </Context>

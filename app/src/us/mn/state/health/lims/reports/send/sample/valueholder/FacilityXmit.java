@@ -46,7 +46,7 @@ public class FacilityXmit extends
 
 	public String getCity() {
 		if (!StringUtil.isNullorNill(city)) {
-			city.trim();
+		    city.trim();
 		}
 		return city;
 	}
@@ -56,9 +56,9 @@ public class FacilityXmit extends
 	}
 
 	public String getState() {
-		if (!StringUtil.isNullorNill(state)) {
-			city.trim();
-		}
+        if (!StringUtil.isNullorNill(state)) {
+            state.trim();
+        }
 		return state;
 	}
 

@@ -24,6 +24,7 @@ import us.mn.state.health.lims.common.action.BaseAction;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
+import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.organization.valueholder.Organization;
 import us.mn.state.health.lims.patient.dao.PatientDAO;
@@ -92,11 +93,12 @@ public class NewbornSampleFullViewAction extends BaseAction {
 	}
 
 	private void prepareNewbornFullData(BaseActionForm dynaForm) throws Exception {
-
+		String locale = SystemConfiguration.getInstance().getDefaultLocale().toString();
+		
 		SampleDAO sampleDAO = new SampleDAOImpl();
 		Sample sample = sampleDAO.getSampleByAccessionNumber(dynaForm.getString("accessionNumber"));
 		PropertyUtils.setProperty(dynaForm,"collectionDateForDisplay",sample.getCollectionDateForDisplay());
-		PropertyUtils.setProperty(dynaForm,"collectionTimeForDisplay",DateUtil.convertTimestampToStringTime(sample.getCollectionDate()));
+		PropertyUtils.setProperty(dynaForm,"collectionTimeForDisplay",DateUtil.convertTimestampToStringTime(sample.getCollectionDate(), locale));
 		
 		SampleHuman sampleHuman = new SampleHuman();
 		SampleHumanDAO sampleHumanDAO = new SampleHumanDAOImpl();
@@ -108,15 +110,15 @@ public class NewbornSampleFullViewAction extends BaseAction {
 		childPatient.setId(sampleHuman.getPatientId());
 		patientDAO.getData(childPatient);
 		PropertyUtils.setProperty(dynaForm,"birthDateForDisplay",childPatient.getBirthDateForDisplay());
-		PropertyUtils.setProperty(dynaForm,"birthTimeForDisplay",DateUtil.convertTimestampToStringTime(childPatient.getBirthDate()));
+		PropertyUtils.setProperty(dynaForm,"birthTimeForDisplay",DateUtil.convertTimestampToStringTime(childPatient.getBirthDate(), locale));
 		PropertyUtils.setProperty(dynaForm,"gender",childPatient.getGender());
 		
-		Person childPerson;
+		Person childPperson = new Person();
 		PersonDAO personDAO = new PersonDAOImpl();
-		childPerson = childPatient.getPerson();
-		personDAO.getData(childPerson);
-		PropertyUtils.setProperty(dynaForm,"lastName",childPerson.getLastName());
-		PropertyUtils.setProperty(dynaForm,"firstName",childPerson.getFirstName());
+		childPperson = childPatient.getPerson();
+		personDAO.getData(childPperson);
+		PropertyUtils.setProperty(dynaForm,"lastName",childPperson.getLastName());
+		PropertyUtils.setProperty(dynaForm,"firstName",childPperson.getFirstName());
 		
 		PatientRelation patientRelation = new PatientRelation();
 		PatientRelationDAO patientRelationDAO = new PatientRelationDAOImpl(); 
@@ -126,7 +128,7 @@ public class NewbornSampleFullViewAction extends BaseAction {
 			Patient motherPatient = new Patient();
 			motherPatient.setId(patientRelation.getPatientId());
 			patientDAO.getData(motherPatient);
-			Person motherPerson;
+			Person motherPerson = new Person();
 			motherPerson = motherPatient.getPerson();
 			personDAO.getData(motherPerson);
 			PropertyUtils.setProperty(dynaForm,"motherLastName",motherPerson.getLastName());
@@ -166,7 +168,7 @@ public class NewbornSampleFullViewAction extends BaseAction {
 		PropertyUtils.setProperty(dynaForm,"birthOrder",sampleNewborn.getBirthOrder());		
 		PropertyUtils.setProperty(dynaForm,"gestationalWeek",sampleNewborn.getGestationalWeek());
 		PropertyUtils.setProperty(dynaForm,"dateFirstFeedingForDisplay",sampleNewborn.getDateFirstFeedingForDisplay());
-		PropertyUtils.setProperty(dynaForm,"timeFirstFeedingForDisplay",DateUtil.convertTimestampToStringTime(sampleNewborn.getDateFirstFeeding()));
+		PropertyUtils.setProperty(dynaForm,"timeFirstFeedingForDisplay",DateUtil.convertTimestampToStringTime(sampleNewborn.getDateFirstFeeding(), locale));
 		PropertyUtils.setProperty(dynaForm,"breast",sampleNewborn.getBreast());
 		PropertyUtils.setProperty(dynaForm,"tpn",sampleNewborn.getTpn());
 		PropertyUtils.setProperty(dynaForm,"formula",sampleNewborn.getFormula());
@@ -207,7 +209,7 @@ public class NewbornSampleFullViewAction extends BaseAction {
 		
 		SampleOrganization sampleOrganization = new SampleOrganization();
 		SampleOrganizationDAO sampleOrganizationDAO = new SampleOrganizationDAOImpl();
-		sampleOrganization.setSample(sample);
+		sampleOrganization.setSampleId(sample.getId());
 		sampleOrganizationDAO.getDataBySample(sampleOrganization);
 		if ( !StringUtil.isNullorNill(sampleOrganization.getId()) ) {
 			Organization o = sampleOrganization.getOrganization();
@@ -216,7 +218,7 @@ public class NewbornSampleFullViewAction extends BaseAction {
 			PropertyUtils.setProperty(dynaForm,"submitterNumber","");
 		// set lastupdated fields
 		dynaForm.set("lastupdated",sample.getLastupdated());
-		dynaForm.set("personLastupdated",childPerson.getLastupdated());
+		dynaForm.set("personLastupdated",childPperson.getLastupdated());
 		dynaForm.set("patientLastupdated",childPatient.getLastupdated());
 		dynaForm.set("sampleHumanLastupdated",sampleHuman.getLastupdated());
 		dynaForm.set("sampleNewbornLastupdated",sampleNewborn.getLastupdated());

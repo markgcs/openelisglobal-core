@@ -16,13 +16,24 @@
  */
 package us.mn.state.health.lims.common.services.historyservices;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.audittrail.action.workers.AuditTrailItem;
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.audittrail.valueholder.History;
 import us.mn.state.health.lims.common.services.StatusService;
-import us.mn.state.health.lims.common.services.TypeOfTestResultService;
 import us.mn.state.health.lims.common.util.DateUtil;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
@@ -32,12 +43,7 @@ import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
-
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.*;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult;
 
 public abstract class HistoryService {
 
@@ -91,7 +97,7 @@ public abstract class HistoryService {
 						addItemsForKeys(items, history, changeMaps);
 					}
 				} else {
-					addInsertion(history, items);
+				    addInsertion(history, items);
 				}
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -108,12 +114,25 @@ public abstract class HistoryService {
 			setIdentifierForKey(key);
 			AuditTrailItem item = getCoreTrail(history);
             item.setAttribute(showAttribute() && !GenericValidator.isBlankOrNull( key ) ? key : StringUtil.getMessageForKey( "auditTrail.action.update" ));
-			item.setOldValue(changeMaps.get(key));
-			item.setNewValue(newValueMap.get(key));
-			newValueMap.put(key, item.getOldValue());
-			if (item.newOldDiffer()) {
-				items.add(item);
-			}
+            if (key.equals("receivedTime")) {
+                String datetimeArr[] = newValueMap.get("receivedDate").split(" ");
+                item.setOldValue(datetimeArr[0] + " " + changeMaps.get(key));
+                item.setNewValue(newValueMap.get("receivedDate"));
+                newValueMap.put("receivedDate", item.getOldValue());
+            } else {
+                if (key.equals("onsetOfDate") && StringUtil.isNullorNill(changeMaps.get(key))) {
+                    item.setAction("I");
+                }
+                item.setOldValue(changeMaps.get(key));
+                item.setNewValue(newValueMap.get(key));
+                newValueMap.put(key, item.getOldValue());
+            }
+			
+			if (!(key.equals("accessionNumber") && item.getAttribute().equals(StringUtil.getMessageForKey( "auditTrail.action.update" )))) {
+    			if (item.newOldDiffer()) {
+    				items.add(item);
+    			}
+		    }
 		}
 	}
 
@@ -133,7 +152,6 @@ public abstract class HistoryService {
 		if (attributeToIdentifierMap != null && attributeToIdentifierMap.get(key) != null) {
 			identifier = attributeToIdentifierMap.get(key);
 		}
-
 	}
 
 	protected AuditTrailItem getCoreTrail(History history) {
@@ -195,7 +213,7 @@ public abstract class HistoryService {
 	}
 
 	protected String getViewableValue(String value, Result result) {
-		if ( TypeOfTestResultService.ResultType.isDictionaryVariant(result.getResultType()) && !GenericValidator.isBlankOrNull(value) && org.apache.commons.lang.StringUtils.isNumeric(value)) {
+		if ( TypeOfTestResult.ResultType.isDictionaryVariant(result.getResultType()) && !GenericValidator.isBlankOrNull(value) && org.apache.commons.lang.StringUtils.isNumeric(value)) {
 			Dictionary dictionaryValue = dictDAO.getDictionaryById(value);
 			value = dictionaryValue != null ? dictionaryValue.getDictEntry() : StringUtil.getMessageForKey("result.undefined");
 		}

@@ -16,34 +16,41 @@
 
 package us.mn.state.health.lims.patient.action.bean;
 
+import java.io.Serializable;
+import java.util.List;
+
 import us.mn.state.health.lims.common.services.DisplayListService;
 import us.mn.state.health.lims.common.util.IdValuePair;
 
-import java.util.List;
-
 /**
  */
-public class PatientSearch{
-    private boolean loadFromServerWithPatient = false;
-    private String selectedPatientActionButtonText;
+public class PatientSearch implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private boolean loadFromServerWithPatient = false;
+	private String selectedPatientActionButtonText;
 
-    public boolean isLoadFromServerWithPatient(){
-        return loadFromServerWithPatient;
-    }
+	public boolean isLoadFromServerWithPatient() {
+		return loadFromServerWithPatient;
+	}
 
-    public void setLoadFromServerWithPatient( boolean loadFromServerWithPatient ){
-        this.loadFromServerWithPatient = loadFromServerWithPatient;
-    }
+	public void setLoadFromServerWithPatient(boolean loadFromServerWithPatient) {
+		this.loadFromServerWithPatient = loadFromServerWithPatient;
+	}
 
-    public List<IdValuePair> getSearchCriteria() {
-        return DisplayListService.getList( DisplayListService.ListType.PATIENT_SEARCH_CRITERIA );
-    }
+	public List<IdValuePair> getSearchCriteria() {
+		return DisplayListService
+				.getList(DisplayListService.ListType.PATIENT_SEARCH_CRITERIA);
+	}
 
-    public String getSelectedPatientActionButtonText(){
-        return selectedPatientActionButtonText;
-    }
+	public String getSelectedPatientActionButtonText() {
+		return selectedPatientActionButtonText;
+	}
 
-    public void setSelectedPatientActionButtonText( String selectedPatientActionButtonText ){
-        this.selectedPatientActionButtonText = selectedPatientActionButtonText;
-    }
+	public void setSelectedPatientActionButtonText(
+			String selectedPatientActionButtonText) {
+		this.selectedPatientActionButtonText = selectedPatientActionButtonText;
+	}
 }

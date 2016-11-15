@@ -13,12 +13,19 @@
 <%!
 
 String allowEdits = "true";
-
+//add: check allow edit or not
+boolean isAllowEdits = true;
 %>
 
 <%
 if (request.getAttribute(IActionConstants.ALLOW_EDITS_KEY) != null) {
- allowEdits = (String)request.getAttribute(IActionConstants.ALLOW_EDITS_KEY);
+   allowEdits = (String)request.getAttribute(IActionConstants.ALLOW_EDITS_KEY);
+   //add: if not allow edit will set field read only
+   if (allowEdits == "true") {
+      isAllowEdits = true;
+   } else {
+      isAllowEdits = false;
+   }     
 }
 
 %>
@@ -51,7 +58,7 @@ function validateForm(form) {
 							<bean:message key="program.code"/>:<span class="requiredlabel">*</span>
 						</td>	
 						<td>
-							<html:text name="<%=formName%>" property="code"/>
+							<html:text name="<%=formName%>" property="code" styleId="programCode" readonly="<%=!isAllowEdits%>"/>
 						</td>
           </tr>
  		<tr>

@@ -16,6 +16,7 @@
 package us.mn.state.health.lims.resultvalidation.bean;
 
 import us.mn.state.health.lims.common.util.IdValuePair;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -87,7 +88,11 @@ public class AnalysisItem  {
     private boolean hasQualifiedResult = false;
     private int significantDigits = 0;
     private String rejectReasonId;
+    private SystemUserSection statusUserSession;
     private boolean valid = true;
+    private boolean withInRange = false;
+    private boolean outOfRangeLow = false;
+	private boolean outOfRangeHigh = false;
 
 	public String getRejectReasonId() {
         return rejectReasonId;
@@ -97,7 +102,12 @@ public class AnalysisItem  {
     }
 
 	public AnalysisItem() {
-
+	    statusUserSession=new SystemUserSection();
+	    statusUserSession.setHasView("N");
+	    statusUserSession.setHasAssign("N");
+	    statusUserSession.setHasComplete("N");
+	    statusUserSession.setHasRelease("N");
+	    statusUserSession.setHasCancel("N");
 	}
 
 	public void setId(String id) {
@@ -600,7 +610,6 @@ public class AnalysisItem  {
     public int getSignificantDigits(){
         return significantDigits;
     }
-
     public void setSignificantDigits( int significantDigits ){
         this.significantDigits = significantDigits;
     }
@@ -608,8 +617,36 @@ public class AnalysisItem  {
     public boolean isValid(){
         return valid;
     }
-
     public void setValid( boolean valid ){
         this.valid = valid;
     }
+    
+    public boolean isWithInRange() {
+        return withInRange;
+    }
+    public void setWithInRange( boolean withInRange ) {
+        this.withInRange = withInRange;
+    }
+    
+    public boolean isOutOfRangeLow() {
+		return outOfRangeLow;
+	}
+	public void setOutOfRangeLow(boolean outOfRangeLow) {
+		this.outOfRangeLow = outOfRangeLow;
+	}
+	
+	public boolean isOutOfRangeHigh() {
+		return outOfRangeHigh;
+	}
+	public void setOutOfRangeHigh(boolean outOfRangeHigh) {
+		this.outOfRangeHigh = outOfRangeHigh;
+	}
+    
+    public SystemUserSection getStatusUserSession() {
+        return statusUserSession;
+    }
+    public void setStatusUserSession(SystemUserSection statusUserSession) {
+        this.statusUserSession = statusUserSession;
+    }
+    
 }

@@ -170,7 +170,7 @@ public class SampleOrganizationDAOImpl extends BaseDAOImpl implements SampleOrga
 		try {
 		String sql = "from SampleOrganization so where samp_id = :param";
 		Query query = HibernateUtil.getSession().createQuery(sql);
-		query.setInteger("param", Integer.valueOf(sampleOrganization.getSample().getId()));
+		query.setInteger("param", Integer.valueOf(sampleOrganization.getSampleId()));
 		List list = query.list();
 		HibernateUtil.getSession().flush();
 		HibernateUtil.getSession().clear();
@@ -193,13 +193,12 @@ public class SampleOrganizationDAOImpl extends BaseDAOImpl implements SampleOrga
 		try{
 			Query query = HibernateUtil.getSession().createQuery(sql);
 			query.setInteger("sampleId", Integer.parseInt(sample.getId()));
-			List<SampleOrganization> sampleOrg = query.list();
+			SampleOrganization sampleOrg = (SampleOrganization)query.uniqueResult();
 			closeSession();
-			//There was a bug that allowed the same sample id / organization id to be entered twice
-			return sampleOrg.isEmpty() ? null : sampleOrg.get(0);
+			return sampleOrg;
 
 		}catch(HibernateException e){
-			handleException(e, "getDataBySample");
+			handleException(e, "getDataBySampleID");
 		}
 		return null;
 	}

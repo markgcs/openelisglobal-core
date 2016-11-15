@@ -17,6 +17,7 @@
 package us.mn.state.health.lims.reports.action.implementation;
 
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
@@ -26,6 +27,7 @@ import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.reports.action.implementation.reportBeans.ErrorMessages;
 
 import java.sql.Date;
+import java.util.HashMap;
 
 public abstract class IndicatorReport extends Report {
 
@@ -70,6 +72,32 @@ public abstract class IndicatorReport extends Report {
 		if (GenericValidator.isBlankOrNull(upperDateRange)) {
 			upperDateRange = lowerDateRange;
 		}
+
+		try {
+			lowDate = DateUtil.convertStringDateToSqlDate(lowerDateRange);
+			highDate = DateUtil.convertStringDateToSqlDate(upperDateRange);
+		} catch (LIMSRuntimeException re) {
+			errorFound = true;
+			ErrorMessages msgs = new ErrorMessages();
+			msgs.setMsgLine1(StringUtil.getMessageForKey("report.error.message.date.format"));
+			errorMsgs.add(msgs);
+		}
+	}
+	
+	protected void setDateRange(HashMap<String, String> hashmap) {
+		errorFound = false;
+		lowerDateRange = hashmap.get("lowerDateRange");
+		upperDateRange = hashmap.get("upperDateRange");
+
+		if (GenericValidator.isBlankOrNull(lowerDateRange)) {
+			errorFound = true;
+			ErrorMessages msgs = new ErrorMessages();
+			msgs.setMsgLine1(StringUtil.getMessageForKey("report.error.message.noPrintableItems"));
+			errorMsgs.add(msgs);
+		}
+
+		if (GenericValidator.isBlankOrNull(upperDateRange))
+			upperDateRange = lowerDateRange;
 
 		try {
 			lowDate = DateUtil.convertStringDateToSqlDate(lowerDateRange);

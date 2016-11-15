@@ -25,11 +25,13 @@ public class AdminFormFields {
 		ActionMenu,
 		AnalyteMenu,
 		AnalyzerTestNameMenu,
+		CityMenu,
 		CodeElementXref,
 		CodeElementTypeMenu,
 		CountyMenu,
 		DictionaryMenu,
 		DictionaryCategoryMenu,
+		DistrictMenu,
 		LabelMenu,
 		MethodMenu,
 		OrganizationMenu,
@@ -59,6 +61,8 @@ public class AdminFormFields {
 		TestTrailerMenu,
 		TypeOfSampleMenu,
 		TypeOfSamplePanelMenu,
+		TypeOfSampleSourceMenu,
+		SampleLabelMenu,
 		TypeOfSampleTestMenu,
 		TypeOfTestResultMenu,
 		UnitOfMeasureMenu,
@@ -70,12 +74,14 @@ public class AdminFormFields {
 		SystemUserSectionMenu,
 		SystemUserModuleMenu,
 		UnifiedSystemUserMenu,
+		OpenReports,
 		TestUsageAggregatation,
 		RESULT_REPORTING_CONFIGURATION,
 		PRINTED_REPORTS_CONFIGURATION,
 		WORKPLAN_CONFIGURATION,
 		NON_CONFORMITY_CONFIGURATION,
         PATIENT_ENTRY_CONFIGURATION,
+        TEST_MANAGEMENT
 	}
 
 	private static AdminFormFields instance = null;

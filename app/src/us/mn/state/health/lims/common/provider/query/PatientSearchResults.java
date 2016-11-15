@@ -35,6 +35,8 @@ public class PatientSearchResults {
 	private String mothersName;
 	private String dataSourceName;
 	private String dataSourceId;
+	private String accessionNumber;
+	private String sampleId;
 
 	public PatientSearchResults(){}
 
@@ -52,6 +54,22 @@ public class PatientSearchResults {
 		this.externalId = externalId;
         this.referringSitePatientId = referringSitePatientId;
 	}
+	   public PatientSearchResults( BigDecimal id, String first, String last, String gender, String dob, String nationalId, String externalId, String stNumber, String subjectNumber, String guid, String referringSitePatientId,String accessionNum,BigDecimal sampleId)
+	    {
+	        this.id = id.toPlainString();
+	        firstName = first;
+	        lastName = last;
+	        this.gender = gender;
+	        birthdate = dob;
+	        this.nationalId = nationalId;
+	        this.stNumber = stNumber;
+	        this.subjectNumber = subjectNumber;
+	        this.GUID = guid;
+	        this.externalId = externalId;
+	        this.referringSitePatientId = referringSitePatientId;
+	        this.accessionNumber = accessionNum;
+	        this.sampleId = sampleId.toPlainString();
+	    }
 
 	public String getPatientID() {
 		return id;
@@ -172,5 +190,22 @@ public class PatientSearchResults {
     public void setReferringSitePatientId( String referringSitePatientId ){
         this.referringSitePatientId = referringSitePatientId;
     }
+
+    public String getAccessionNumber() {
+        return accessionNumber;
+    }
+
+    public void setAccessionNumber(String accessionNumber) {
+        this.accessionNumber = accessionNumber;
+    }
+
+    public String getSampleId() {
+        return sampleId;
+    }
+
+    public void setSampleId(String sampleId) {
+        this.sampleId = sampleId;
+    }
+    
 }
 

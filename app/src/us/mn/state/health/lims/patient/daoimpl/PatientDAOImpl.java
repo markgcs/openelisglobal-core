@@ -100,6 +100,29 @@ public class PatientDAOImpl extends BaseDAOImpl implements PatientDAO {
 
 		return true;
 	}
+	@Override
+	public String insertDataWS(Patient patient) throws LIMSRuntimeException {
+		String id =null;
+		try {
+			 id = (String) HibernateUtil.getSession().save(patient);
+			patient.setId(id);
+
+			//bugzilla 1824 inserts will be logged in history table
+			AuditTrailDAO auditDAO = new AuditTrailDAOImpl();
+			String sysUserId = patient.getSysUserId();
+			String tableName = "PATIENT";
+			auditDAO.saveNewHistory(patient,sysUserId,tableName);
+
+			HibernateUtil.getSession().flush();
+			HibernateUtil.getSession().clear();
+		} catch (Exception e) {
+			//bugzilla 2154
+			LogEvent.logError("PatientDAOImpl","insertData()",e.toString());
+			throw new LIMSRuntimeException("Error in Patient insertData()", e);
+		}
+
+		return id;
+	}
 
 	public void updateData(Patient patient) throws LIMSRuntimeException {
 
@@ -365,7 +388,6 @@ public class PatientDAOImpl extends BaseDAOImpl implements PatientDAO {
 
 		return new ArrayList<String>();
 	}
-
 	
 
 }

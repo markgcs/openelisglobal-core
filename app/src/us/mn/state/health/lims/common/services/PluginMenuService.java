@@ -27,15 +27,13 @@ import java.util.Map;
 public class PluginMenuService {
 	private final Map<String, Menu > elementToMenuMap = new HashMap<String, Menu>();
     private final Map<String, Map<String, String>> menuLabelMap = new HashMap<String, Map<String, String>>();
-	private final Map<String, String> actionToKeyMap = new HashMap<String, String>();
 	private final MenuDAO menuDAO = new MenuDAOImpl();
 	
 	public enum KnownMenu{
 		ANALYZER("menu_results_analyzer");
 		
 		private final String elementId;
-
-		KnownMenu(String elementId){
+		private KnownMenu(String elementId){
 			this.elementId = elementId;
 		}
 		public String getElementId(){
@@ -108,10 +106,5 @@ public class PluginMenuService {
 
     public void addMenu(Menu menu){
         MenuUtil.addMenu(menu);
-		actionToKeyMap.put( menu.getActionURL(), menu.getDisplayKey());
     }
-
-	public String getKeyForAction( String action){
-		return actionToKeyMap.get(action);
-	}
 }

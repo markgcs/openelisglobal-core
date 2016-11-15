@@ -5,6 +5,16 @@
   "http://java.sun.com/j2ee/dtds/web-app_2_2.dtd">
 
 <web-app>
+   <!-- Begin: include cxf.xml -->
+   <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>WEB-INF/cxf.xml</param-value>
+    </context-param>
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+    <!-- End: include cxf.xml -->
+    
   <display-name>LIMS Application</display-name>
   
   <!--bugzilla 1908 added resource-ref for Vietnam tomcat/linux-->
@@ -140,13 +150,30 @@
     <load-on-startup>15</load-on-startup>
   </servlet>
 
+   <servlet>
+    <servlet-name>ajaxReportsXML</servlet-name>
+    <display-name>ajaxReportsXML</display-name> 
+    <servlet-class>us.mn.state.health.lims.common.servlet.reports.AjaxXMLServlet</servlet-class>
+    <load-on-startup>16</load-on-startup>
+  </servlet>
+ 
  <servlet>
     <servlet-name>logoUpload</servlet-name>
     <display-name>logoUpload</display-name> 
     <servlet-class>us.mn.state.health.lims.common.servlet.reports.LogoUploadServlet</servlet-class>
     <load-on-startup>3</load-on-startup>
   </servlet>
-  
+  <!--Begin: Config web services -->
+  <servlet>
+    <servlet-name>CXFServlet</servlet-name>
+    <servlet-class>org.apache.cxf.transport.servlet.CXFServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>CXFServlet</servlet-name>
+    <url-pattern>/services/*</url-pattern>
+  </servlet-mapping>
+   <!--End: Config web services -->
+   
   <servlet-mapping>
    <servlet-name>action</servlet-name> 
    <url-pattern>*.do</url-pattern> 
@@ -215,6 +242,11 @@
    <servlet-mapping>
     <servlet-name>OrderRequestRawServlet</servlet-name>
     <url-pattern>/OrderRequest_Raw</url-pattern>
+  </servlet-mapping>
+  
+  <servlet-mapping>
+    <servlet-name>ajaxReportsXML</servlet-name>
+    <url-pattern>/ajaxReportsXML</url-pattern>
   </servlet-mapping>
   
    <servlet-mapping>

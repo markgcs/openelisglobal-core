@@ -15,6 +15,10 @@
 */
 package us.mn.state.health.lims.result.dao;
 
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.List;
+
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.dao.BaseDAO;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
@@ -22,9 +26,6 @@ import us.mn.state.health.lims.result.valueholder.Result;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.testanalyte.valueholder.TestAnalyte;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
-
-import java.sql.Date;
-import java.util.List;
 
 /**
  * @author diane benz
@@ -46,6 +47,8 @@ public interface ResultDAO extends BaseDAO {
 	public void getData(Result result) throws LIMSRuntimeException;
 
 	public void updateData(Result result) throws LIMSRuntimeException;
+	
+	public void updateDataAIM(Result result, String resultValue, String sysUserId) throws LIMSRuntimeException;
 
 	public List getNextResultRecord(String id) throws LIMSRuntimeException;
 
@@ -68,6 +71,7 @@ public interface ResultDAO extends BaseDAO {
 
 	public Result getResultById(String resultId) throws LIMSRuntimeException;
 
+	public Result getResultByIdAIM(String resultId) throws LIMSRuntimeException;
 
 	public void deleteData(Result result) throws LIMSRuntimeException;
 
@@ -79,9 +83,16 @@ public interface ResultDAO extends BaseDAO {
 
 	public List<Result> getChildResults(String resultId) throws LIMSRuntimeException;
 
+	public List<Result> getChildResultsAIM(String resultId) throws LIMSRuntimeException;
+	
     public List<Result> getResultsForTestInDateRange( String testId, Date startDate, Date endDate )throws LIMSRuntimeException;
 
     public List<Result> getResultsForPanelInDateRange( String panelId, Date lowDate, Date highDate )throws LIMSRuntimeException;
 
     public List<Result> getResultsForTestSectionInDateRange( String testSectionId, Date lowDate, Date highDate ) throws LIMSRuntimeException;
+    
+    public String insertDataWS(Result result) throws LIMSRuntimeException;
+    
+    public List<BigDecimal> getListofResultId( String accessionNumber, String testId ) throws LIMSRuntimeException;
+    public void deleteAllData(Result result) throws LIMSRuntimeException;
 }

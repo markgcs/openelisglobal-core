@@ -51,9 +51,11 @@ public class CI_LNSPFormFields implements IFormFieldsForImplementation {
 		settings.put(Field.NON_CONFORMITY_SITE_LIST_USER_ADDABLE, Boolean.TRUE);
 		settings.put(Field.PatientNameRequired, Boolean.FALSE);
 		settings.put(Field.SubjectNumber, Boolean.TRUE);
+        settings.put(Field.SubjectNumberRequired, Boolean.TRUE);
 		settings.put(Field.NationalID, Boolean.TRUE);
 		settings.put(Field.SampleEntryUseReceptionHour, Boolean.TRUE);
 		settings.put(Field.SampleEntryUseRequestDate, Boolean.TRUE);
+		settings.put(Field.onsetOfDate, Boolean.TRUE);//Dung add
 		settings.put(Field.SampleEntryNextVisitDate, Boolean.TRUE);
 		settings.put(Field.SampleEntryRequestingSiteSampleId, Boolean.FALSE);
 		settings.put(Field.SampleEntryReferralSiteNameRequired, Boolean.TRUE);
@@ -67,6 +69,7 @@ public class CI_LNSPFormFields implements IFormFieldsForImplementation {
 		settings.put(Field.PatientHealthRegion, Boolean.TRUE);
 		settings.put(Field.PatientHealthDistrict, Boolean.TRUE);
 		settings.put(Field.PatientMarriageStatus, Boolean.TRUE);
+		settings.put(Field.PatientNationality, Boolean.TRUE);
 		settings.put(Field.PatientEducation, Boolean.TRUE);
 		settings.put(Field.SampleEntryPatientClinical, Boolean.FALSE);
 		settings.put(Field.SampleEntryRequesterLastNameRequired, Boolean.TRUE);

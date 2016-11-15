@@ -69,9 +69,13 @@ public class AnalysisUpdateAction extends BaseAction {
 		request.setAttribute(PREVIOUS_DISABLED, "false");
 		request.setAttribute(NEXT_DISABLED, "false");
 
-		String id = request.getParameter(ID);
-
-        isNew = StringUtil.isNullorNill(id) || "0".equals(id);
+		String id = request.getParameter(ID);	
+		
+		if (StringUtil.isNullorNill(id) || "0".equals(id)) {
+			isNew = true;
+		} else {
+			isNew = false;
+		}
 		
 		BaseActionForm dynaForm = (BaseActionForm) form;
 
@@ -79,7 +83,7 @@ public class AnalysisUpdateAction extends BaseAction {
 		ActionMessages errors = dynaForm.validate(mapping, request);
 		
 		try {
-			errors = validateAll(errors, dynaForm);
+			errors = validateAll(request, errors, dynaForm);
 		} catch (Exception e) {
 			//bugzilla 2154
 			LogEvent.logError("AnalysisUpdateAction","performAction()",e.toString());	
@@ -95,8 +99,8 @@ public class AnalysisUpdateAction extends BaseAction {
 			return mapping.findForward(FWD_FAIL);
 		}
 
-		String start = request.getParameter("startingRecNo");
-		String direction = request.getParameter("direction");
+		String start = (String) request.getParameter("startingRecNo");
+		String direction = (String) request.getParameter("direction");
 
 		Analysis analysis = new Analysis();
 		//get sysUserId from login module
@@ -113,10 +117,12 @@ public class AnalysisUpdateAction extends BaseAction {
 		TestSectionDAO testSectionDAO = new TestSectionDAOImpl();
 		TestSection ts = testSectionDAO.getTestSectionByName(testSection);
 
+		Test test = new Test();
 		String testName = (String) dynaForm.get("testName");
+		test.setTestName(testName);
 
 		TestDAO testDAO = new TestDAOImpl();
-		Test t = testDAO.getTestByName(testName);
+		Test t = testDAO.getTestByName(test);
 
 		// populate valueholder from form
 		PropertyUtils.copyProperties(analysis, dynaForm);
@@ -179,7 +185,7 @@ public class AnalysisUpdateAction extends BaseAction {
 			LogEvent.logError("AnalysisUpdateAction","performAction()",lre.toString());			
 			tx.rollback();
 			errors = new ActionMessages();
-			ActionError error;
+			ActionError error = null;
 			if (lre.getException() instanceof org.hibernate.StaleObjectStateException) {
 				// how can I get popup instead of struts error at the top of
 				// page?
@@ -240,7 +246,8 @@ public class AnalysisUpdateAction extends BaseAction {
 		}
 	}
 
-	protected ActionMessages validateAll(ActionMessages errors, BaseActionForm dynaForm) throws Exception {
+	protected ActionMessages validateAll(HttpServletRequest request,
+			ActionMessages errors, BaseActionForm dynaForm) throws Exception {
 
 		// testsection name validation against database
 		String testSectionNameSelected = (String) dynaForm
@@ -267,8 +274,11 @@ public class AnalysisUpdateAction extends BaseAction {
 		String testNameSelected = (String) dynaForm.get("testName");
 
 		if (!StringUtil.isNullorNill(testSectionNameSelected)) {
+			Test test = new Test();
+			//System.out.println("This is test name selected " + testNameSelected);
+			test.setTestName(testNameSelected);
 			TestDAO testDAO = new TestDAOImpl();
-			Test test = testDAO.getTestByName(testNameSelected);
+			test = testDAO.getTestByName(test);
 
 			String messageKey = "analysis.testName";
 

@@ -53,7 +53,6 @@ public class ProgramAction extends BaseAction {
 		String id = request.getParameter(ID);
 
 		String forward = FWD_SUCCESS;
-		request.setAttribute(ALLOW_EDITS_KEY, "true");
 		request.setAttribute(PREVIOUS_DISABLED, "true");
 		request.setAttribute(NEXT_DISABLED, "true");
 
@@ -67,7 +66,6 @@ public class ProgramAction extends BaseAction {
 		//System.out.println("I am in ProgramAction and this is id " + id);
 		if ((id != null) && (!"0".equals(id))) { // this is an existing
 													// program
-
 			program.setId(id);
 			ProgramDAO programDAO = new ProgramDAOImpl();
 			programDAO.getData(program);
@@ -90,6 +88,9 @@ public class ProgramAction extends BaseAction {
 		} else { // this is a new program
 			isNew = true; // this is to set correct page title
 		}
+		
+		// Disable program code when edit program and enable when add new
+        request.setAttribute(ALLOW_EDITS_KEY, isNew ? "true" : "false");
 
 		if (program.getId() != null && !program.getId().equals("0")) {
 			request.setAttribute(ID, program.getId());

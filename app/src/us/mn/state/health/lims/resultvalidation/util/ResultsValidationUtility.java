@@ -16,7 +16,16 @@
  */
 package us.mn.state.health.lims.resultvalidation.util;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
@@ -24,10 +33,17 @@ import us.mn.state.health.lims.analyte.dao.AnalyteDAO;
 import us.mn.state.health.lims.analyte.daoimpl.AnalyteDAOImpl;
 import us.mn.state.health.lims.analyte.valueholder.Analyte;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
-import us.mn.state.health.lims.common.services.*;
+import us.mn.state.health.lims.common.services.AnalysisService;
+import us.mn.state.health.lims.common.services.NoteService;
 import us.mn.state.health.lims.common.services.NoteService.NoteType;
+import us.mn.state.health.lims.common.services.QAService;
+import us.mn.state.health.lims.common.services.ResultLimitService;
+import us.mn.state.health.lims.common.services.ResultService;
+import us.mn.state.health.lims.common.services.StatusService;
 import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.services.StatusService.RecordStatus;
+import us.mn.state.health.lims.common.services.TestIdentityService;
+import us.mn.state.health.lims.common.services.TestService;
 import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.dictionary.dao.DictionaryDAO;
@@ -39,25 +55,29 @@ import us.mn.state.health.lims.observationhistory.valueholder.ObservationHistory
 import us.mn.state.health.lims.observationhistorytype.dao.ObservationHistoryTypeDAO;
 import us.mn.state.health.lims.observationhistorytype.daoImpl.ObservationHistoryTypeDAOImpl;
 import us.mn.state.health.lims.observationhistorytype.valueholder.ObservationHistoryType;
+import us.mn.state.health.lims.patient.valueholder.Patient;
 import us.mn.state.health.lims.result.dao.ResultDAO;
 import us.mn.state.health.lims.result.daoimpl.ResultDAOImpl;
 import us.mn.state.health.lims.result.valueholder.Result;
+import us.mn.state.health.lims.resultlimits.valueholder.ResultLimit;
 import us.mn.state.health.lims.resultvalidation.action.util.ResultValidationItem;
 import us.mn.state.health.lims.resultvalidation.bean.AnalysisItem;
 import us.mn.state.health.lims.sample.dao.SampleDAO;
 import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
 import us.mn.state.health.lims.sample.valueholder.Sample;
+import us.mn.state.health.lims.samplehuman.dao.SampleHumanDAO;
+import us.mn.state.health.lims.samplehuman.daoimpl.SampleHumanDAOImpl;
 import us.mn.state.health.lims.statusofsample.util.StatusRules;
 import us.mn.state.health.lims.test.dao.TestDAO;
 import us.mn.state.health.lims.test.dao.TestSectionDAO;
 import us.mn.state.health.lims.test.daoimpl.TestDAOImpl;
 import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
 import us.mn.state.health.lims.test.valueholder.Test;
+import us.mn.state.health.lims.test.valueholder.TestSection;
 import us.mn.state.health.lims.testresult.dao.TestResultDAO;
 import us.mn.state.health.lims.testresult.daoimpl.TestResultDAOImpl;
 import us.mn.state.health.lims.testresult.valueholder.TestResult;
-
-import java.util.*;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult.ResultType;
 
 public class ResultsValidationUtility {
 
@@ -109,39 +129,99 @@ public class ResultsValidationUtility {
 
 	protected final AnalysisDAO analysisDAO = new AnalysisDAOImpl();
 
-	public List<AnalysisItem> getResultValidationList( List<Integer> statusList, String testSectionId) {
+    /** 
+     * Get list data for search by status or date of validation
+     *
+     * @param testName
+     * @param statusList
+     * @param testSectionId
+     * @param receivedDate
+     * @return
+     */
+    public List<AnalysisItem> getResultValidationList(String testId, List<Integer> statusList, String testSectionId, String receivedDate) {
+        //Dung 2016.07.01
+        //Add the parameter receivedDate for search by condition  
+    	List<ResultValidationItem> testList = new ArrayList<ResultValidationItem>();
+    	List<AnalysisItem> resultList = new ArrayList<AnalysisItem>();
+    
+    	if (!GenericValidator.isBlankOrNull(testSectionId) || !GenericValidator.isBlankOrNull(receivedDate)) {
+    		testList = getUnValidatedTestResultItemsInTestSection(testSectionId, testId, statusList, receivedDate);
+    		resultList = testResultListToAnalysisItemList(testList);
+    		sortByAccessionNumberAndOrder(resultList);
+    		setGroupingNumbers(resultList);
+    	}
+    
+    	return resultList;
+    }
+	
+    public List<AnalysisItem> getResultValidationList(List<Integer> statusList, String testSectionId) {
 
+        List<ResultValidationItem> testList = new ArrayList<ResultValidationItem>();
+        List<AnalysisItem> resultList = new ArrayList<AnalysisItem>();
+
+        if (!GenericValidator.isBlankOrNull(testSectionId)) {
+            testList = getUnValidatedTestResultItemsInTestSection(testSectionId, statusList);
+            resultList = testResultListToAnalysisItemList(testList);
+            sortByAccessionNumberAndOrder(resultList);
+            setGroupingNumbers(resultList);
+        }
+
+        return resultList;
+    }
+	
+	public List<AnalysisItem> getResultValidationListByAccessionNumber(List<Integer> statusList, String accessionNumber) {
+
+		List<ResultValidationItem> testList = new ArrayList<ResultValidationItem>();
 		List<AnalysisItem> resultList = new ArrayList<AnalysisItem>();
 
-		if (!GenericValidator.isBlankOrNull(testSectionId)) {
-            List<ResultValidationItem> testList = getUnValidatedTestResultItemsInTestSection(testSectionId, statusList);
+		if (!GenericValidator.isBlankOrNull(accessionNumber)) {
+			testList = getUnValidatedTestResultItems(accessionNumber, statusList);
 			resultList = testResultListToAnalysisItemList(testList);
 			sortByAccessionNumberAndOrder(resultList);
 			setGroupingNumbers(resultList);
 		}
 
 		return resultList;
-
 	}
+	
+	public final List<ResultValidationItem> getUnValidatedTestResultItemsInTestSection(String sectionId, String testId, List<Integer> statusList, String receivedDate) {
 
-    @SuppressWarnings("unchecked")
+		List<Analysis> analysisList = analysisDAO.getAllAnalysisByTestSectionAndStatus(sectionId, testId, statusList, receivedDate, false);
+		return getGroupedTestsForAnalysisList(analysisList, !StatusRules.useRecordStatusForValidation());
+	}
 	public final List<ResultValidationItem> getUnValidatedTestResultItemsInTestSection(String sectionId, List<Integer> statusList) {
 
-		List<Analysis> analysisList = analysisDAO.getAllAnalysisByTestSectionAndStatus(sectionId, statusList, false);
+	        List<Analysis> analysisList = analysisDAO.getAllAnalysisByTestSectionAndStatus(sectionId, statusList, false);
+	        return getGroupedTestsForAnalysisList(analysisList, !StatusRules.useRecordStatusForValidation());
+	    }
+	
+	public final List<ResultValidationItem> getUnValidatedTestResultItems(String accessionNumber, List<Integer> statusList) {
+
+		List<Analysis> analysisList = analysisDAO.getAllAnalysisByAccessionNumberAndStatus(accessionNumber, statusList, false);
 		return getGroupedTestsForAnalysisList(analysisList, !StatusRules.useRecordStatusForValidation());
 	}
 	
 	protected final void sortByAccessionNumberAndOrder(List<AnalysisItem> resultItemList) {
 		Collections.sort(resultItemList, new Comparator<AnalysisItem>() {
 			public final int compare(AnalysisItem a, AnalysisItem b) {
-				int accessionComp = a.getAccessionNumber().compareTo(b.getAccessionNumber());
-				return ((accessionComp == 0) ? Integer.parseInt(a.getTestSortNumber()) - Integer.parseInt(b.getTestSortNumber())
-						: accessionComp);
+				int accessionComp = a.getAccessionNumber().compareTo(b.getAccessionNumber());	// accession_number (1st priority)
+				if (accessionComp == 0) {
+					if( !GenericValidator.isBlankOrNull(a.getTestSortNumber()) && !GenericValidator.isBlankOrNull(b.getTestSortNumber())){ // test.sort_order (2nd priority)
+						try {
+							return Integer.parseInt(a.getTestSortNumber()) - Integer.parseInt(b.getTestSortNumber());
+						} catch (NumberFormatException e) {
+							return a.getTestName().compareTo(b.getTestName());
+						}
+					} else {
+						return a.getTestName().compareTo(b.getTestName()); // test.name (3rd priority)
+					}
+				} 
+				
+				return accessionComp;
 			}
 		});
-
 	}
-
+	
 	protected final void setGroupingNumbers(List<AnalysisItem> resultList) {
 		String currentAccessionNumber = null;
 		AnalysisItem headItem = null;
@@ -178,7 +258,7 @@ public class ResultsValidationUtility {
 				List<ResultValidationItem> testResultItemList = getResultItemFromAnalysis(analysis);
 				//NB.  The resultValue is filled in during getResultItemFromAnalysis as a side effect of setResult
 				for (ResultValidationItem validationItem : testResultItemList) {
-					if (TypeOfTestResultService.ResultType.isDictionaryVariant( validationItem.getResultType() )) {
+					if (ResultType.isDictionaryVariant( validationItem.getResultType() )) {
 						dictionary = new Dictionary();
 						String resultValue = null;
 						try {
@@ -196,8 +276,11 @@ public class ResultsValidationUtility {
 
                     validationItem.setAnalysis( analysis );
 					validationItem.setNonconforming( QAService.isAnalysisParentNonConforming( analysis ) ||
-                            StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.TechnicalRejected ) );
-					selectedTestList.add(validationItem);
+                    StatusService.getInstance().matches( analysis.getStatusId(), AnalysisStatus.TechnicalRejected ) );	
+					
+					if(!GenericValidator.isBlankOrNull(validationItem.getResultValue())){
+						selectedTestList.add(validationItem);
+					}
 				}
 			}
 		}
@@ -205,13 +288,12 @@ public class ResultsValidationUtility {
 		return selectedTestList;
 	}
 
-
     protected final boolean sampleReadyForValidation(Sample sample) {
 
 		Boolean valid = accessionToValidMap.get(sample.getAccessionNumber());
 
 		if (valid == null) {
-			valid = getSampleRecordStatus( sample ) != RecordStatus.NotRegistered;
+			valid = getSampleRecordStatus( sample ) == StatusService.RecordStatus.ValidationRegistration;
 			accessionToValidMap.put(sample.getAccessionNumber(), valid);
 		}
 
@@ -254,9 +336,9 @@ public class ResultsValidationUtility {
             notes = null;//we only want it once
 			if( resultItem.getQualifiedDictionaryId() != null){
 				parentItem = resultItem;
-			}
-			
+			}			
 			testResultList.add(resultItem);
+			
 		}
 
 		return testResultList;
@@ -303,10 +385,19 @@ public class ResultsValidationUtility {
 		return  "".equals(qualDictionaryIds) ?  null : "[" + qualDictionaryIds + "]";
 	}
 
-	protected final String augmentUOMWithRange(String uom,	Result result) {
-        if( result == null){return uom;}
-        String range = new ResultService( result ).getDisplayReferenceRange( true );
+	protected final String augmentUOMWithRange(String uom, ResultValidationItem testResultItem, Patient patient) {
+        if (testResultItem.getResult() == null) { return uom; }
+        
+        String range = "";
+        Test test = testDAO.getTestById(testResultItem.getTestId());
+		if (test != null && patient != null) {
+            ResultLimit resultLimit = new ResultLimitService().getResultLimitForTestAndPatient(test, patient);
+            if (resultLimit != null) {
+            	range = ResultLimitService.getDisplayNormalRange(resultLimit.getLowNormal(), resultLimit.getHighNormal(), String.valueOf(testResultItem.getResult().getSignificantDigits()), " - ");
+            }
+        }
         uom = StringUtil.blankIfNull( uom );
+        
         return GenericValidator.isBlankOrNull( range ) ? uom : (uom + " ( " + range + " )");
 	}
 
@@ -328,7 +419,7 @@ public class ResultsValidationUtility {
 
 		return true;
 	}
-    @SuppressWarnings("unchecked")
+
 	protected final List<TestResult> getPossibleResultsForTest(Test test) {
 		return testResultDAO.getAllActiveTestResultsPerTest( test );
 	}
@@ -337,22 +428,25 @@ public class ResultsValidationUtility {
 		List<IdValuePair> values = null;
 		Dictionary dictionary;
 
-		if (testResults != null && testResults.size() > 0 && TypeOfTestResultService.ResultType.isDictionaryVariant( testResults.get( 0 ).getTestResultType() )) {
+		if (testResults != null && testResults.size() > 0 && ResultType.isDictionaryVariant( testResults.get( 0 ).getTestResultType() )) {
 			values = new ArrayList<IdValuePair>();
 			values.add(new IdValuePair("0", ""));
 
 			for (TestResult testResult : testResults) {
 				// Note: result group use to be a criteria but was removed, if
 				// results are not as expected investigate
-				if ( TypeOfTestResultService.ResultType.isDictionaryVariant( testResult.getTestResultType() )) {
+				if ( ResultType.isDictionaryVariant( testResult.getTestResultType() )) {
 					dictionary = dictionaryDAO.getDataForId(testResult.getValue());
-					String displayValue = dictionary.getLocalizedName();
-
-					if ("unknown".equals(displayValue)) {
-						displayValue = GenericValidator.isBlankOrNull(dictionary.getLocalAbbreviation()) ? dictionary.getDictEntry()
-								: dictionary.getLocalAbbreviation();
+					if (dictionary == null) {
+					    return null;
 					}
-					values.add(new IdValuePair(testResult.getValue(), displayValue));
+				    String displayValue = dictionary.getLocalizedName();
+
+                    if ("unknown".equals(displayValue)) {
+                        displayValue = GenericValidator.isBlankOrNull(dictionary.getLocalAbbreviation()) ? dictionary.getDictEntry()
+                                : dictionary.getLocalAbbreviation();
+                    }
+                    values.add(new IdValuePair(testResult.getValue(), displayValue));
 				}
 			}
 		}
@@ -362,7 +456,7 @@ public class ResultsValidationUtility {
 
 
 	protected final String getTestResultType(List<TestResult> testResults) {
-		String testResultType = TypeOfTestResultService.ResultType.NUMERIC.getCharacterValue();
+		String testResultType = ResultType.NUMERIC.getDBValue();
 
 		if (testResults != null && testResults.size() > 0) {
 			testResultType = testResults.get(0).getTestResultType();
@@ -371,8 +465,170 @@ public class ResultsValidationUtility {
 		return testResultType;
 	}
 
+	public final List<AnalysisItem> testResultListToELISAAnalysisList(List<ResultValidationItem> testResultList, List<Integer> statusList) {
+		List<AnalysisItem> analysisItemList = new ArrayList<AnalysisItem>();
+		AnalysisItem analysisResultItem = new AnalysisItem();
+		String currentAccessionNumber = "";
+		String currentInvalidAccessionNumber = "";
+		boolean readyForValidation = true;
 
+		for (int i = 0; i < testResultList.size(); i++) {
 
+			ResultValidationItem tResultItem = testResultList.get(i);
+
+			// create new bean
+			if (!tResultItem.getAccessionNumber().equals(currentAccessionNumber)) {
+				if (tResultItem.getAccessionNumber().equals(currentInvalidAccessionNumber)) {
+					continue;
+				}
+				Sample sample = sampleDAO.getSampleByAccessionNumber(tResultItem.getAccessionNumber());
+				if (sampleReadyForValidation(sample)) {
+					if (!GenericValidator.isBlankOrNull(analysisResultItem.getFinalResult()) && readyForValidation) {
+						analysisItemList.add(analysisResultItem);
+					}
+					readyForValidation = true;
+
+					analysisResultItem = testResultItemToELISAAnalysisItem(tResultItem);
+
+					currentAccessionNumber = analysisResultItem.getAccessionNumber();
+					currentInvalidAccessionNumber = "";
+				} else { // record status not valid
+					currentInvalidAccessionNumber = tResultItem.getAccessionNumber();
+					continue;
+				}
+				// or just add test result to elisaAlgorithm bean
+			} else {
+				analysisResultItem.setResult(tResultItem.getResultValue());
+				analysisResultItem = addTestResultToELISAAnalysisItem(tResultItem, analysisResultItem);
+			}
+
+			if (!GenericValidator.isBlankOrNull(analysisResultItem.getStatusId())
+					&& !statusList.contains(Integer.parseInt(analysisResultItem.getStatusId()))) {
+				readyForValidation = false;
+			}
+
+			String finalResult = checkIfFinalResult(tResultItem.getAnalysis().getId());
+
+			if (!GenericValidator.isBlankOrNull(finalResult)) {
+				analysisResultItem.setFinalResult(finalResult);
+			}
+
+			// final time through
+			if (i == (testResultList.size() - 1) && readyForValidation
+					&& !GenericValidator.isBlankOrNull(analysisResultItem.getFinalResult())) {
+				analysisItemList.add(analysisResultItem);
+			}
+		}
+
+		return analysisItemList;
+	}
+
+	public final String checkIfFinalResult(String analysisId) {
+		String finalResult = null;
+		Analysis analysis = new Analysis();
+		analysis.setId(analysisId);
+
+		List<Result> resultList = resultDAO.getResultsByAnalysis(analysis);
+		String conclusion = null;
+
+		if (resultList.size() > 1) {
+			for (Result result : resultList) {
+				if (result.getAnalyte() != null && result.getAnalyte().getId().equals(CONCLUSION_ID)) {
+					conclusion = result.getValue();
+				}
+			}
+
+		}
+
+		if (conclusion != null) {
+			Dictionary dictionary = new Dictionary();
+			dictionary.setId(conclusion);
+			dictionaryDAO.getData(dictionary);
+			finalResult = (dictionary.getDictEntry());
+		}
+
+		return finalResult;
+
+	}
+
+	public final AnalysisItem testResultItemToELISAAnalysisItem(ResultValidationItem testResultItem) {
+		AnalysisItem elisaResultItem = new AnalysisItem();
+
+		elisaResultItem.setAccessionNumber(testResultItem.getAccessionNumber());
+		elisaResultItem.setTestName(testResultItem.getTestName());
+		elisaResultItem.setResult(testResultItem.getResultValue());
+		elisaResultItem.setSampleGroupingNumber(testResultItem.getSampleGroupingNumber());
+		elisaResultItem.setAnalysisId(testResultItem.getAnalysis().getId());
+		elisaResultItem.setStatusId(testResultItem.getAnalysis().getStatusId());
+		elisaResultItem.setNote(testResultItem.getNote());
+		elisaResultItem.setNoteId(testResultItem.getNoteId());
+		elisaResultItem.setResultId(testResultItem.getResultId());
+		elisaResultItem.setNonconforming(testResultItem.isNonconforming() );
+
+		// elisaResultItem.setResult(testResultItem.getResult().getValue());
+
+		// set elisa test to result
+		elisaResultItem = setElisaTestResult(testResultItem.getTestName(), elisaResultItem);
+
+		return elisaResultItem;
+
+	}
+
+	public final AnalysisItem addTestResultToELISAAnalysisItem(ResultValidationItem testResultItem, AnalysisItem eItem) {
+
+		eItem.setAnalysisId(testResultItem.getAnalysis().getId());
+		eItem.setStatusId(testResultItem.getAnalysis().getStatusId());
+		if( testResultItem.isNonconforming()){
+			eItem.setNonconforming(true);
+		}
+		// set elisa test to result
+		eItem = setElisaTestResult(testResultItem.getTestName(), eItem);
+
+		return eItem;
+
+	}
+
+	public final AnalysisItem setElisaTestResult(String testName, AnalysisItem eItem) {
+		String result = eItem.getResult();
+		String analysisId = eItem.getAnalysisId();
+
+		if (testName.equals("Murex")) {
+			eItem.setMurexResult(result);
+			eItem.setMurexAnalysisId(analysisId);
+		} else if (testName.equals("Integral")) {
+			eItem.setIntegralResult(result);
+			eItem.setIntegralAnalysisId(analysisId);
+		} else if (testName.equals("Vironostika")) {
+			eItem.setVironostikaResult(result);
+			eItem.setVironostikaAnalysisId(analysisId);
+		} else if (testName.equals("Genie II")) {
+			eItem.setGenieIIResult(result);
+			eItem.setGenieIIAnalysisId(analysisId);
+		} else if (testName.equals("Genie II 10")) {
+			eItem.setGenieII10Result(result);
+			eItem.setGenieII10AnalysisId(analysisId);
+		} else if (testName.equals("Genie II 100")) {
+			eItem.setGenieII100Result(result);
+			eItem.setGenieII100AnalysisId(analysisId);
+		} else if (testName.equals("Western Blot 1")) {
+			eItem.setWesternBlot1Result(result);
+			eItem.setWesternBlot1AnalysisId(analysisId);
+		} else if (testName.equals("Western Blot 2")) {
+			eItem.setWesternBlot2Result(result);
+			eItem.setWesternBlot2AnalysisId(analysisId);
+		} else if (testName.equals("p24 Ag")) {
+			eItem.setP24AgResult(result);
+			eItem.setP24AgAnalysisId(analysisId);
+		} else if (testName.equals("Bioline")) {
+			eItem.setBiolineResult(result);
+			eItem.setBiolineAnalysisId(analysisId);
+		} else if (testName.equals("Innolia")) {
+			eItem.setInnoliaResult(result);
+			eItem.setInnoliaAnalysisId(analysisId);
+		}
+
+		return eItem;
+	}
 
 	public final List<AnalysisItem> testResultListToAnalysisItemList(List<ResultValidationItem> testResultList) {
 		List<AnalysisItem> analysisResultList = new ArrayList<AnalysisItem>();
@@ -394,7 +650,7 @@ public class ResultsValidationUtility {
             if( !multiResultEntered){
                 AnalysisItem convertedItem = testResultItemToAnalysisItem(testResultItem);
                 analysisResultList.add(convertedItem);
-                if( TypeOfTestResultService.ResultType.isMultiSelectVariant( testResultItem.getResultType() )){
+                if( ResultType.isMultiSelectVariant( testResultItem.getResultType() )){
                     multiResultEntered = true;
                     currentMultiSelectAnalysisItem = convertedItem;
                 }
@@ -427,7 +683,7 @@ public class ResultsValidationUtility {
 		String sortOrder = testResultItem.getTestSortNumber();
         Result result = testResultItem.getResult();
 
-        if (result != null && result.getAnalyte() != null
+        if (result != null && result.getAnalyte() != null 
 				&& ANALYTE_CD4_CT_GENERATED_ID.equals(testResultItem.getResult().getAnalyte().getId())) {
 			testUnits = "";
 			testName = StringUtil.getMessageForKey("result.conclusion.cd4");
@@ -440,8 +696,8 @@ public class ResultsValidationUtility {
 			analysisResultItem.setIsHighlighted(!"100.0".equals(testResultItem.getResult().getValue()));
 		}
 
-		testUnits = augmentUOMWithRange(testUnits,	testResultItem.getResult());
-
+        Patient patient = getPatientByAccessionNumber(testResultItem.getAccessionNumber());
+		testUnits = augmentUOMWithRange(testUnits, testResultItem, patient);
 
 		analysisResultItem.setAccessionNumber(testResultItem.getAccessionNumber());
 		analysisResultItem.setTestName(testName);
@@ -455,13 +711,13 @@ public class ResultsValidationUtility {
 		analysisResultItem.setDictionaryResults(testResultItem.getDictionaryResults());
 		analysisResultItem.setDisplayResultAsLog(TestIdentityService.isTestNumericViralLoad(testResultItem.getTestId()));
         if( result != null){
-            if( TypeOfTestResultService.ResultType.isMultiSelectVariant( testResultItem.getResultType() ) ){
+            if( ResultType.isMultiSelectVariant( testResultItem.getResultType() ) ){
                 analysisResultItem.setMultiSelectResultValues( new AnalysisService( testResultItem.getAnalysis() ).getJSONMultiSelectResults() );
             }else{
                 analysisResultItem.setResult( getFormattedResult( testResultItem ) );
             }
 
-            if( TypeOfTestResultService.ResultType.NUMERIC.matches( testResultItem.getResultType() )){
+            if( ResultType.NUMERIC.matches( testResultItem.getResultType() )){
                 analysisResultItem.setSignificantDigits( result.getMinNormal().equals( result.getMaxNormal())? -1 : result.getSignificantDigits());
             }
         }
@@ -473,10 +729,43 @@ public class ResultsValidationUtility {
 		analysisResultItem.setQualifiedResultValue(testResultItem.getQualifiedResultValue());
         analysisResultItem.setQualifiedResultId(testResultItem.getQualificationResultId());
         analysisResultItem.setHasQualifiedResult( testResultItem.isHasQualifiedResult() );
+        
+        boolean withInRange = true;
+        boolean outOfRangeLow = false;
+        boolean outOfRangeHigh = false;
+        Test test = testDAO.getTestById(testResultItem.getTestId());
+        
+        if (test != null && patient != null) {
+            ResultLimit resultLimit = new ResultLimitService().getResultLimitForTestAndPatient(test, patient);
+            if (resultLimit != null) {
+                if (Double.parseDouble(getFormattedResult( testResultItem )) < resultLimit.getLowNormal()) {
+                	outOfRangeLow = true;
+                    withInRange = false;
+                } else if(Double.parseDouble(getFormattedResult( testResultItem )) > resultLimit.getHighNormal()) {
+                    outOfRangeHigh = true;
+                    withInRange = false;
+                }
+            }
+        }
+        analysisResultItem.setWithInRange(withInRange);
+        analysisResultItem.setOutOfRangeLow(outOfRangeLow);
+        analysisResultItem.setOutOfRangeHigh(outOfRangeHigh);
 
 		return analysisResultItem;
 
 	}
+	
+	private Patient getPatientByAccessionNumber(String accessionNumber) {
+        SampleDAO sampleDAO = new SampleDAOImpl();
+        Sample sample = sampleDAO.getSampleByAccessionNumber(accessionNumber);
+
+        if (sample != null && !GenericValidator.isBlankOrNull(sample.getId())) {
+            SampleHumanDAO sampleHumanDAO = new SampleHumanDAOImpl();
+            return sampleHumanDAO.getPatientForSample(sample);
+        }
+
+        return new Patient();
+    }
 
 	protected final String getFormattedResult(ResultValidationItem testResultItem) {
         String result = testResultItem.getResult().getValue();
@@ -510,9 +799,19 @@ public class ResultsValidationUtility {
 
 	}
 
+	public final String getTestSectionId(String testSectionName) {
+		TestSection testSection = new TestSection();
+		testSection.setTestSectionName(testSectionName);
+		testSection = testSectionDAO.getTestSectionByName(testSection);
+
+		return testSection == null ? "0" : testSection.getId();
+	}
 
 	protected final String getTestId(String testName) {
-		Test test = testDAO.getTestByName(testName);
+		Test test = new Test();
+		test.setTestName(testName);
+		test = testDAO.getTestByName(test);
+
 		return test.getId();
 	}
 

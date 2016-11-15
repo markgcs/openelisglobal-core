@@ -18,6 +18,7 @@
 package us.mn.state.health.lims.common.provider.query.workerObjects;
 
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.provider.query.PatientSearchResults;
 import us.mn.state.health.lims.common.services.ObservationHistoryService;
@@ -40,7 +41,7 @@ public class PatientSearchLocalWorker extends PatientSearchWorker {
 
 	@Override
 	public String createSearchResultXML(String lastName, String firstName, String STNumber, String subjectNumber, String nationalID,
-			String patientID, String guid, StringBuilder xml)  {
+			String externalID, String patientID, String guid, StringBuilder xml)  {
 
 		String success = IActionConstants.VALID;
 
@@ -58,6 +59,7 @@ public class PatientSearchLocalWorker extends PatientSearchWorker {
 
 		SearchResultsDAO search = new SearchResultsDAOImp();
         //N.B. results do not have the referrinngPatientId information but it is not displayed so for now it will be left as null
+		//Dung 2016.07.05 
 		List<PatientSearchResults> results = search.getSearchResults(lastName, firstName, STNumber, subjectNumber, nationalID, nationalID, patientID, guid);
         if( !GenericValidator.isBlankOrNull(nationalID)) {
             List<PatientSearchResults> observationResults = getObservationsByReferringPatientId(nationalID);
@@ -103,7 +105,7 @@ public class PatientSearchLocalWorker extends PatientSearchWorker {
                 service.getFirstName(),
                 service.getLastName(),
                 service.getGender(),
-                service.getEnteredDOB(),
+                service.getDOB(),
                 service.getNationalId(),
                 patient.getExternalId(),
                 service.getSTNumber(),

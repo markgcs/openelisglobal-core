@@ -40,16 +40,19 @@ public class Dictionary extends BaseObject{
 
 	private String dictEntry;
 
-    
+    //bugzilla 2061-2063
 	private String selectedDictionaryCategoryId;
 
-    
+    //bugzilla 2061-2063
 	private ValueHolderInterface dictionaryCategory;
 
-    
+    //bugzilla 2061-2063
 	private String localAbbreviation;
 
-	private Integer sortOrder;
+    //bugzilla 1802
+	private String dictEntryDisplayValue;
+	
+    private Integer sortOrder;
     
     public Integer getSortOrder() {
         return sortOrder;
@@ -84,8 +87,16 @@ public class Dictionary extends BaseObject{
 		return (DictionaryCategory) this.dictionaryCategory.getValue();
 	}
 
+	protected ValueHolderInterface getDictionaryCategoryHolder() {
+		return this.dictionaryCategory;
+	}
+
 	public void setDictionaryCategory(DictionaryCategory dictionaryCategory) {
 		this.dictionaryCategory.setValue(dictionaryCategory);
+	}
+
+	protected void setDictionaryCategoryHolder(ValueHolderInterface dictionaryCategory) {
+		this.dictionaryCategory = dictionaryCategory;
 	}
 
 	public void setId(String id) {
@@ -106,11 +117,10 @@ public class Dictionary extends BaseObject{
 		this.dictEntry = dictEntry;
 	}
 
-    
+    //bugzilla 1802
 	public String getDictEntryDisplayValue() {
-		String dictEntryDisplayValue;
 		if (!StringUtil.isNullorNill(this.localAbbreviation)) {
-		    
+		    //bugzilla 1847 defined separator in IActionConstants
 			dictEntryDisplayValue = localAbbreviation + IActionConstants.LOCAL_CODE_DICT_ENTRY_SEPARATOR_STRING + dictEntry;
 		} else {
 			dictEntryDisplayValue = dictEntry;
@@ -125,7 +135,10 @@ public class Dictionary extends BaseObject{
 	public void setSelectedDictionaryCategoryId(String selectedDictionaryCategoryId) {
 		this.selectedDictionaryCategoryId = selectedDictionaryCategoryId;
 	}
-	
+
+	public void setDictionaryCategory(ValueHolderInterface dictionaryCategory) {
+		this.dictionaryCategory = dictionaryCategory;
+	}
 
 	@Override
 	protected String getDefaultLocalizedName() {

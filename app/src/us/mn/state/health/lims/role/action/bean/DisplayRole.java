@@ -17,11 +17,17 @@
 */
 package us.mn.state.health.lims.role.action.bean;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
+
 public class DisplayRole {
 	public static final String GROUPING_ID = "Grouping_ID";
 	private String roleName;
 	private String roleId;
 	private int nestingLevel = 0;
+	private List<SystemModule> systemModule = new ArrayList<SystemModule>();
 	private String elementID;
 	private StringBuilder childrenID;
 	private boolean isGroupingRole = false;
@@ -44,6 +50,12 @@ public class DisplayRole {
 	}
 	public void setNestingLevel(int nestingLevel) {
 		this.nestingLevel = nestingLevel;
+	}
+	public List<SystemModule> getSystemModuleList() {
+		return systemModule;
+	}
+	public void setSystemModuleList(List<SystemModule> systemModule) {
+		this.systemModule = systemModule;
 	}
 	public String getElementID() {
 		return elementID;

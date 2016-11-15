@@ -14,12 +14,12 @@
  * Copyright (C) The Minnesota Department of Health.  All Rights Reserved.
  *
  * Contributor(s): CIRG, University of Washington, Seattle WA.
- * Contributor(s): ITECH, University of Washington, Seattle WA.
  */
 package us.mn.state.health.lims.common.action;
 
 import org.apache.struts.Globals;
 import org.apache.struts.action.*;
+
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.provider.validation.AccessionNumberValidationProvider;
@@ -29,17 +29,34 @@ import us.mn.state.health.lims.common.util.SystemConfiguration;
 import us.mn.state.health.lims.common.util.resources.ResourceLocator;
 import us.mn.state.health.lims.common.util.validator.ActionError;
 import us.mn.state.health.lims.common.valueholder.BaseTestComparator;
+import us.mn.state.health.lims.login.dao.LoginDAO;
 import us.mn.state.health.lims.login.dao.UserModuleDAO;
+import us.mn.state.health.lims.login.daoimpl.LoginDAOImpl;
 import us.mn.state.health.lims.login.daoimpl.UserModuleDAOImpl;
+import us.mn.state.health.lims.login.valueholder.Login;
 import us.mn.state.health.lims.login.valueholder.UserSessionData;
+import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
+import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
+import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
+import us.mn.state.health.lims.systemusersection.dao.SystemUserSectionDAO;
+import us.mn.state.health.lims.systemusersection.daoimpl.SystemUserSectionDAOImpl;
+import us.mn.state.health.lims.systemusersection.valueholder.SystemUserSection;
+import us.mn.state.health.lims.test.dao.TestSectionDAO;
+import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
+import us.mn.state.health.lims.test.valueholder.TestSection;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.util.*;
 
 public abstract class BaseAction extends Action implements IActionConstants {
 	private static final boolean USE_PARAMETERS = true;
 
+	String pageSubtitle = null;
+
+	String pageTitle = null;
+	private Set<SystemUserSection> userSection=new HashSet<SystemUserSection>();
 	protected String currentUserId;
 
 	public BaseAction() {
@@ -48,7 +65,9 @@ public abstract class BaseAction extends Action implements IActionConstants {
 
 	public ActionForward execute(ActionMapping mapping, ActionForm form, HttpServletRequest request, HttpServletResponse response)
 			throws Exception {
-
+	    // This code it's not good because this function always authentication when load actions
+	    // If have time save session when login if the old session equal the new session then doesn't need authentication 
+	    //and save all information authentication by sessions
 		// return to login page if user session is not found
 		UserModuleDAO userModuleDAO = new UserModuleDAOImpl();
 		if (userModuleDAO.isSessionExpired(request)) {
@@ -59,12 +78,13 @@ public abstract class BaseAction extends Action implements IActionConstants {
 			return mapping.findForward(LOGIN_PAGE);
 		}
 
-		String pageSubtitle;
-		String pageTitle;
-
-		if (FWD_SUCCESS.equals(request.getParameter("forward"))) {
+		String pageSubtitle = null;
+		String pageTitle = null;
+		
+		if (FWD_SUCCESS.equals(request.getParameter("forward")) || FWD_SUCCESS_NUMBER.equals(request.getParameter("forward"))) {
 			setSuccessFlag(request);
 		}
+		
 
 		currentUserId = getSysUserId(request);
 
@@ -131,16 +151,18 @@ public abstract class BaseAction extends Action implements IActionConstants {
 					@SuppressWarnings("rawtypes")
 					HashSet accessMap = (HashSet) request.getSession().getAttribute(IActionConstants.PERMITTED_ACTIONS_MAP);
 
-					if (!accessMap.contains(PageIdentityUtil.getActionName(request, USE_PARAMETERS))) {
+					if (!accessMap.contains(PageIdentityUtil.getActionName(request, USE_PARAMETERS)) &&
+							(!userModuleDAO.isVerifyUserModule(request))) {
 						return handlePermissionDenied(mapping, request, userModuleDAO.isSessionExpired(request));
 					}
 				}
 			} else {
-				if (!userModuleDAO.isVerifyUserModule(request)) {
+				if (!userModuleDAO.isVerifyUserModule(request))
 					return handlePermissionDenied(mapping, request, userModuleDAO.isSessionExpired(request));
-				}
+				
 			}
 		}
+		
 		userModuleDAO.setupUserSessionTimeOut(request);
 
 		return forward;
@@ -239,17 +261,7 @@ public abstract class BaseAction extends Action implements IActionConstants {
 	 *            the message key to look up
 	 */
 	protected String getMessageForKey(String messageKey) throws Exception {
-		String message = StringUtil.getContextualMessageForKey(messageKey);
-		return message == null ? getActualMessage( messageKey ) : message;
-	}
-
-	/**
-	 * Template method to allow subclasses to handle special cases.  The default is to return the message
-	 * @param message The message
-	 * @return The message
-	 */
-	protected String getActualMessage(String message) {
-		return message;
+		return StringUtil.getContextualMessageForKey(messageKey);
 	}
 
 	protected String getMessageForKey(HttpServletRequest request, String messageKey, String arg0) throws Exception {
@@ -265,7 +277,7 @@ public abstract class BaseAction extends Action implements IActionConstants {
 			if (null != form) {
 				DynaActionForm theForm = (DynaActionForm) form;
 				theForm.getDynaClass().getName();
-				String name = theForm.getDynaClass().getName();
+				String name = theForm.getDynaClass().getName().toString();
 				// use IActionConstants!
 				request.setAttribute(FORM_NAME, name);
 				request.setAttribute("formType", theForm.getClass().toString());
@@ -321,18 +333,19 @@ public abstract class BaseAction extends Action implements IActionConstants {
 	protected ActionMessages validateAccessionNumber(HttpServletRequest request, ActionMessages errors, BaseActionForm dynaForm)
 			throws Exception {
 
-		String formName = dynaForm.getDynaClass().getName();
+		String formName = dynaForm.getDynaClass().getName().toString();
 
 		AccessionNumberValidationProvider accessionNumberValidator = new AccessionNumberValidationProvider();
 
-		String accessionNumber;
+		String accessionNumber = "";
+		String result = "";
 
-		if (!StringUtil.isNullorNill(request.getParameter(ACCESSION_NUMBER))) {
-			accessionNumber = request.getParameter(ACCESSION_NUMBER);
+		if (!StringUtil.isNullorNill((String) request.getParameter(ACCESSION_NUMBER))) {
+			accessionNumber = (String) request.getParameter(ACCESSION_NUMBER);
 		} else {
 			accessionNumber = (String) dynaForm.get(ACCESSION_NUMBER);
 		}
-		String result = accessionNumberValidator.validate(accessionNumber, formName);
+		result = accessionNumberValidator.validate(accessionNumber, formName);
 
 		String messageKey = "sample.accessionNumber";
 		if (result.equals(INVALID)) {
@@ -352,13 +365,14 @@ public abstract class BaseAction extends Action implements IActionConstants {
 
 		List<Analysis> rootLevelNodes = new ArrayList<Analysis>();
 		for (int i = 0; i < analyses.size(); i++) {
-			Analysis analysis = analyses.get(i);
+			Analysis analysis = (Analysis) analyses.get(i);
 			String analysisId = analysis.getId();
 
 			List<Analysis> children = new ArrayList<Analysis>();
-			for (Analysis analyse : analyses) {
-				if (analyse.getParentAnalysis() != null && analyse.getParentAnalysis().getId().equals(analysisId)) {
-					children.add(analyse);
+			for (int j = 0; j < analyses.size(); j++) {
+				Analysis anal = (Analysis) analyses.get(j);
+				if (anal.getParentAnalysis() != null && anal.getParentAnalysis().getId().equals(analysisId)) {
+					children.add(anal);
 				}
 			}
 			analysis.setChildren(children);
@@ -372,9 +386,10 @@ public abstract class BaseAction extends Action implements IActionConstants {
 		Collections.sort(rootLevelNodes, BaseTestComparator.SORT_ORDER_COMPARATOR);
 
 		analyses = new ArrayList<Analysis>();
-		for (Analysis rootLevelNode : rootLevelNodes) {
-			analyses.add(rootLevelNode);
-			recursiveSort(rootLevelNode, analyses);
+		for (int i = 0; i < rootLevelNodes.size(); i++) {
+			Analysis analysis = (Analysis) rootLevelNodes.get(i);
+			analyses.add(analysis);
+			recursiveSort(analysis, analyses);
 		}
 
 		return analyses;
@@ -386,7 +401,8 @@ public abstract class BaseAction extends Action implements IActionConstants {
 		if (children != null && children.size() > 0) {
 			Collections.sort(children, BaseTestComparator.SORT_ORDER_COMPARATOR);
 		}
-		for (Analysis childElement : children) {
+		for (Iterator<Analysis> it = children.iterator(); it.hasNext();) {
+			Analysis childElement = it.next();
 			analyses.add(childElement);
 			recursiveSort(childElement, analyses);
 		}
@@ -394,14 +410,79 @@ public abstract class BaseAction extends Action implements IActionConstants {
 
 	protected String getSysUserId(HttpServletRequest request) {
 		UserSessionData usd = (UserSessionData) request.getSession().getAttribute(USER_SESSION_DATA);
+		if(usd != null){ 
+		    Login login =new Login();
+		    LoginDAO loginDAO= new LoginDAOImpl();
+		    login= loginDAO.getUserProfile(usd.getLoginName());
+		    getUserSectionById(usd.getSystemUserId(),login);
+		request.getSession().setAttribute("userSection", userSection);
+		}
 		return String.valueOf(usd.getSystemUserId());
 	}
-
+	/** 
+	 * Added by Dung 2016-07-22
+	 * get System user session
+	 *
+	 *  The user session
+	 */
+	@SuppressWarnings("unchecked")
+    private void getUserSectionById(int userId,Login login){
+	    if(login.getIsAdmin().equals("N")){
+    	    SystemUserSectionDAO systemUserSectionDAO=new SystemUserSectionDAOImpl();
+    	    //get list user session by user
+    	    userSection= new HashSet<SystemUserSection>(systemUserSectionDAO.getAllSystemUserSectionsBySystemUserId(userId));
+	    }else{
+	        //if the user login is admin then full role
+	        userSection=new HashSet<SystemUserSection>();
+	        List<TestSection> liTestSection =new ArrayList<TestSection>();
+	        TestSectionDAO testSectionDAO=new TestSectionDAOImpl();
+	        SystemUser systemUser=new SystemUser();
+	        //get the system User
+	        SystemUserDAO systemUserDAO=new SystemUserDAOImpl();
+	        systemUser=systemUserDAO.getUserById(String.valueOf(userId));
+	        liTestSection= testSectionDAO.getAllTestSections();
+	        for (TestSection testSection : liTestSection) {
+	            SystemUserSection systemUserSection=new SystemUserSection();
+	            systemUserSection.setHasAssign(YES);
+	            systemUserSection.setHasCancel(YES);
+	            systemUserSection.setHasComplete(YES);
+	            systemUserSection.setHasRelease(YES);
+	            systemUserSection.setHasView(YES);
+	            systemUserSection.setSystemUser(systemUser);
+	            systemUserSection.setTestSection(testSection);
+	            systemUserSection.setTestSectionId(testSection.getId());
+	            userSection.add(systemUserSection);
+	        }
+	        
+	    }
+	    
+	}
+	//Dung add
 	protected void setSuccessFlag(HttpServletRequest request, String forwardFlag) {
 		request.setAttribute(FWD_SUCCESS, FWD_SUCCESS.equals(forwardFlag));
+		request.setAttribute(FWD_SUCCESS_NUMBER, FWD_SUCCESS_NUMBER.equals(forwardFlag));
 	}
 
 	protected void setSuccessFlag(HttpServletRequest request) {
 		request.setAttribute(FWD_SUCCESS, Boolean.TRUE);
+		request.setAttribute(FWD_SUCCESS_NUMBER, Boolean.TRUE);
 	}
+
+    public Set<SystemUserSection> getUserSection() {
+        return userSection;
+    }
+
+    public void setUserSection(Set<SystemUserSection> userSection) {
+        this.userSection = userSection;
+    }
+	
+    public Set<SystemUserSection> getUserSectionForView() {
+        Set<SystemUserSection> userSectionForView = new HashSet<SystemUserSection>();
+        for (SystemUserSection systemUserSection : this.userSection) {
+            if ("Y".equals(systemUserSection.getHasView())) {
+                userSectionForView.add(systemUserSection);
+            }
+        }
+        return userSectionForView;
+    }
 }

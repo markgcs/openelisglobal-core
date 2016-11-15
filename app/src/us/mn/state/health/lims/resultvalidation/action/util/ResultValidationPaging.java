@@ -35,7 +35,6 @@ import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.resultvalidation.bean.AnalysisItem;
 
 public class ResultValidationPaging {
-	public static final int VALIDATION_PAGING_SIZE = 240;
 	private PagingUtility<List<AnalysisItem>> paging = new PagingUtility<List<AnalysisItem>>();
 	private static AnalysisItemPageHelper pagingHelper = new AnalysisItemPageHelper();
 
@@ -48,7 +47,7 @@ public class ResultValidationPaging {
 
 		if (resultPage != null) {		
 			PropertyUtils.setProperty(dynaForm, "resultList", resultPage);
-			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(1, request.getSession()));
+			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(1, resultPage.size(), analysisItems.size(), request.getSession()));
 		}
 	}
 
@@ -63,19 +62,22 @@ public class ResultValidationPaging {
 		paging.updatePagedResults(request.getSession(), clientAnalysis, bean, pagingHelper);
 
 		int page = Integer.parseInt(newPage);
-
 		List<AnalysisItem> resultPage = paging.getPage(page, request.getSession());
 		if (resultPage != null) {
+			int	currentPageTotal = resultPage.size() * page;
+			if (resultPage.size() < IActionConstants.VALIDATION_PAGING_SIZE) {
+				currentPageTotal = (IActionConstants.VALIDATION_PAGING_SIZE * (page - 1)) + resultPage.size();
+			}
 			PropertyUtils.setProperty(dynaForm, "resultList", resultPage);
 			PropertyUtils.setProperty(dynaForm, "testSectionId", testSectionId);
-			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(page, request.getSession()));
+			PropertyUtils.setProperty(dynaForm, "paging", paging.getPagingBeanWithSearchMapping(page, currentPageTotal, bean.getSearchTermToPage().size(), request.getSession()));
 		}
 	}
 
 	public void updatePagedResults(HttpServletRequest request, DynaActionForm dynaForm) {
 		List<AnalysisItem> clientAnalysis = (List<AnalysisItem>) dynaForm.get("resultList");
 		PagingBean bean = (PagingBean) dynaForm.get("paging");
-
+		
 		paging.updatePagedResults(request.getSession(), clientAnalysis, bean, pagingHelper);
 	}
 
@@ -99,7 +101,7 @@ public class ResultValidationPaging {
 					pagedResults.add(page);
 					page = new ArrayList<AnalysisItem>();
 				}
-				if (resultCount >= VALIDATION_PAGING_SIZE) {
+				if (resultCount >= (IActionConstants.VALIDATION_PAGING_SIZE -1)) {
 					currentAccessionNumber = item.getAccessionNumber();
 				}
 				
@@ -113,24 +115,25 @@ public class ResultValidationPaging {
 		}
 
 		public void updateCache(List<AnalysisItem> cacheItems, List<AnalysisItem> clientItems) {
+		    // Dung 2016.07.06
+		    //Use add all for
+		    //cacheItems.addAll(clientItems);
 			for (int i = 0; i < clientItems.size(); i++) {
 					cacheItems.set(i, clientItems.get(i));
 			}
-
 		}
 
 		public List<AnalysisItem> flattenPages(List<List<AnalysisItem>> pages) {
 
 			List<AnalysisItem> allResults = new ArrayList<AnalysisItem>();
-
+			
 			for (List<AnalysisItem> page : pages) {
 				for (AnalysisItem item : page) {
 					allResults.add(item);
 				}
 			}
-
+		
 			return allResults;
-
 		}
 
 		@Override

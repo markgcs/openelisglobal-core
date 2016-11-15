@@ -84,7 +84,9 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 			testManagementNewbornForm.initialize(mapping);
 		}
 
-		String accessionNumber = request.getParameter(ACCESSION_NUMBER);
+		String accessionNumber = null;
+
+		accessionNumber = (String)request.getParameter(ACCESSION_NUMBER);
 		if (StringUtil.isNullorNill(accessionNumber)) {
 				accessionNumber = (String)testManagementNewbornForm.get("accessionNumber");
 		}
@@ -152,7 +154,7 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 				//bugzilla 2227 we now allow amending
 				//testsAddOption is currently always true (but I am leaving this functionality commented out
 				//if we need to add restrictions later
-				String testsAddOption;
+				String testsAddOption = "";
 				/*if (sample.getStatus().equals(
 						SystemConfiguration.getInstance()
 								.getSampleStatusReleased())
@@ -237,11 +239,13 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 	}
 
 	private void prepareNewbornFullData(BaseActionForm dynaForm) throws Exception {
+		String locale = SystemConfiguration.getInstance().getDefaultLocale().toString();
+		
 		SampleDAO sampleDAO = new SampleDAOImpl();
 		Sample sample = sampleDAO.getSampleByAccessionNumber(dynaForm.getString("accessionNumber"));
 		dynaForm.set("barcode",sample.getBarCode());
 		PropertyUtils.setProperty(dynaForm,"collectionDateForDisplay",sample.getCollectionDateForDisplay());
-		PropertyUtils.setProperty(dynaForm,"collectionTimeForDisplay",DateUtil.convertTimestampToStringTime(sample.getCollectionDate()));
+		PropertyUtils.setProperty(dynaForm,"collectionTimeForDisplay",DateUtil.convertTimestampToStringTime(sample.getCollectionDate(), locale));
 		
 		SampleHuman sampleHuman = new SampleHuman();
 		SampleHumanDAO sampleHumanDAO = new SampleHumanDAOImpl();
@@ -253,14 +257,15 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 		childPatient.setId(sampleHuman.getPatientId());
 		patientDAO.getData(childPatient);
 		PropertyUtils.setProperty(dynaForm,"birthDateForDisplay",childPatient.getBirthDateForDisplay());
-		PropertyUtils.setProperty(dynaForm,"birthTimeForDisplay",DateUtil.convertTimestampToStringTime(childPatient.getBirthDate()));
+		PropertyUtils.setProperty(dynaForm,"birthTimeForDisplay",DateUtil.convertTimestampToStringTime(childPatient.getBirthDate(), locale));
 		PropertyUtils.setProperty(dynaForm,"gender",childPatient.getGender());
 		
+		Person childPperson = new Person();
 		PersonDAO personDAO = new PersonDAOImpl();
-		Person childPerson = childPatient.getPerson();
-		personDAO.getData(childPerson);
-		PropertyUtils.setProperty(dynaForm, "lastName", childPerson.getLastName());
-		PropertyUtils.setProperty(dynaForm, "firstName", childPerson.getFirstName());
+		childPperson = childPatient.getPerson();
+		personDAO.getData(childPperson);
+		PropertyUtils.setProperty(dynaForm,"lastName",childPperson.getLastName());
+		PropertyUtils.setProperty(dynaForm,"firstName",childPperson.getFirstName());
 		
 		PatientRelation patientRelation = new PatientRelation();
 		PatientRelationDAO patientRelationDAO = new PatientRelationDAOImpl(); 
@@ -310,7 +315,7 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 		PropertyUtils.setProperty(dynaForm,"birthOrder",sampleNewborn.getBirthOrder());		
 		PropertyUtils.setProperty(dynaForm,"gestationalWeek",sampleNewborn.getGestationalWeek());
 		PropertyUtils.setProperty(dynaForm,"dateFirstFeedingForDisplay",sampleNewborn.getDateFirstFeedingForDisplay());
-		PropertyUtils.setProperty(dynaForm,"timeFirstFeedingForDisplay",DateUtil.convertTimestampToStringTime(sampleNewborn.getDateFirstFeeding()));
+		PropertyUtils.setProperty(dynaForm,"timeFirstFeedingForDisplay",DateUtil.convertTimestampToStringTime(sampleNewborn.getDateFirstFeeding(), locale));
 		PropertyUtils.setProperty(dynaForm,"breast",sampleNewborn.getBreast());
 		PropertyUtils.setProperty(dynaForm,"tpn",sampleNewborn.getTpn());
 		PropertyUtils.setProperty(dynaForm,"formula",sampleNewborn.getFormula());
@@ -351,7 +356,7 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 		
 		SampleOrganization sampleOrganization = new SampleOrganization();
 		SampleOrganizationDAO sampleOrganizationDAO = new SampleOrganizationDAOImpl();
-		sampleOrganization.setSample(sample);
+		sampleOrganization.setSampleId(sample.getId());
 		sampleOrganizationDAO.getDataBySample(sampleOrganization);
 		if ( !StringUtil.isNullorNill(sampleOrganization.getId()) ) {
 			Organization o = sampleOrganization.getOrganization();
@@ -360,7 +365,7 @@ public class TestVerificationNewbornViewAction extends BaseAction {
 			PropertyUtils.setProperty(dynaForm,"submitterNumber","");
 		// set lastupdated fields
 		dynaForm.set("lastupdated",sample.getLastupdated());
-		dynaForm.set("personLastupdated", childPerson.getLastupdated());
+		dynaForm.set("personLastupdated",childPperson.getLastupdated());
 		dynaForm.set("patientLastupdated",childPatient.getLastupdated());
 		dynaForm.set("sampleHumanLastupdated",sampleHuman.getLastupdated());
 		dynaForm.set("sampleNewbornLastupdated",sampleNewborn.getLastupdated());

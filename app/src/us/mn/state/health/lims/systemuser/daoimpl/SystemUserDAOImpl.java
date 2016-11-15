@@ -20,16 +20,16 @@ import java.util.List;
 import java.util.Vector;
 
 import org.apache.commons.beanutils.PropertyUtils;
+import org.hibernate.Query;
 
 import us.mn.state.health.lims.audittrail.dao.AuditTrailDAO;
 import us.mn.state.health.lims.audittrail.daoimpl.AuditTrailDAOImpl;
 import us.mn.state.health.lims.common.action.IActionConstants;
 import us.mn.state.health.lims.common.daoimpl.BaseDAOImpl;
-import us.mn.state.health.lims.common.exception.LIMSDuplicateRecordException;
 import us.mn.state.health.lims.common.exception.LIMSRuntimeException;
+import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.common.util.StringUtil;
 import us.mn.state.health.lims.common.util.SystemConfiguration;
-import us.mn.state.health.lims.common.log.LogEvent;
 import us.mn.state.health.lims.hibernate.HibernateUtil;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
@@ -84,10 +84,10 @@ public class SystemUserDAOImpl extends BaseDAOImpl implements SystemUserDAO {
 
 		try {
 			// bugzilla 1482 throw Exception if record already exists
-			if (duplicateSystemUserExists(systemUser)) {
+			/*if (duplicateSystemUserExists(systemUser)) {
 				throw new LIMSDuplicateRecordException(
 						"Duplicate record exists for " + systemUser.getFirstName() + BLANK + systemUser.getFirstName());
-			}
+			}*/
 			String id = (String)HibernateUtil.getSession().save(systemUser);
 			systemUser.setId(id);
 			
@@ -111,7 +111,7 @@ public class SystemUserDAOImpl extends BaseDAOImpl implements SystemUserDAO {
 
 	public void updateData(SystemUser systemUser) throws LIMSRuntimeException {
 		// bugzilla 1482 throw Exception if active record already exists
-		try {
+		/*try {
 			if (duplicateSystemUserExists(systemUser)) {
 				throw new LIMSDuplicateRecordException(
 						"Duplicate record exists for " + systemUser.getLastName() + BLANK + systemUser.getFirstName());
@@ -120,7 +120,7 @@ public class SystemUserDAOImpl extends BaseDAOImpl implements SystemUserDAO {
     		//bugzilla 2154
 			LogEvent.logError("SystemUserDAOImpl","updateData()",e.toString());
 			throw new LIMSRuntimeException("Error in SystemUser updateData()", e);
-		}
+		}*/
 		
 		SystemUser oldData = (SystemUser)readSystemUser(systemUser.getId());
 		SystemUser newData = systemUser;
@@ -209,6 +209,26 @@ public class SystemUserDAOImpl extends BaseDAOImpl implements SystemUserDAO {
 		}
 
 		return list;
+	}
+	
+	public List<SystemUser> getPageOfSearchSystemUsers (String stringSearch) throws LIMSRuntimeException {
+	    
+	    List<SystemUser> listUser = new Vector();
+	    String searchString = "%" + stringSearch.toUpperCase().trim() + "%";
+	    
+	    try {
+	        String sql = "from SystemUser s where upper(s.loginName) like :searchString";
+	        Query query = HibernateUtil.getSession().createQuery(sql);
+	        query.setParameter("searchString", searchString);
+	        
+	        listUser = query.list();
+	        HibernateUtil.getSession().flush();
+            HibernateUtil.getSession().clear();
+	        return listUser;
+	    } catch (Exception e) {
+	        LogEvent.logError("SystemUserDAOImpl","getPageOfSearchSystemUsers()",e.toString());
+            throw new LIMSRuntimeException("Error in SystemUser getPageOfSearchSystemUsers()", e);
+	    }
 	}
 
 
@@ -314,7 +334,7 @@ public class SystemUserDAOImpl extends BaseDAOImpl implements SystemUserDAO {
 	}
 	
 	//bugzilla 1482
-	private boolean duplicateSystemUserExists(SystemUser systemUser) throws LIMSRuntimeException {
+	public boolean duplicateSystemUserExists(SystemUser systemUser) throws LIMSRuntimeException {
 		try {
 			
 			List list = new ArrayList();

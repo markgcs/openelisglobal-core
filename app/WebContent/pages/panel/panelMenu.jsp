@@ -30,13 +30,19 @@
 	   <th>
 	   	  <bean:message key="panel.description"/>
 	   </th>
+	   <th>
+	      <bean:message key="panel.sortOrder"/>
+	   </th>
+	   <th>
+	      <bean:message key="panel.isActive"/>
+	   </th> 
 	   
 	</tr>
 	<logic:iterate id="pan" indexId="ctr" name="<%=formName%>" property="menuList" type="us.mn.state.health.lims.panel.valueholder.Panel">
 	<bean:define id="panID" name="pan" property="id"/>
 	  <tr>	
 	   <td class="textcontent">
-	      <html:multibox name="<%=formName%>" property="selectedIDs">
+	      <html:multibox name="<%=formName%>" property="selectedIDs" onclick="output()">
 	         <bean:write name="panID" />
 	      </html:multibox>
      
@@ -49,11 +55,19 @@
 	   --%>
 	 <td class="textcontent">
 	   	  <bean:write name="pan" property="panelName"/>
+	   	  &nbsp;
 	   </td>
 	   <td class="textcontent">
 	     <bean:write name="pan" property="description"/>
 	   	  &nbsp;
 	    </td>
+	    <td class="textcontent">
+   	      <app:write name="pan" property="sortOrder" maxLength="10" />
+	      &nbsp;
+       </td>
+	   <td class="textcontent">
+	   	  <bean:write name="pan" property="isActive"/>
+	   </td> 
      </tr>
 	</logic:iterate>
 </table>

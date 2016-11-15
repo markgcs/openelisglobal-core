@@ -16,16 +16,27 @@
  */
 package us.mn.state.health.lims.reports.action.implementation;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import net.sf.jasperreports.engine.JRDataSource;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
+
 import org.apache.commons.validator.GenericValidator;
+
 import us.mn.state.health.lims.analysis.dao.AnalysisDAO;
 import us.mn.state.health.lims.analysis.daoimpl.AnalysisDAOImpl;
 import us.mn.state.health.lims.analysis.valueholder.Analysis;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.common.services.NoteService;
+import us.mn.state.health.lims.common.services.StatusService;
+import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.services.TestService;
-import us.mn.state.health.lims.common.services.TypeOfTestResultService;
 import us.mn.state.health.lims.common.util.ConfigurationProperties;
 import us.mn.state.health.lims.common.util.ConfigurationProperties.Property;
 import us.mn.state.health.lims.common.util.DateUtil;
@@ -37,9 +48,6 @@ import us.mn.state.health.lims.organization.daoimpl.OrganizationDAOImpl;
 import us.mn.state.health.lims.person.dao.PersonDAO;
 import us.mn.state.health.lims.person.daoimpl.PersonDAOImpl;
 import us.mn.state.health.lims.person.valueholder.Person;
-import us.mn.state.health.lims.referral.dao.ReferringTestResultDAO;
-import us.mn.state.health.lims.referral.daoimpl.ReferringTestResultDAOImpl;
-import us.mn.state.health.lims.referral.valueholder.ReferringTestResult;
 import us.mn.state.health.lims.reports.action.implementation.reportBeans.ConfirmationData;
 import us.mn.state.health.lims.reports.action.implementation.reportBeans.ErrorMessages;
 import us.mn.state.health.lims.requester.dao.RequesterTypeDAO;
@@ -50,15 +58,12 @@ import us.mn.state.health.lims.requester.valueholder.SampleRequester;
 import us.mn.state.health.lims.result.dao.ResultDAO;
 import us.mn.state.health.lims.result.daoimpl.ResultDAOImpl;
 import us.mn.state.health.lims.result.valueholder.Result;
-import us.mn.state.health.lims.sample.dao.SampleDAO;
-import us.mn.state.health.lims.sample.daoimpl.SampleDAOImpl;
 import us.mn.state.health.lims.sample.valueholder.Sample;
 import us.mn.state.health.lims.sampleitem.dao.SampleItemDAO;
 import us.mn.state.health.lims.sampleitem.daoimpl.SampleItemDAOImpl;
 import us.mn.state.health.lims.sampleitem.valueholder.SampleItem;
-import us.mn.state.health.lims.common.services.TypeOfSampleService;
-
-import java.util.*;
+import us.mn.state.health.lims.typeofsample.util.TypeOfSampleUtil;
+import us.mn.state.health.lims.typeoftestresult.valueholder.TypeOfTestResult.ResultType;
 
 public class ConfirmationReport extends IndicatorReport implements IReportCreator, IReportParameterSetter {
 
@@ -70,8 +75,6 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 	private static ResultDAO resultDAO = new ResultDAOImpl();
 	private static DictionaryDAO dictionaryDAO = new DictionaryDAOImpl();
 	private static OrganizationDAO organizationDAO = new OrganizationDAOImpl();
-    private static ReferringTestResultDAO referringTestResultDAO = new ReferringTestResultDAOImpl();
-    private static SampleDAO sampleDAO = new SampleDAOImpl();
 	private static long PERSON_REQUESTER_TYPE_ID;
 	private static long ORG_REQUESTER_TYPE_ID;
 
@@ -98,19 +101,21 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 
 		setConfirmationData();
 	}
-
+	
 	private void setConfirmationData() {
 		reportItems = new ArrayList<ConfirmationData>();
 
-        List<Sample> referredSamples = getReferredInSamples();
+		List<Analysis> qualifiedAnalysis = getAllConfirmationAnalysisInDateRange();
 
-		if (referredSamples.isEmpty()) {
+		if (qualifiedAnalysis.isEmpty()) {
 			errorFound = true;
 			ErrorMessages msgs = new ErrorMessages();
 			msgs.setMsgLine1(StringUtil.getMessageForKey("report.error.message.noPrintableItems"));
 			errorMsgs.add(msgs);
 			return;
 		}
+
+		Set<Sample> referredSamples = getSamplesForAnalysis(qualifiedAnalysis);
 
 		for (Sample sample : referredSamples) {
 			reportItems.addAll(createConfirmationBeanFromSample(sample));
@@ -130,9 +135,18 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 		});
 	}
 
+	private List<Analysis> getAllConfirmationAnalysisInDateRange() {
+		return analysisDAO
+				.getAnalysisStartedOnRangeByStatusId(lowDate, highDate, StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn));
+	}
 
-	private List<Sample> getReferredInSamples() {
-		return  sampleDAO.getConfirmationSamplesReceivedInDateRange(lowDate, highDate);
+	private Set<Sample> getSamplesForAnalysis(List<Analysis> qualifiedAnalysis) {
+		Set<Sample> sampleSet = new HashSet<Sample>();
+
+		for (Analysis analysis : qualifiedAnalysis) {
+			sampleSet.add(analysis.getSampleItem().getSample());
+		}
+		return sampleSet;
 	}
 
 	private List<ConfirmationData> createConfirmationBeanFromSample(Sample sample) {
@@ -150,7 +164,7 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 			ConfirmationData data = new ConfirmationData();
 
 			data.setLabAccession(accessionNumber + "-" + sampleItem.getSortOrder());
-			data.setSampleType(TypeOfSampleService.getTypeOfSampleNameForId(sampleItem.getTypeOfSampleId()));
+			data.setSampleType(TypeOfSampleUtil.getTypeOfSampleNameForId(sampleItem.getTypeOfSampleId()));
 			data.setOrganizationName(StringUtil.replaceNullWithEmptyString(orgName));
 			data.setRequesterAccession(sampleItem.getExternalId());
 			data.setNote(getNoteForSampleItem(sampleItem));
@@ -206,23 +220,21 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 		List<String> completionDate = new ArrayList<String>();
 
 		for (Analysis analysis : analysisList) {
+			if (analysis.getStatusId().equals(StatusService.getInstance().getStatusID(AnalysisStatus.ReferredIn))) {
+				
+				if( analysis.getTest() != null){
+					requestTestList.add( TestService.getUserLocalizedTestName( analysis.getTest() ) );
+					requestResultList.add(getResultsForAnalysis(analysis));
+				}else{
+					requestTestList.add(StringUtil.getMessageForKey("test.name.notSpecified") );
+					requestResultList.add("");
+				}
+			} else {
 				labTestList.add(TestService.getUserLocalizedTestName( analysis.getTest() ));
 				labResultList.add(getResultsForAnalysis(analysis));
 				completionDate.add( getCompleationDate( analysis ) );
+			}
 		}
-
-        List<ReferringTestResult> referringTestResultList = referringTestResultDAO.getReferringTestResultsForSampleItem(sampleItem.getId());
-        if( referringTestResultList.isEmpty()){
-            requestTestList.add(StringUtil.getMessageForKey("test.name.notSpecified") );
-            requestResultList.add( "" );
-        }else {
-            for (ReferringTestResult result : referringTestResultList) {
-                String name = result.getTestName();
-                String resultValue = result.getResultValue();
-                requestTestList.add(GenericValidator.isBlankOrNull(name) ? StringUtil.getMessageForKey("test.name.notSpecified") : name );
-                requestResultList.add(resultValue == null ? "" : resultValue);
-            }
-        }
 
 		data.setLabResult(labResultList);
 		data.setLabTest(labTestList);
@@ -237,7 +249,7 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 		if (results != null && !results.isEmpty()) {
 			String type = results.get(0).getResultType();
 
-			if ( TypeOfTestResultService.ResultType.isDictionaryVariant( type )) {
+			if ( ResultType.isDictionaryVariant( type )) {
 				StringBuilder builder = new StringBuilder();
 				boolean firstNumber = true;
 				for (Result result : results) {
@@ -291,4 +303,15 @@ public class ConfirmationReport extends IndicatorReport implements IReportCreato
 	protected String getLabNameLine2() {
 		return "";
 	}
+
+	@Override
+	public void initializeReport(HashMap<String, String> hashmap) {
+		super.initializeReport();
+		setDateRange(hashmap);
+
+		createReportParameters();
+
+		setConfirmationData();
+	}
+
 }

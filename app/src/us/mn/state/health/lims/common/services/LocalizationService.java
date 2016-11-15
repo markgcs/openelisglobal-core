@@ -37,55 +37,27 @@ public class LocalizationService implements LocaleChangeListener{
         SystemConfiguration.getInstance().addLocalChangeListener( INSTANCE );
     }
 
-    public static String getCurrentLocale() {
-        return LANGUAGE_LOCALE;
-    }
-
-    public enum LocalizationType{
-        TEST_NAME("test name"),
-        REPORTING_TEST_NAME("test report name"),
-        BANNER_LABEL("Site information banner test"),
-        TEST_UNIT_NAME("test unit name"),
-        PANEL_NAME("panel name"),
-        BILL_REF_LABEL("Billing reference_label");
-
-        String dbLabel;
-
-        LocalizationType( String dbLabel){
-            this.dbLabel = dbLabel;
-        }
-
-        public String getDBDescription( ){ return dbLabel;}
-    }
-
     public LocalizationService( String id){
         if( !GenericValidator.isBlankOrNull( id )){
             localization = localizationDAO.getLocalizationById( id );
         }
     }
 
-    public static String getLocalizationValueByLocal(ConfigurationProperties.LOCALE locale, Localization localization){
-        if( locale == ConfigurationProperties.LOCALE.FRENCH ){
-            return localization.getFrench();
-        }else{
-            return localization.getEnglish();
-        }
-    }
     @Override
     public void localeChanged( String locale ){
         LANGUAGE_LOCALE = locale;
     }
 
     public static String getLocalizedValueById( String id){
-        return getLocalizedValue(localizationDAO.getLocalizationById(id));
-    }
+        Localization localization = localizationDAO.getLocalizationById( id );
 
-    public static String getLocalizedValue(Localization localization){
         if( localization == null){
             return "";
         }
         if( LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.FRENCH.getRepresentation() )){
             return localization.getFrench();
+        } else if (LANGUAGE_LOCALE.equals( ConfigurationProperties.LOCALE.VIETNAMESE.getRepresentation())) {
+        	return localization.getVietnamese();
         }else{
             return localization.getEnglish();
         }
@@ -95,11 +67,12 @@ public class LocalizationService implements LocaleChangeListener{
      * Checks to see if localization is needed, if so it does the update.
      * @param french The french localization
      * @param english The english localization
+     * @param vietnamese The vietnamese localization
      * @return true if the object can be found and an update is needed.  False if the id the service was created with is
-     * not valid or the french or english is empty or null or the french and english match what is already in the object
+     * not valid or any language value is empty or null or all language values match what is already in the object
      */
-    public boolean updateLocalizationIfNeeded( String english, String french){
-        if( localization == null || GenericValidator.isBlankOrNull( french ) || GenericValidator.isBlankOrNull( english )){
+    public boolean updateLocalizationIfNeeded( String english, String french, String vietnamese ){
+        if( localization == null || GenericValidator.isBlankOrNull( french ) || GenericValidator.isBlankOrNull( english ) || GenericValidator.isBlankOrNull( vietnamese ) ){
             return false;
         }
 
@@ -107,12 +80,13 @@ public class LocalizationService implements LocaleChangeListener{
             return false;
         }
 
-        if( english.equals( localization.getEnglish() ) && french.equals( localization.getFrench() )){
+        if( english.equals( localization.getEnglish() ) && french.equals( localization.getFrench() ) && vietnamese.equals( localization.getVietnamese() ) ){
             return false;
         }
 
         localization.setEnglish( english );
         localization.setFrench( french );
+        localization.setVietnamese( vietnamese );
         return true;
     }
 
@@ -124,13 +98,5 @@ public class LocalizationService implements LocaleChangeListener{
         if( localization != null ){
             localization.setSysUserId( currentUserId );
         }
-    }
-
-    public static Localization createNewLocalization( String english, String french, LocalizationType type){
-        Localization localization = new Localization();
-        localization.setDescription(type.getDBDescription());
-        localization.setEnglish(english);
-        localization.setFrench(french);
-        return localization;
     }
 }

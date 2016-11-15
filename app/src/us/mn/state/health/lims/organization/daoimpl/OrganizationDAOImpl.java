@@ -222,27 +222,26 @@ public class OrganizationDAOImpl extends GenericDAOImpl<String, Organization> im
 	public List getPagesOfSearchedOrganizations(int startingRecNo, String searchString)
 	throws LIMSRuntimeException {
          List list = new Vector();
-         String wildCard = "*";
+        /* String wildCard = "*";*/
          String newSearchStr;
          String sql;
 
          try {
         	  int endingRecNo = startingRecNo
   			                    + (SystemConfiguration.getInstance().getDefaultPageSize() + 1);
-        	  int wCdPosition = searchString.indexOf (wildCard);
+        	/*  int wCdPosition = searchString.indexOf (wildCard);*/
 
-              if (wCdPosition == -1)  // no wild card looking for exact match
+/*              if (wCdPosition == -1)  // no wild card looking for exact match
               {
             	  newSearchStr = searchString.toLowerCase().trim();
                   sql = "from Organization o where trim(lower (o.organizationName)) = :param  order by o.organizationName";
               }
 	          else
-	          {
-	             newSearchStr = searchString.replace(wildCard, "%").toLowerCase().trim();
-	              sql = "from Organization o where trim(lower (o.organizationName)) like :param  order by o.organizationName";
-	          }
+	          {*/
+	              sql = "from Organization o where trim(lower (o.organizationName)) like  :param  order by o.organizationName";
+/*	          }*/
 	          org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
-	          query.setParameter("param", newSearchStr);
+	          query.setParameter("param","%"+ searchString.toLowerCase().trim()+"%");
 	          query.setFirstResult(startingRecNo - 1);
 	          query.setMaxResults(endingRecNo - 1);
 
@@ -450,7 +449,7 @@ public class OrganizationDAOImpl extends GenericDAOImpl<String, Organization> im
 			if (!StringUtil.isNullorNill(organization.getOrganizationLocalAbbreviation())) {
 				organizationLocalAbbrev = organization.getOrganizationLocalAbbreviation();
 			}
-			query.setParameter("orgAbrv", organizationLocalAbbrev);
+			query.setParameter("orgAbrv", organizationLocalAbbrev.trim());
 
 
 			list = query.list();
@@ -503,16 +502,14 @@ public class OrganizationDAOImpl extends GenericDAOImpl<String, Organization> im
 	          HibernateUtil.getSession().clear();
 
 	      	if (results != null && results.get(0) != null) {
-				if (results.get(0) != null) {
-					count = (Integer)results.get(0);
-				}
+				count = (Integer)results.get(0);
 			 }
 
-            }       catch (Exception e) {
-	                 e.printStackTrace();
-	                 throw new LIMSRuntimeException(
-			             "Error in OrganizationDAOImpl getTotalSearchedOrganizations()", e);
-                       }
+            }  catch (Exception e) {
+                 e.printStackTrace();
+                 throw new LIMSRuntimeException(
+                     "Error in OrganizationDAOImpl getTotalSearchedOrganizations()", e);
+            }
 
        return count;
    }
@@ -625,5 +622,51 @@ public class OrganizationDAOImpl extends GenericDAOImpl<String, Organization> im
 		}
 		
 		return null;
+	}
+    
+    
+	/**
+	 * Get list name from table organization
+	 * @return
+	 * @throws LIMSRuntimeException
+	 */
+	public List getListOrganizationName() throws LIMSRuntimeException {
+	try {
+    	String sql = "from Organization o where o.isActive='Y'";
+		org.hibernate.Query query = HibernateUtil.getSession().createQuery(sql);
+
+		List list = query.list();
+		HibernateUtil.getSession().flush();
+		HibernateUtil.getSession().clear();
+		return list;
+
+	} catch (Exception e) {
+		//bugzilla 2154
+		LogEvent.logError("getListOrganizationName","getListOrganizationName()",e.toString());
+		throw new LIMSRuntimeException("Error in Organization getListOrganizationName()", e);
+	}
+}
+	//add: function to get organization by local abbreviation or submitter number
+	public Organization getOrganizationBySubmitterNumber(String submitterNumber) throws LIMSRuntimeException {
+	    if ( !GenericValidator.isBlankOrNull(submitterNumber)) {
+            String sql = "from Organization o where o.organizationLocalAbbreviation = :submitterNumber";
+
+            try {
+                Query query = HibernateUtil.getSession().createQuery(sql);
+                query.setString("submitterNumber", submitterNumber);
+                Organization organization = (Organization)query.uniqueResult();
+
+                closeSession();
+                return organization;
+
+            } catch (Exception e) {
+             // handleException(e, "getOrganizationBySubmitterNumber");
+                //add: log exception into log file
+                LogEvent.logError("OrganizationDAOImpl","getOrganizationBySubmitterNumber()",e.toString());
+                throw new LIMSRuntimeException("Error in Organization getOrganizationBySubmitterNumber()", e);
+            }
+        }
+
+        return null;
 	}
 }

@@ -1,3 +1,4 @@
+<%@page import="org.hamcrest.core.IsNot"%>
 <%@page import="us.mn.state.health.lims.common.action.IActionConstants"%>
 <%@page import="us.mn.state.health.lims.common.formfields.FormFields,
                 us.mn.state.health.lims.common.formfields.FormFields.Field"%>
@@ -7,7 +8,7 @@
 <%@ page import="us.mn.state.health.lims.common.util.DateUtil" %>
 <%@ page import="us.mn.state.health.lims.common.util.StringUtil, us.mn.state.health.lims.common.util.Versioning" %>
 <%@ page import="us.mn.state.health.lims.qaevent.valueholder.retroCI.QaEventItem" %>
-<%@ page import="us.mn.state.health.lims.common.util.ConfigurationProperties" %>
+
 
 
 <%@ taglib uri="/tags/struts-bean" prefix="bean"%>
@@ -27,6 +28,9 @@
     boolean useSiteList = FormFields.getInstance().useField(Field.NON_CONFORMITY_SITE_LIST);
     boolean useSubjectNo = FormFields.getInstance().useField(Field.QASubjectNumber);
     boolean useNationalID = FormFields.getInstance().useField(Field.NationalID);
+    boolean useExternalID = FormFields.getInstance().useField(Field.EXTERNAL_ID);
+    
+	boolean isNonConformity = true;
 %>
 <%
     String path = request.getContextPath();
@@ -51,6 +55,7 @@
 
 <script type="text/javascript" >
 
+var requiredFields = new Array();
 var dirty = false;
 
 var confirmNewTypeMessage = "<bean:message key='nonConformant.confirm.newType.message'/>";
@@ -134,7 +139,36 @@ function tweekSampleTypeOptions() {
 			});
 }
 
-function addRow( ) {
+// Initialize row fields enable/disable status
+function /*void*/ initializeRowFields() {
+	var eventsTable = $('qaEventsTable');
+	if (eventsTable == null)
+		return;
+	var rows = eventsTable.getElementsBySelector("TR.qaEventRow");
+	rows.detect(function(row) {
+		// Initialize the enable/disable status of each row fields
+		var qaEvent = row.getElementsBySelector("#qaEvent" + row.id.split("_")[1])[0];
+		var sampleType = row.getElementsBySelector("#sampleType" + row.id.split("_")[1])[0];
+		var section = row.getElementsBySelector("#section" + row.id.split("_")[1])[0];
+		var author = row.getElementsBySelector("#author" + row.id.split("_")[1])[0];
+		var note = row.getElementsBySelector("#note" + row.id.split("_")[1])[0];
+		var rowcheckBox = row.getElementsBySelector(".qaEventEnable")[0];
+		qaEvent.enable(); qaEvent.removeClassName("readOnly");
+		sampleType.enable(); sampleType.removeClassName("readOnly");
+		section.enable(); section.removeClassName("readOnly");
+		author.enable(); author.removeClassName("readOnly");
+		note.enable(); note.removeClassName("readOnly");
+		
+		// Check if row has data or value, then disable/enable
+		if (checkRowHasData(row)) {
+			rowcheckBox.enable();
+		} else {
+			rowcheckBox.disable();
+		}
+	});
+}
+
+function addRow() {
 	var eventsTable = $('qaEventsTable');
 	if (eventsTable == null)
 		return;
@@ -142,14 +176,12 @@ function addRow( ) {
 	// display all rows up to the first unused one
 	var row = rows.detect(function(row) {
 		row.show(); // show each row as we go everyone
-			var idFieldValue = row.getElementsBySelector(".id")[0].getValue();
-			if (idFieldValue == "NEW") {
-				enableRow(row, idFieldValue);
-			} else {
-				disableRow(row, true);
-			}
-			return idFieldValue == "";
-		});
+		var idFieldValue = row.getElementsBySelector(".id")[0].getValue();
+		if (idFieldValue == "NEW") {
+			enableRow(row, idFieldValue);
+		}
+		return idFieldValue == "";
+	});
 	if (row == null) {
 		row = rows[rows.length - 1];
 	}
@@ -158,7 +190,24 @@ function addRow( ) {
 	var idFields = row.getElementsBySelector(".id");
 	$(idFields[0]).value = "NEW";
 	enableRow(row, "NEW");
+	
+	addToRequiredFields(row.getElementsBySelector("#qaEvent" + row.id.split("_")[1])[0]);
+	addToRequiredFields(row.getElementsBySelector("#sampleType" + row.id.split("_")[1])[0]);
 	setSave();
+}
+
+function /*bool*/ checkRowHasData(row) {
+	var qaEventValue = row.getElementsBySelector("#qaEvent" + row.id.split("_")[1])[0].getValue();
+	var sampleTypeValue = row.getElementsBySelector("#sampleType" + row.id.split("_")[1])[0].getValue();
+	var sectionValue = row.getElementsBySelector("#section" + row.id.split("_")[1])[0].getValue();
+	var authorValue = row.getElementsBySelector("#author" + row.id.split("_")[1])[0].getValue();
+	var noteValue = row.getElementsBySelector("#note" + row.id.split("_")[1])[0].getValue();
+	
+	if (!(qaEventValue == 0) || !(sampleTypeValue == 0) || !(sectionValue == 0) || 
+			!authorValue.blank() || !noteValue.blank()) {
+		return true;
+	}
+	return false;	
 }
 
 function enableRow(row, newIndicator) {
@@ -172,27 +221,11 @@ function enableRow(row, newIndicator) {
 			field.removeClassName("readOnly");
 		}
 	});
-	
 /* 	elements = row.getElementsBySelector(".requiredField");
 	elements.each(function(field) {
 		fieldValidator.addRequiredField(field.id);
 	});
  */
-}
-function disableRow(row, userAdded) {
-	var elements = row.getElementsBySelector(".qaEventElement");
-	elements.each(function(field) {
-		field = $(field);
-		if( !(userAdded && field.id.startsWith("note"))){
-			field.disable();
-			field.addClassName("readOnly");
-		}
-	});
-	
-	/* elements = row.getElementsBySelector(".requiredField");
-	elements.each(function(field) {
-		fieldValidator.removeRequiredField(field.id);
-	}); */
 }
 
 function areNewTypesOfSamples() {
@@ -246,25 +279,12 @@ function checkValidTime( timeElement ){
 	setSave();
 }
 
-function enableDisableIfChecked(removeCheckBox){
-	var row = removeCheckBox.parentNode.parentNode;
-	var idFieldValue = row.getElementsBySelector(".id")[0].getValue();
-
-	if( removeCheckBox.checked){
-		disableRow(row, false );
-	}else{
-		enableRow(row, idFieldValue);
-	}
-	
-	setSave();
-}
-
 function setSave(){
-	var saveButton = $("saveButtonId"); 
-	var validToSave = fieldValidator.isAllValid();
+	var saveButton = $("saveButtonId");
+	var validToSave = fieldValidator.isAllValid() && isRequireFieldsEmpty();
 
-		//all this crap is to make sure there is not an enabled new row that has no value for the required field then none of the 
-		//other fields have values		
+	//all this crap is to make sure there is not an enabled new row that has no value for the required field then none of the 
+	//other fields have values		
 	if( validToSave){
 		$jq("#qaEventsTable tbody tr").each( function(rowIndex, rowElement){
 			var jqRow = $jq(rowElement);
@@ -272,10 +292,9 @@ function setSave(){
 				//if row is visible and the required field is blank make sure no other field has a value
 				if( !(jqRow.find(".qaEventEnable").is(":checked") ) && requiredSelectionsNotDone( jqRow ) ){
 					jqRow.find(".qaEventElement").each( function(index, element){
-						var cellValue = $jq(element).val(); 
-						if( !(cellValue.length == 0 || cellValue == "0" )){
+						var cellValue = $jq(element).val();
+						if(!(cellValue.length == 0 || cellValue == "0")){
 							validToSave = false;
-							return;
 						}
 					});
 				}
@@ -283,9 +302,79 @@ function setSave(){
 		});
 	}
 
-	if( saveButton){
+	if(saveButton){
 		saveButton.disabled = !validToSave;
-	}	
+	}
+	return;
+}
+
+function /*void*/ updateRequiredFields(field) {
+	// For removeCheckbox
+	if (field.id.startsWith("remove")) {
+		var row = field.parentNode.parentNode;
+		var elements = row.getElementsBySelector(".qaEventElement");
+		var qaEventField = elements[0];
+		var sampleTypeField = elements[1];
+		if (field.checked) {
+			// Delete qaEvent and sampleType from requiredFields
+			deleteFromRequiredFields(qaEventField);
+			deleteFromRequiredFields(sampleTypeField);
+		} else {
+			// Check if row->qaEvent has a value
+			if (!(qaEventField.value == 0)) {
+				deleteFromRequiredFields(qaEventField);
+			} else {
+				addToRequiredFields(qaEventField);
+			}
+			// Check if row->sampleType has a value
+			if (!(sampleTypeField.value == 0)) {
+				deleteFromRequiredFields(sampleTypeField);
+			} else {
+				addToRequiredFields(sampleTypeField);
+			}
+		}
+		setSave();
+		return;
+	} 
+	// For refusalReason & sampleType
+	if (field.id.startsWith("qaEvent") || field.id.startsWith("sampleType")) {
+		var row = field.parentNode.parentNode;
+		var removeCheckbox = row.getElementsBySelector(".qaEventEnable");
+		if (!(removeCheckbox[0].checked)) {
+			if (field.value == 0) {
+				addToRequiredFields(field);
+			} else {
+				deleteFromRequiredFields(field);
+			}
+		}
+	}
+	setSave();
+}
+
+function /*void*/ deleteFromRequiredFields(field) {
+    var removeIndex = $jq.inArray(field, requiredFields);
+	if (!(removeIndex == -1)) {
+		requiredFields.splice(field.id.split(field.id)[1], 1);
+	}
+}
+
+function /*void*/ addToRequiredFields(field) {
+	if ($jq.inArray(field, requiredFields) == -1) {
+		requiredFields.push(field);
+	}
+}
+
+function /*bool*/ isRequireFieldsEmpty() {
+	if (requiredFields.length > 0) {
+		return false;
+	}
+    for(var i = 0; i < requiredFields.length; ++i){
+        // Check if there are empty required fields
+        if (requiredFields[i].value.blank()) {
+        	return false;
+        }
+    }
+    return true;
 }
 
 function requiredSelectionsNotDone( jqRow ){
@@ -334,11 +423,12 @@ function  processPhoneSuccess(xhr){
 	:
 	<input type="text" name="searchNumber"
 		maxlength='<%=Integer.toString(accessionNumberValidator.getMaxAccessionLength())%>'
-		value="" onchange="onChangeSearchNumber(this)" id="searchId">
+		value="" onchange="onChangeSearchNumber(this)" id="searchId" style="margin-top: 10px; float:inherit;"
+		class="text input-medium">
 	&nbsp;
-	<input type="button" id="searchButtonId"
+	<input type="button" id="searchButtonId" class="btn btn-default"
 		value='<%=StringUtil.getMessageForKey("label.button.search")%>'
-		onclick="loadForm();" disabled="disabled">
+		onclick="loadForm();" disabled="disabled" style="padding-top: 4px;padding-bottom: 4px;">
 </div>
 <hr />
 <bean:define id="readOnly" name='<%=formName%>' property="readOnly"	type="java.lang.Boolean" />
@@ -347,17 +437,24 @@ function  processPhoneSuccess(xhr){
 	<html:hidden name='<%=formName%>' property="patientId" />
 	<html:hidden name='<%=formName%>' styleId="sampleItemsTypeOfSampleIds" property="sampleItemsTypeOfSampleIds" />
 	<table >
-		<tr>
-			<td >
+			<tr>
+			<td width="width: 200px;">
+				<%=StringUtil.getContextualMessageForKey("resultsentry.accessionNumber") %> :
+			</td>
+			<td width="352px;">
+				<bean:write name="<%=formName%>" property="labNo" />
+			</td>
+						<td >
 				<%= StringUtil.getContextualMessageForKey("nonconformity.date") %>&nbsp;
                 <span style="font-size: xx-small; "><%=DateUtil.getDateUserPrompt()%></span>
 				:
 			</td>
-			<td>
+			<td width="225px;">
 				<html:text name='<%=formName %>' 
 				           styleId="date1" 
 				           property="date"
-					       maxlength="10" 
+					       maxlength="10"
+                       	   onkeyup="addDateSlashes(this, event);"
 					       onchange="checkValidDate(this);" />
 			<% if( FormFields.getInstance().useField(Field.QATimeWithDate)){ %>
 				<%= StringUtil.getContextualMessageForKey("nonconformity.time") %>
@@ -369,6 +466,8 @@ function  processPhoneSuccess(xhr){
 					       onchange="checkValidTime(this);" />
 			<% } %>
 			</td>
+		</tr>
+		<tr>
 		</tr>
 		<tr>
 			<html:hidden name='<%=formName%>' property="project" />
@@ -418,8 +517,7 @@ function  processPhoneSuccess(xhr){
 		<% if ( FormFields.getInstance().useField(Field.StNumber) ) { %>
 		<tr>
 			<td >
-				<bean:message key="patient.ST.number" />
-				:
+				<bean:message key="patient.ST.number" /> :
 			</td>
 			<html:hidden name='<%=formName%>' property="newSTNumber" styleId="newSTNumber"/>
 			<logic:equal name='<%=formName%>' property="STNumber" value="">
@@ -435,8 +533,25 @@ function  processPhoneSuccess(xhr){
 			</logic:notEqual>
 		</tr>
 		<% } %>
-		<% if ( useNationalID ) { %>
+		<% if ( useExternalID ) { %>
 		<tr>
+			<td >
+			    <%=StringUtil.getContextualMessageForKey("patient.externalId") %> :
+			</td>
+			<html:hidden name='<%=formName%>' property="externalIdNew" styleId="externalIdNew"/>
+			<%-- <logic:equal name='<%=formName%>' property="externalId" value=""> --%>
+				<td>
+					<html:text name='<%=formName %>' property="externalId" styleClass="text"
+						onchange="makeDirty();$('externalIdNew').value = true;" size="70" />
+				</td>
+			<%-- </logic:equal>
+			<logic:notEqual name='<%=formName%>' property="externalId" value="">
+				<td>
+					<bean:write name="<%=formName%>" property="externalId" />
+				</td>
+			</logic:notEqual> --%>
+		<% } %>
+		<% if ( !isNonConformity ) { %>
 			<td >
 			    <%=StringUtil.getContextualMessageForKey("patient.NationalID") %>
 				:
@@ -452,23 +567,15 @@ function  processPhoneSuccess(xhr){
 				<td>
 					<bean:write name="<%=formName%>" property="nationalId" />
 				</td>
-			</logic:notEqual>
+			</logic:notEqual>	
 		</tr>
 		<% } %>
 		<tr>
-			<td >
-				<%=StringUtil.getContextualMessageForKey("sample.id") %>
-				:
-			</td>
-			<td>
-				<bean:write name="<%=formName%>" property="labNo" />
-			</td>
-		</tr>
 		<html:hidden name='<%=formName%>' styleId="serviceNew" property="serviceNew" />
 			<html:hidden name='<%=formName%>' styleId="newServiceName" property="newServiceName" />
 			<logic:equal name='<%=formName%>' property="service" value="">
+			<% if ( !isNonConformity ) { %>
 				<% if( useSiteList ){ %>
-					<tr>
 						<td><%= StringUtil.getContextualMessageForKey("sample.entry.project.siteName") %>
 						<td>
 							<html:select styleId="site"
@@ -479,86 +586,80 @@ function  processPhoneSuccess(xhr){
 								<html:optionsCollection name="<%=formName%>" property="siteList" label="value" value="id" />
 						   	</html:select>
 						</td>
-					</tr>
 				<% } else { %>
-					<tr>
 						<td ><bean:message key="patient.project.service" />:</td>
-				  		<td><html:text name='<%=formName %>' property="service" onchange="makeDirty();$('serviceNew').value = true;" /></td>
-					</tr>
+				  		<td><html:text name='<%=formName %>' property="service" onchange="makeDirty();$('serviceNew').value = true;"/></td>
 				<% }%>
+			<% }%>
 			</logic:equal>
-			<logic:notEqual name='<%=formName%>' property="service" value="">
-					<tr>
-						<td ><%= StringUtil.getContextualMessageForKey("sample.entry.project.siteName") %>:</td>
-						<td>
-							<bean:write name='<%=formName%>' property="service" />
-						</td>
-					</tr>
-			</logic:notEqual>
+				<logic:notEqual name='<%=formName%>' property="service" value="">
+						
+							<td ><%= StringUtil.getContextualMessageForKey("sample.entry.project.siteName") %>:</td>
+							<td>
+								<bean:write name='<%=formName%>' property="service" />
+							</td>
+				</logic:notEqual>
+				<% if ( !isNonConformity ) { %>
+					<%  if (FormFields.getInstance().useField(Field.QA_FULL_PROVIDER_INFO )) { %>
+	        			<% if( FormFields.getInstance().useField( Field.QA_REQUESTER_SAMPLE_ID )) { %>
+								<td><bean:message key="sample.clientReference" />:</td>
+									<td >
+									<logic:equal name='<%=formName%>' property="requesterSampleID" value="">
+										<app:text name="<%=formName%>"
+												  property="requesterSampleID"
+												  size="30"
+											  	onchange="makeDirty();"/>
+									</logic:equal>		  	
+									<logic:notEqual name='<%=formName%>' property="requesterSampleID" value="">					
+										<bean:write name="<%=formName%>" property="requesterSampleID" />
+									</logic:notEqual>
+									</td>
+								<td colspan="2">&nbsp;</td>
+		        		<% } %>
+		        	<% } %>
+	        	<% } %>
+			</tr>
 		<html:hidden name='<%=formName%>' styleId="doctorNew" property="doctorNew" />
 		<%  if (FormFields.getInstance().useField(Field.QA_FULL_PROVIDER_INFO )) { %>
-        <% if(ConfigurationProperties.getInstance().isPropertyValueEqual(ConfigurationProperties.Property.QA_SAMPLE_ID_REQUIRED, "true")) { %>
+				<% if ( !isNonConformity ) { %>
 					<tr>
-						<td><bean:message key="sample.clientReference" />:</td>
-						<td >
-						<logic:equal name='<%=formName%>' property="requesterSampleID" value="">
-							<app:text name="<%=formName%>"
-									  property="requesterSampleID"
-									  size="30"
-								  	onchange="makeDirty();"/>
-						</logic:equal>		  	
-						<logic:notEqual name='<%=formName%>' property="requesterSampleID" value="">					
-							<bean:write name="<%=formName%>" property="requesterSampleID" />
-						</logic:notEqual>
-						</td>
-					<td colspan="2">&nbsp;</td>
-				</tr>
-        <% } %>
+						<td><%= StringUtil.getContextualMessageForKey("nonconformity.provider.label") %></td>
+					</tr>
+				<% } %>
 				<tr>
-					<td><%= StringUtil.getContextualMessageForKey("nonconformity.provider.label") %></td>
-				</tr>
-				<tr>
-					<logic:equal name='<%=formName%>' property="providerLastName" value="">
-						<td align="right"><bean:message key="person.lastName" />:</td>
+					<%-- <logic:equal name='<%=formName%>' property="providerLastName" value=""> --%>
+						<td align="left"><bean:message key="patient.epiFullName"/> :</td>
 						<td >
-						<html:text name="<%=formName%>"
-								  property="providerLastName"
-							      styleId="providerLastNameID"
-							      onchange="makeDirty();$('doctorNew').value = true;"
-							      size="30" />
-						<bean:message key="humansampleone.provider.firstName.short"/>:
 						<html:text name="<%=formName%>"
 								  property="providerFirstName"
 							      styleId="providerFirstNameID"
 							      onchange="makeDirty();$('doctorNew').value = true;"
 							      size="30" />
 						</td>		      
-					</logic:equal>
+					<%-- </logic:equal>
 					<logic:notEqual name='<%=formName%>' property="providerLastName" value="">
-						<td align="right"><bean:message key="person.name" />:</td>
+						<td align="left"><bean:message key="person.name" /> :</td>
 						<td><bean:write name="<%=formName%>" property="providerLastName" />,&nbsp;<bean:write name="<%=formName%>" property="providerFirstName" /></td>
-					</logic:notEqual>		      
-				</tr>
-				<tr>
-					<td align="right">
-						<bean:message  key="person.streetAddress.street" />:
+					</logic:notEqual> --%>
+					<td align="left">
+						<bean:message  key="person.streetAddress.street" /> :
 					</td>
 					<td>
-					<logic:equal name='<%=formName%>' property="providerStreetAddress" value="">
+					<%-- <logic:equal name='<%=formName%>' property="providerStreetAddress" value=""> --%>
 						<app:text name='<%=formName%>'
 					  			  property="providerStreetAddress"
 					  			  styleClass="text"
 					  			  size="70" />
-					</logic:equal>
+					<%-- </logic:equal>
 					<logic:notEqual name='<%=formName%>' property="providerStreetAddress" value="">
 						<bean:write name="<%=formName%>" property="providerStreetAddress" />
-					</logic:notEqual>
-					</td>
+					</logic:notEqual> --%>
+					</td>		      
 				</tr>
 			<% if( FormFields.getInstance().useField(Field.ADDRESS_VILLAGE )) { %>
 				<tr>
-					<td align="right">
-					    <%= StringUtil.getContextualMessageForKey("person.town") %>:
+					<td align="left">
+					    <%= StringUtil.getContextualMessageForKey("person.town") %> :
 					</td>
 					<td>
 					<logic:equal name='<%=formName%>' property="providerCity" value="">
@@ -575,25 +676,46 @@ function  processPhoneSuccess(xhr){
 			<% } %>
 			<% if( FormFields.getInstance().useField(Field.ADDRESS_COMMUNE)){ %>
 			<tr>
-				<td align="right">
-					<bean:message  key="person.commune" />:
+				<td align="left">
+					<bean:message  key="person.commune" /> :
 				</td>
 				<td>
-				<logic:equal name='<%=formName%>' property="providerCommune" value="">
+				<%-- <logic:equal name='<%=formName%>' property="providerCommune" value=""> --%>
 					<app:text name='<%=formName%>'
 							  property="providerCommune"
 							  styleClass="text"
 							  size="30" />
-				</logic:equal>
+				<%-- </logic:equal>
 				<logic:notEqual name='<%=formName%>' property="providerCommune" value="">
 					<bean:write name="<%=formName%>" property="providerCommune" />
+				</logic:notEqual> --%>
+				</td>
+			<% } %>
+			<% if ( !isNonConformity ) { %>
+				<td align="left">
+					<bean:message key="person.phone" />&nbsp;
+					(<%= PhoneNumberService.getPhoneFormat() %>)
+				</td>
+				<td>
+				<logic:equal name='<%=formName%>' property="providerWorkPhone" value="">
+					<app:text name="<%=formName%>"
+					          property="providerWorkPhone"
+						      styleId="providerWorkPhoneID"
+						      size="30"
+						      maxlength="35"
+						      styleClass="text"
+						      onchange="validatePhoneNumber(this);makeDirty();$('doctorNew').value = true;" />
+				    <div id="providerWorkPhoneMessage" class="blank" ></div>
+				</logic:equal>    
+				<logic:notEqual name='<%=formName%>' property="providerWorkPhone" value="">
+					<bean:write name="<%=formName%>" property="providerWorkPhone" />
 				</logic:notEqual>
 				</td>
-			</tr>
 			<% } %>
+			</tr>
 			<% if( FormFields.getInstance().useField(Field.ADDRESS_DEPARTMENT )){ %>
 			<tr>
-				<td align="right">
+				<td align="left">
 					<bean:message  key="person.department" />:
 				</td>
 				<td>
@@ -611,28 +733,6 @@ function  processPhoneSuccess(xhr){
 				</td>
 			</tr>
 			<% } %>
-
-			<tr>
-				<td align="right">
-					<bean:message key="person.phone" />&nbsp;
-					<%= PhoneNumberService.getPhoneFormat() %>
-				</td>
-				<td>
-				<logic:equal name='<%=formName%>' property="providerWorkPhone" value="">
-					<app:text name="<%=formName%>"
-					          property="providerWorkPhone"
-						      styleId="providerWorkPhoneID"
-						      size="30"
-						      maxlength="35"
-						      styleClass="text"
-						      onchange="validatePhoneNumber(this);makeDirty();$('doctorNew').value = true;" />
-				    <div id="providerWorkPhoneMessage" class="blank" ></div>
-				</logic:equal>    
-				<logic:notEqual name='<%=formName%>' property="providerWorkPhone" value="">
-					<bean:write name="<%=formName%>" property="providerWorkPhone" />
-				</logic:notEqual>
-				</td>
-			</tr>
 		<% } else { %>
 			<tr>
 				<td ><bean:message key="sample.entry.project.doctor" />:</td>
@@ -652,7 +752,7 @@ function  processPhoneSuccess(xhr){
 	</table>
 	
 	<hr />
-	<table style="width:95%" id="qaEventsTable">
+	<table style="width:100%" id="qaEventsTable">
 		<thead>
 		<tr>
 			<th style="display: none"></th>
@@ -673,7 +773,7 @@ function  processPhoneSuccess(xhr){
 			<th style="width:13%">
 				<%=StringUtil.getContextualMessageForKey("label.biologist") %>
 			</th>
-			<th >
+			<th style="width:28%;">
 				<%= StringUtil.getContextualMessageForKey("nonconformity.note") %>
 			</th>
 			<th style="width:5%">
@@ -684,7 +784,7 @@ function  processPhoneSuccess(xhr){
 		<tbody>
 		<logic:iterate id="qaEvents" name="<%=formName%>" property="qaEvents"
 			indexId="index" type="QaEventItem">
-			<tr id="qaEvent_<%=index%>" style="display: none" class="qaEventRow">
+			<tr id="qaEvent_<%=index%>" style="display: none;" class="qaEventRow">
 			<% if( FormFields.getInstance().useField(Field.QA_DOCUMENT_NUMBER)){ %>
 				<td>
 					<html:text 
@@ -709,7 +809,7 @@ function  processPhoneSuccess(xhr){
 						         indexed="true" 
 						         disabled = "true"						    
 						         style="width: 99%" 
-						         onchange='makeDirty();'>
+						         onchange='makeDirty(); updateRequiredFields(this);'>
 						<option value="0"></option>
 						<html:optionsCollection name="<%=formName%>"
 							property="qaEventTypes" label="value" value="id" />
@@ -718,7 +818,7 @@ function  processPhoneSuccess(xhr){
 				<td>
                     <html:select styleId='<%="sampleType" + index%>' name="qaEvents"
 						styleClass="readOnly qaEventElement typeOfSample requiredField" disabled="false"
-						property="sampleType" onchange='makeDirty();' indexed="true"
+						property="sampleType" onchange='makeDirty(); updateRequiredFields(this);' indexed="true"
 						style="width: 99%">
                         <option value="0"></option>
                         <option value="-1"  <%= (qaEvents.getSampleType() != null && qaEvents.getSampleType().equals("-1")) ? "selected='selected'" : ""%> ></option>
@@ -739,40 +839,39 @@ function  processPhoneSuccess(xhr){
 				<td>
 					<html:text styleId='<%="author" + index%>' name="qaEvents"
 						styleClass="readOnly qaEventElement" disabled="false"
-						property="authorizer" indexed="true" onchange='makeDirty();'
-						style="width: 99%" />
+						property="authorizer" indexed="true" onchange='makeDirty();' />
 				</td>
 				<td>
 					<html:text styleId='<%="note" + index%>'
 					           name="qaEvents"
-							   styleClass="qaEventElement" 
+							   styleClass="readOnly qaEventElement" 
 							   disabled="false"
-							   property="note" 
+							   property="note"
 							   indexed="true" 
 							   onchange='makeDirty();'
-						style="width: 99%" />
+							   style="width: 99%" />
 				</td>
 				<td>
 					<html:checkbox styleId='<%="remove" + index%>' name="qaEvents"
 						styleClass="qaEventEnable" property="remove" indexed="true"
-						onclick='makeDirty(); enableDisableIfChecked(this)' />
+						onclick='makeDirty(); updateRequiredFields(this);' style="margin-left: 40px;margin-top: -7px;"/>
 				</td>
 			</tr>
 		</logic:iterate>
 		</tbody>
 	</table>
-	<input type="button" id="addButtonId"
+	<input type="button" id="addButtonId"  class="btn btn-default"
 		value='<%=StringUtil.getMessageForKey("label.button.add")%>'
 		onclick="addRow()" />
 	<hr />
 	<html:hidden name='<%=formName%>' styleId="commentNew"
 		property="commentNew" value="" />
-	<bean:message key="label.comments" />:
+	<center><bean:message key="label.comments" />:
 	<div style="width: 50%">
 		<html:textarea name="<%=formName %>" property="comment"
 			onchange="makeDirty();$('commentNew').value = true;"
-			disabled='<%=readOnly%>' />
-	</div>
+			disabled='<%=readOnly%>' style="resize:none;" rows="6" />
+	</div></center>
 </logic:notEmpty>
 
 <script type="text/javascript" >
@@ -806,6 +905,7 @@ function savePage() {
 }
 
 addRow(); // call once at the beginning to make the table of Sample QA Events look right.
+initializeRowFields();
 tweekSampleTypeOptions();
 
 <% if( FormFields.getInstance().useField(Field.NON_CONFORMITY_SITE_LIST_USER_ADDABLE)){ %>

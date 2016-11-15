@@ -25,11 +25,14 @@
         </property>
         <property name="hasCancel" type="java.lang.String">
             <column name="HAS_CANCEL" length="1" />
-        </property>        
+        </property>
+        <property name="isAdmin" type="java.lang.String">
+        	<column name="IS_ADMIN" length="1"/>
+        </property>       
         <many-to-one name="systemUser" class="us.mn.state.health.lims.systemuser.valueholder.SystemUser" fetch="select">
             <column name="SYSTEM_USER_ID" precision="10" scale="0" />
         </many-to-one>
-        <many-to-one name="testSection" class="us.mn.state.health.lims.test.valueholder.TestSection" fetch="select">
+        <many-to-one name="testSection" class="us.mn.state.health.lims.test.valueholder.TestSection" fetch="select" lazy="false">
             <column name="TEST_SECTION_ID" precision="10" scale="0" />
         </many-to-one>                     
      </class>

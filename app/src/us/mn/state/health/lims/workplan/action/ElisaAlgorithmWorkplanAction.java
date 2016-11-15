@@ -31,7 +31,10 @@ import us.mn.state.health.lims.common.services.StatusService.AnalysisStatus;
 import us.mn.state.health.lims.common.util.IdValuePair;
 import us.mn.state.health.lims.resultvalidation.action.util.ResultValidationItem;
 import us.mn.state.health.lims.resultvalidation.bean.AnalysisItem;
-import us.mn.state.health.lims.resultvalidation.util.ResultsValidationRetroCIUtility;
+import us.mn.state.health.lims.resultvalidation.util.ResultsValidationRetroCUtility;
+import us.mn.state.health.lims.test.dao.TestSectionDAO;
+import us.mn.state.health.lims.test.daoimpl.TestSectionDAOImpl;
+import us.mn.state.health.lims.test.valueholder.TestSection;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -43,9 +46,11 @@ import java.util.List;
 public class ElisaAlgorithmWorkplanAction extends BaseWorkplanAction {
 
 	private final AnalysisDAO analysisDAO = new AnalysisDAOImpl();
-	private ResultsValidationRetroCIUtility resultsValidationUtility = new ResultsValidationRetroCIUtility();
+	private ResultsValidationRetroCUtility resultsValidationUtility = new ResultsValidationRetroCUtility();
 	private List<Integer> notValidStatus = new ArrayList<Integer>();
 
+	String testType = "";
+	String department;
 
 	@Override
 	protected ActionForward performAction(ActionMapping mapping, ActionForm form, HttpServletRequest request, HttpServletResponse response)
@@ -62,7 +67,7 @@ public class ElisaAlgorithmWorkplanAction extends BaseWorkplanAction {
 
 		setNotValidStatus();
 
-		List<AnalysisItem> workplanTests;
+		List<AnalysisItem> workplanTests = new ArrayList<AnalysisItem>();
 
 		// workplan by department
 		if (!GenericValidator.isBlankOrNull(workplan)) {
@@ -78,7 +83,6 @@ public class ElisaAlgorithmWorkplanAction extends BaseWorkplanAction {
 
 		PropertyUtils.setProperty(dynaForm, "workplanType", request.getParameter("type"));
 		PropertyUtils.setProperty(dynaForm, "testName", "Serology");
-		PropertyUtils.setProperty(dynaForm, "testSectionsByName" , new ArrayList<IdValuePair>());
 		
 		//this is needed because the jsp form is shared with the biologist validation
 		PagingBean pagingBean = new PagingBean();
@@ -91,8 +95,8 @@ public class ElisaAlgorithmWorkplanAction extends BaseWorkplanAction {
 	@SuppressWarnings("unchecked")
 	private List<AnalysisItem> getWorkplanByTestSection(String testSection) {
 
-		List<Analysis> testList;
-		List<ResultValidationItem> testItemList;
+		List<Analysis> testList = new ArrayList<Analysis>();
+		List<ResultValidationItem> testItemList = new ArrayList<ResultValidationItem>();
 		List<AnalysisItem> workplanTestList = new ArrayList<AnalysisItem>();
 
 		if (!(GenericValidator.isBlankOrNull(testSection))) {
@@ -132,7 +136,7 @@ public class ElisaAlgorithmWorkplanAction extends BaseWorkplanAction {
 						&& !GenericValidator.isBlankOrNull(analysisResultItem.getNextTest())) {
 					analysisItemList.add(analysisResultItem);
 				}
-
+				analysisResultItem = new AnalysisItem();
 				analysisResultItem = resultsValidationUtility.testResultItemToELISAAnalysisItem(validationItem);
 				String finalResult = resultsValidationUtility.checkIfFinalResult(validationItem.getAnalysis().getId());
 

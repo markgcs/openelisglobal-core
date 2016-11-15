@@ -45,14 +45,14 @@ public class ResultSignatureDAOImpl extends BaseDAOImpl implements ResultSignatu
 			
 				ResultSignature oldData = (ResultSignature)readResultSignature(resultSig.getId());
 
-				String sysUserId = resultSig.getSysUserId();
+				String sysUserId = resultSig.getSysUserId()==null? "1" : resultSig.getSysUserId();
 				String event = IActionConstants.AUDIT_TRAIL_DELETE;
 				String tableName = "RESULT_SIGNATURE";
 				auditDAO.saveHistory(resultSig,oldData,sysUserId,event,tableName);
 			}
 		}  catch (Exception e) {
 
-			LogEvent.logError("ResultSignatureDAOImpl","AuditTrail deleteData()",e.toString());
+			LogEvent.logError("ResultSignatureDAOImpl","AuditTrail deleteData()",e.getMessage());
 		    throw new LIMSRuntimeException("Error in ResultSignature AuditTrail deleteData()", e);
 		}  
 		

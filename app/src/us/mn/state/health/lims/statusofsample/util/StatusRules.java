@@ -38,6 +38,16 @@ public class StatusRules{
 		resultsLoadUtility.addIncludedSampleStatus(OrderStatus.Entered);
 		resultsLoadUtility.addIncludedSampleStatus(OrderStatus.Started);
 		resultsLoadUtility.addIncludedSampleStatus(OrderStatus.NonConforming_depricated);
+		/**
+		 * This function will add status of test, so that tests can be loaded by their status
+		 * Missing "TechnicalAcceptance", "Finalized", "TechnicalRejected" and "Finished" will lead
+		 * to only load the the tests without the results. In this case we need to load tests with results,
+		 * tests that are validated, tests are marked with "retest" and "non-conform"
+		 */
+		resultsLoadUtility.addIncludedAnalysisStatus(AnalysisStatus.TechnicalAcceptance);
+		resultsLoadUtility.addIncludedAnalysisStatus(AnalysisStatus.Finalized);
+		resultsLoadUtility.addIncludedAnalysisStatus(AnalysisStatus.TechnicalRejected);
+		resultsLoadUtility.addIncludedSampleStatus(OrderStatus.Finished);
 	}
 
 	public String getStartingAnalysisStatus() {

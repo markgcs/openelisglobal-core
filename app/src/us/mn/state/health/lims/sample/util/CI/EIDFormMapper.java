@@ -20,7 +20,6 @@ package us.mn.state.health.lims.sample.util.CI;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.collections4.CollectionUtils;
 import us.mn.state.health.lims.common.action.BaseActionForm;
 import us.mn.state.health.lims.test.valueholder.Test;
 
@@ -34,11 +33,11 @@ public class EIDFormMapper extends BaseProjectFormMapper implements IProjectForm
 		super(projectFormId, dynaForm);
 	}
 
-	public List<Test> getTests(){
+	public List<Test> getTests(BaseActionForm dynaForm){
 		List<Test> testList = new ArrayList<Test>();
 
 		if (projectData.getDnaPCR()){
-			CollectionUtils.addIgnoreNull(testList, createTest("DNA PCR", true));
+			testList.add(createTest("DNA PCR"));
 		}
 
 		return testList;
@@ -59,13 +58,13 @@ public class EIDFormMapper extends BaseProjectFormMapper implements IProjectForm
 		
 	public ArrayList<TypeOfSampleTests> getTypeOfSampleTests() {
 		ArrayList<TypeOfSampleTests> sItemTests = new ArrayList<TypeOfSampleTests>();
-		List<Test> testList;
+		List<Test> testList = new ArrayList<Test>();
 
 
 		//Check for DBS Tests
 		if (projectData.getDnaPCR()) {
 		    if (projectData.getDbsTaken()) {
-				testList = getTests();
+				testList = getTests(dynaForm);
 				sItemTests.add( new TypeOfSampleTests(getTypeOfSample("DBS"), testList));
 			}
 		}
@@ -73,7 +72,7 @@ public class EIDFormMapper extends BaseProjectFormMapper implements IProjectForm
 		//Check for Dry Tube Tests
 		if (projectData.getDnaPCR()) {
 		    if (projectData.getDryTubeTaken() ) {
-				testList = getTests();
+				testList = getTests(dynaForm);
 				sItemTests.add( new TypeOfSampleTests(getTypeOfSample("Dry Tube"), testList));
 			}
 		}

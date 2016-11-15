@@ -53,6 +53,12 @@ public interface ProviderDAO extends BaseDAO {
 	 * uniquely linked to a person.  If more than one provider is linked to the same person then the first
 	 * provider is returned.
 	 */
-	public Provider getProviderByPerson(Person person)  throws LIMSRuntimeException;;
+	public Provider getProviderByPerson(Person person)  throws LIMSRuntimeException;
+	/**
+	 * @param add New for web service
+	 * @return
+	 * @throws LIMSRuntimeException
+	 */
+	public String insertDataWS(Provider provider) throws LIMSRuntimeException;
 
 }

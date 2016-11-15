@@ -47,10 +47,18 @@ import us.mn.state.health.lims.role.action.bean.DisplayRole;
 import us.mn.state.health.lims.role.dao.RoleDAO;
 import us.mn.state.health.lims.role.daoimpl.RoleDAOImpl;
 import us.mn.state.health.lims.role.valueholder.Role;
+import us.mn.state.health.lims.systemmodule.dao.SystemModuleDAO;
+import us.mn.state.health.lims.systemmodule.daoimpl.SystemModuleDAOImpl;
+import us.mn.state.health.lims.systemmodule.valueholder.SystemModule;
 import us.mn.state.health.lims.systemuser.dao.SystemUserDAO;
 import us.mn.state.health.lims.systemuser.daoimpl.SystemUserDAOImpl;
 import us.mn.state.health.lims.systemuser.valueholder.SystemUser;
 import us.mn.state.health.lims.systemuser.valueholder.UnifiedSystemUser;
+import us.mn.state.health.lims.systemusermodule.dao.PermissionAgentModuleDAO;
+import us.mn.state.health.lims.systemusermodule.daoimpl.RoleModuleDAOImpl;
+import us.mn.state.health.lims.systemusermodule.daoimpl.SystemUserModuleDAOImpl;
+import us.mn.state.health.lims.systemusermodule.valueholder.RoleModule;
+import us.mn.state.health.lims.systemusermodule.valueholder.SystemUserModule;
 import us.mn.state.health.lims.userrole.dao.UserRoleDAO;
 import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 
@@ -58,7 +66,7 @@ import us.mn.state.health.lims.userrole.daoimpl.UserRoleDAOImpl;
 public class UnifiedSystemUserAction extends BaseAction {
 
 	private boolean isNew = false;
-	private static final String MAINTENANCE_ADMIN = "Maintenance Admin";
+	private static final String MAINTENANCE_ADMIN = "1";
 	private static String MAINTENANCE_ADMIN_ID;
 	private boolean doFiltering = true;
 	public static final char DEFAULT_PASSWORD_FILLER = '?';
@@ -69,7 +77,7 @@ public class UnifiedSystemUserAction extends BaseAction {
 		List<Role> roles = roleDAO.getAllRoles();
 
 		for (Role role : roles) {
-			if (MAINTENANCE_ADMIN.equals(role.getName().trim())) {
+			if (MAINTENANCE_ADMIN.equals(role.getId().trim())) {
 				MAINTENANCE_ADMIN_ID = role.getId();
 				break;
 			}
@@ -111,7 +119,10 @@ public class UnifiedSystemUserAction extends BaseAction {
 		List<DisplayRole> displayRoles = convertToDisplayRoles( roles );
 		displayRoles = sortAndGroupRoles(displayRoles);
 
+		List<SystemModule> listModules = getAllSystemModules();
+		
 		PropertyUtils.setProperty(dynaForm, "roles", displayRoles);
+		PropertyUtils.setProperty(dynaForm, "modules", listModules);
 
 		return mapping.findForward(forward);
 	}
@@ -130,8 +141,21 @@ public class UnifiedSystemUserAction extends BaseAction {
 	}
 
 	private DisplayRole convertToDisplayRole(Role role, int count) {
+		RoleModuleDAOImpl rolemoduledaoimpl = new RoleModuleDAOImpl();
+		List<RoleModule> listRoleModule = new ArrayList<RoleModule>();
+		listRoleModule = rolemoduledaoimpl.getRoleModuleByRoleId(String.valueOf(role.getId()));
+		
+		List<SystemModule> listSystemModule = new ArrayList<SystemModule>();
+		if (listRoleModule != null && !listRoleModule.isEmpty()) {
+			
+			SystemModuleDAO systemModuleDAO = new SystemModuleDAOImpl();
+			for (int i=0; i < listRoleModule.size(); i++) {
+				systemModuleDAO.getData(listRoleModule.get(i).getSystemModule());
+				listSystemModule.add(listRoleModule.get(i).getSystemModule());
+			}
+		}
 		DisplayRole displayRole = new DisplayRole();
-
+		displayRole.setSystemModuleList(listSystemModule);
 		displayRole.setRoleName(role.getLocalizedName());
 		displayRole.setElementID(String.valueOf(count));
 		displayRole.setRoleId(role.getId());
@@ -252,6 +276,7 @@ public class UnifiedSystemUserAction extends BaseAction {
 		List<String> rolesForLoggedInUser = userRoleDAO.getRoleIdsForUser(loggedInUserId);
 
 		if (!rolesForLoggedInUser.contains(MAINTENANCE_ADMIN_ID)) {
+
 			List<Role> tmpRoles = new ArrayList<Role>();
 
 			for (Role role : roles) {
@@ -259,7 +284,6 @@ public class UnifiedSystemUserAction extends BaseAction {
 					tmpRoles.add(role);
 				}
 			}
-
 			roles = tmpRoles;
 		}
 
@@ -302,7 +326,16 @@ public class UnifiedSystemUserAction extends BaseAction {
 			UserRoleDAO userRoleDAO = new UserRoleDAOImpl();
 			List<String> roleIds = userRoleDAO.getRoleIdsForUser(systemUser.getId());
 			PropertyUtils.setProperty(dynaForm, "selectedRoles", roleIds.toArray(new String[0]));
-
+			
+			PermissionAgentModuleDAO sysUserModuleDAO = new SystemUserModuleDAOImpl();
+			List list = sysUserModuleDAO.getAllPermissionModulesByAgentId(Integer.parseInt(systemUser.getId()));
+			List<String> moduleIds = new ArrayList<String>();
+			for(int i=0; i < list.size(); i++){
+				SystemUserModule systemUserModule = (SystemUserModule) list.get(i);
+				moduleIds.add(systemUserModule.getSystemModule().getId());
+			}
+			PropertyUtils.setProperty(dynaForm, "selectedModules", moduleIds.toArray(new String[0]));
+			
 			doFiltering = !roleIds.contains(MAINTENANCE_ADMIN_ID);
 		}
 
@@ -355,6 +388,11 @@ public class UnifiedSystemUserAction extends BaseAction {
 		return roleDAO.getAllActiveRoles();
 	}
 
+	private List<SystemModule> getAllSystemModules() {
+		SystemModuleDAO sysModuleDAO = new SystemModuleDAOImpl();
+		return sysModuleDAO.getAllSystemModules();
+	}
+	
 	protected String getPageTitleKey() {
 		return isNew ? "unifiedSystemUser.add.title" : "unifiedSystemUser.edit.title";
 	}

@@ -46,6 +46,5 @@ public interface SiteInformationDAO extends BaseDAO {
 	public List<SiteInformation> getPageOfSiteInformationByDomainName(int startingRecNo, String domainName) throws LIMSRuntimeException;
 
 	public SiteInformation getSiteInformationById(String urlId) throws LIMSRuntimeException;
-
-	public List<SiteInformation> getSiteInformationByDomainName(String domainName) throws LIMSRuntimeException;
+	
 }
